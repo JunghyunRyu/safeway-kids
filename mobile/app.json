@@ -41,7 +41,7 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiBaseUrl": "http://localhost:8000/api/v1",
+      "apiBaseUrl": "http://192.168.44.128:8000/api/v1",
       "eas": {
         "projectId": "your-expo-project-id"
       }
