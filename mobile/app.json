@@ -13,14 +13,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.safeway.kids",
+      "bundleIdentifier": "com.safewaykids.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "자녀의 셔틀버스 위치를 추적하기 위해 위치 권한이 필요합니다.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "셔틀버스 GPS 위치를 전송하기 위해 위치 권한이 필요합니다."
       }
     },
     "android": {
-      "package": "com.safeway.kids",
+      "package": "com.safewaykids.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

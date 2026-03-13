@@ -5,6 +5,7 @@ secrets/
 config/credentials.json
 *.key
 *.key.pub
+firebase-credentials.json
 
 # Python
 __pycache__/
