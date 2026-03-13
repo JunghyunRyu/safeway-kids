@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "defaultMode": "default",
+  "includeGitInstructions": false,
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(npm test *)",
+      "Bash(pnpm test *)",
+      "Bash(yarn test *)",
+      "Bash(pytest *)",
+      "Bash(bash ./scripts/doctor.sh *)",
+      "Bash(sh ./scripts/doctor.sh *)",
+      "Bash(./scripts/doctor.sh *)",
+      "Bash(bash ./scripts/bootstrap-check.sh *)",
+      "Bash(sh ./scripts/bootstrap-check.sh *)",
+      "Bash(./scripts/bootstrap-check.sh *)",
+      "Bash(bash examples/*/smoke.sh *)",
+      "Bash(sh examples/*/smoke.sh *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(./config/credentials.json)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(git push *)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "agent",
+            "timeout": 120,
+            "prompt": "Check whether the assistant is claiming milestone completion or final readiness. If so, verify that the response or repository evidence includes changed files, commands run, test or verification status, and the next action. Block stopping only when the assistant makes a completion claim without evidence. $ARGUMENTS"
+          }
+        ]
+      }
+    ]
+  }
+}

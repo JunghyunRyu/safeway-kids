@@ -1,0 +1,17 @@
+{
+  "name": "engineering-team-plugins",
+  "owner": {
+    "name": "EngineeringTeam"
+  },
+  "metadata": {
+    "description": "Internal development platform plugins"
+  },
+  "plugins": [
+    {
+      "name": "claude-code-platform",
+      "source": ".",
+      "description": "9-phase development workflow framework",
+      "version": "1.0.0"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "claude-code-platform",
+  "description": "High-quality Claude Code operating framework with 9-phase workflow: requirements analysis, independent review, consensus, tech spec, todo plan, implementation, verification, milestone closure, and session handoff.",
+  "version": "1.0.0",
+  "author": {
+    "name": "EngineeringTeam"
+  },
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "framework",
+    "quality",
+    "verification",
+    "milestone",
+    "spec",
+    "review",
+    "handoff",
+    "development-platform"
+  ]
+}

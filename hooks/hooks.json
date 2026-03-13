@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "agent",
+            "timeout": 120,
+            "prompt": "Check whether the assistant is claiming milestone completion or final readiness. If so, verify that the response or repository evidence includes changed files, commands run, test or verification status, and the next action. Block stopping only when the assistant makes a completion claim without evidence. $ARGUMENTS"
+          }
+        ]
+      }
+    ]
+  }
+}
