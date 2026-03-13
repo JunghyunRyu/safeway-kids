@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import ParentHomeScreen from "../screens/parent/HomeScreen";
 import ScheduleScreen from "../screens/parent/ScheduleScreen";
 import MapScreen from "../screens/parent/MapScreen";
+import BillingScreen from "../screens/parent/BillingScreen";
 import ProfileScreen from "../screens/parent/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
@@ -34,6 +35,11 @@ export default function ParentTabNavigator() {
         name="Map"
         component={MapScreen}
         options={{ tabBarLabel: t("tabs.map") }}
+      />
+      <Tab.Screen
+        name="Billing"
+        component={BillingScreen}
+        options={{ tabBarLabel: t("tabs.billing") }}
       />
       <Tab.Screen
         name="Profile"

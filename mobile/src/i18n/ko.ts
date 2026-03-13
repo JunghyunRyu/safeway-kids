@@ -27,6 +27,9 @@ export default {
     schedule: "스케줄",
     profile: "내 정보",
     route: "노선",
+    billing: "청구서",
+    shifts: "근무",
+    availability: "가용시간",
   },
   home: {
     greeting: "안녕하세요",

@@ -5,6 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useNotifications } from "../hooks/useNotifications";
 import ParentTabNavigator from "./ParentTabNavigator";
 import DriverTabNavigator from "./DriverTabNavigator";
+import EscortTabNavigator from "./EscortTabNavigator";
 import LoginScreen from "../screens/LoginScreen";
 
 export default function RootNavigator() {
@@ -29,11 +30,18 @@ export default function RootNavigator() {
     );
   }
 
-  const isDriver = user?.role === "driver" || user?.role === "safety_escort";
+  const isDriver = user?.role === "driver";
+  const isEscort = user?.role === "safety_escort";
 
   return (
     <NavigationContainer>
-      {isDriver ? <DriverTabNavigator /> : <ParentTabNavigator />}
+      {isEscort ? (
+        <EscortTabNavigator />
+      ) : isDriver ? (
+        <DriverTabNavigator />
+      ) : (
+        <ParentTabNavigator />
+      )}
     </NavigationContainer>
   );
 }
