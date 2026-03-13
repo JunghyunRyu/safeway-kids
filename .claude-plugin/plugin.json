@@ -1,9 +1,10 @@
 {
-  "name": "claude-code-platform",
-  "description": "High-quality Claude Code operating framework with 9-phase workflow: requirements analysis, independent review, consensus, tech spec, todo plan, implementation, verification, milestone closure, and session handoff.",
+  "name": "claude-forge",
+  "description": "Evidence-first Claude Code plugin for repeatable, spec-driven development workflows.",
   "version": "1.0.0",
   "author": {
-    "name": "EngineeringTeam"
+    "name": "JunghyunRyu",
+    "url": "https://github.com/JunghyunRyu"
   },
   "license": "MIT",
   "keywords": [
@@ -15,6 +16,7 @@
     "spec",
     "review",
     "handoff",
+    "evidence-first",
     "development-platform"
   ]
 }

@@ -1,16 +1,18 @@
 {
-  "name": "engineering-team-plugins",
+  "name": "claude-forge",
   "owner": {
-    "name": "EngineeringTeam"
+    "name": "JunghyunRyu",
+    "url": "https://github.com/JunghyunRyu"
   },
   "metadata": {
-    "description": "Internal development platform plugins"
+    "description": "Evidence-first Claude Code plugin for repeatable, spec-driven development workflows.",
+    "repository": "https://github.com/JunghyunRyu/claude-forge"
   },
   "plugins": [
     {
-      "name": "claude-code-platform",
+      "name": "claude-forge",
       "source": ".",
-      "description": "9-phase development workflow framework",
+      "description": "9-phase evidence-first development workflow framework",
       "version": "1.0.0"
     }
   ]

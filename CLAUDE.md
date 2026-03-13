@@ -139,12 +139,12 @@ Use plugin agents when appropriate:
 - `verification-auditor` for evidence-first closure checks
 
 Use plugin skills when appropriate:
-- `/claude-code-platform:bootstrap` for environment readiness and next-step guidance
-- `/claude-code-platform:review` for orchestrated multi-review flow
-- `/claude-code-platform:test` for structured verification execution
-- `/claude-code-platform:gap-note` when spec and implementation drift
-- `/claude-code-platform:milestone-report` at milestone closure
-- `/claude-code-platform:session-handoff` before session end
+- `/claude-forge:bootstrap` for environment readiness and next-step guidance
+- `/claude-forge:review` for orchestrated multi-review flow
+- `/claude-forge:test` for structured verification execution
+- `/claude-forge:gap-note` when spec and implementation drift
+- `/claude-forge:milestone-report` at milestone closure
+- `/claude-forge:session-handoff` before session end
 
 ## State and status reporting rules
 1. Never infer the current project phase, prior milestone, or task status unless it is explicitly supported by:

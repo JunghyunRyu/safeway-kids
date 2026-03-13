@@ -16,23 +16,23 @@ A high-quality **Claude Code plugin** for repeatable, evidence-first development
 
 ### From local path
 ```bash
-claude --plugin-dir ./path/to/claude-code-platform
+claude --plugin-dir ./path/to/claude-forge
 ```
 
 ### From marketplace (when published)
 ```bash
-/plugin install claude-code-platform
+/plugin install claude-forge
 ```
 
 ### Verify
 Once installed, these skills become available:
 ```
-/claude-code-platform:bootstrap
-/claude-code-platform:review
-/claude-code-platform:test
-/claude-code-platform:gap-note
-/claude-code-platform:milestone-report
-/claude-code-platform:session-handoff
+/claude-forge:bootstrap
+/claude-forge:review
+/claude-forge:test
+/claude-forge:gap-note
+/claude-forge:milestone-report
+/claude-forge:session-handoff
 ```
 
 ---
@@ -68,10 +68,10 @@ Once installed, these skills become available:
 
 ```bash
 # 1. Install the plugin
-claude --plugin-dir ./claude-code-platform
+claude --plugin-dir ./claude-forge
 
 # 2. In your project, run bootstrap
-/claude-code-platform:bootstrap
+/claude-forge:bootstrap
 
 # 3. Start with Phase 0 — Intake
 ```
@@ -81,7 +81,7 @@ claude --plugin-dir ./claude-code-platform
 ## Plugin structure
 
 ```
-claude-code-platform/
+claude-forge/
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin manifest
 ├── skills/                      # Plugin skills
@@ -140,7 +140,7 @@ All workflow artifacts are stored in your project's `artifacts/` directory with 
 Fix the reported missing files or settings first.
 
 ### Plugin skills not showing
-Run `/reload-plugins` or restart Claude Code. Skills should appear as `/claude-code-platform:<skill-name>`.
+Run `/reload-plugins` or restart Claude Code. Skills should appear as `/claude-forge:<skill-name>`.
 
 ### Claude sees built-in agents but not plugin agents
 Verify the plugin is loaded with `claude --debug`. Check that agent `.md` files are in `agents/`.
