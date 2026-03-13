@@ -1,0 +1,142 @@
+"""M4 integration tests: WebSocket auth, GPS relay, buffer flush."""
+
+import json
+import uuid
+from unittest.mock import patch
+
+import fakeredis.aioredis
+import pytest
+from starlette.testclient import TestClient
+
+from app.database import get_db
+from app.main import app
+from tests.conftest import TestSessionLocal
+
+
+class TestWebSocketAuth:
+    """WebSocket JWT authentication tests."""
+
+    @pytest.fixture
+    def fake_redis(self):
+        return fakeredis.aioredis.FakeRedis(decode_responses=True)
+
+    async def test_ws_rejects_missing_token(self, db_session, fake_redis):
+        """WebSocket without token should be closed with 4001."""
+        vehicle_id = uuid.uuid4()
+
+        with patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis), \
+             patch("app.main.redis_client", fake_redis):
+            with TestClient(app) as tc:
+                with pytest.raises(Exception):
+                    with tc.websocket_connect(
+                        f"/api/v1/telemetry/ws/vehicles/{vehicle_id}"
+                    ):
+                        pass
+
+    async def test_ws_rejects_invalid_token(self, db_session, fake_redis):
+        """WebSocket with invalid JWT should be closed with 4001."""
+        vehicle_id = uuid.uuid4()
+
+        with patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis), \
+             patch("app.main.redis_client", fake_redis):
+            with TestClient(app) as tc:
+                with pytest.raises(Exception):
+                    with tc.websocket_connect(
+                        f"/api/v1/telemetry/ws/vehicles/{vehicle_id}?token=invalid-jwt"
+                    ):
+                        pass
+
+    async def test_ws_accepts_valid_token_and_connects(
+        self, db_session, parent_user, parent_token, fake_redis
+    ):
+        """WebSocket with valid JWT should be accepted (connection not rejected)."""
+        async def override_get_db():
+            yield db_session
+
+        app.dependency_overrides[get_db] = override_get_db
+        vehicle_id = uuid.uuid4()
+
+        with patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis), \
+             patch("app.modules.vehicle_telemetry.router.async_session_factory", TestSessionLocal), \
+             patch("app.main.redis_client", fake_redis):
+            with TestClient(app) as tc:
+                with tc.websocket_connect(
+                    f"/api/v1/telemetry/ws/vehicles/{vehicle_id}?token={parent_token}"
+                ):
+                    pass  # auth succeeded, connection is open
+
+        app.dependency_overrides.clear()
+
+
+class TestGpsBufferFlush:
+    """GPS buffer flush to PostgreSQL tests."""
+
+    async def test_flush_writes_gps_history(self, db_session):
+        """flush_gps_buffer should write buffered GPS data to gps_history table."""
+        from app.modules.vehicle_telemetry.models import GpsHistory, Vehicle
+        from app.modules.vehicle_telemetry.service import flush_gps_buffer
+
+        fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+
+        # Create a vehicle
+        vehicle = Vehicle(
+            id=uuid.uuid4(),
+            license_plate="12가3456",
+            capacity=15,
+        )
+        db_session.add(vehicle)
+        await db_session.flush()
+
+        # Buffer some GPS data
+        buffer_key = f"gps_buffer:{vehicle.id}"
+        for i in range(3):
+            data = json.dumps({
+                "vehicle_id": str(vehicle.id),
+                "latitude": 37.4979 + i * 0.001,
+                "longitude": 127.0276,
+                "heading": 90.0,
+                "speed": 30.0,
+                "recorded_at": f"2026-03-13T10:0{i}:00+00:00",
+            })
+            await fake_redis.rpush(buffer_key, data)
+
+        # Flush
+        count = await flush_gps_buffer(fake_redis, db_session, vehicle.id)
+        assert count == 3
+
+        # Verify gps_history rows
+        from sqlalchemy import select
+        result = await db_session.execute(
+            select(GpsHistory).where(GpsHistory.vehicle_id == vehicle.id)
+        )
+        rows = list(result.scalars().all())
+        assert len(rows) == 3
+        assert rows[0].latitude == pytest.approx(37.4979, abs=0.01)
+
+    async def test_flush_empty_buffer(self, db_session):
+        """flush_gps_buffer with empty buffer returns 0."""
+        from app.modules.vehicle_telemetry.service import flush_gps_buffer
+
+        fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+        vehicle_id = uuid.uuid4()
+
+        count = await flush_gps_buffer(fake_redis, db_session, vehicle_id)
+        assert count == 0
+
+    async def test_update_gps_tracks_active_vehicles(self, db_session):
+        """update_gps should add vehicle to active_vehicles set."""
+        from app.modules.vehicle_telemetry.schemas import GpsUpdateRequest
+        from app.modules.vehicle_telemetry.service import update_gps
+
+        fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+        vehicle_id = uuid.uuid4()
+
+        request = GpsUpdateRequest(
+            vehicle_id=vehicle_id,
+            latitude=37.4979,
+            longitude=127.0276,
+        )
+        await update_gps(fake_redis, request)
+
+        members = await fake_redis.smembers("active_vehicles")
+        assert str(vehicle_id) in members

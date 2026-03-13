@@ -1,0 +1,35 @@
+import httpx
+
+from app.config import settings
+from app.modules.notification.providers.base import SmsProvider
+
+
+class NHNCloudSmsProvider(SmsProvider):
+    """NHN Cloud SMS provider for Korean phone numbers."""
+
+    BASE_URL = "https://api-sms.cloud.toast.com/sms/v3.0"
+
+    async def send_sms(self, phone: str, message: str) -> bool:
+        if settings.environment != "production":
+            print(f"[DEV SMS] {phone}: {message}")
+            return True
+
+        url = f"{self.BASE_URL}/appKeys/{settings.nhn_sms_app_key}/sender/sms"
+        headers = {
+            "Content-Type": "application/json",
+            "X-Secret-Key": settings.nhn_sms_secret_key,
+        }
+        payload = {
+            "body": message,
+            "sendNo": settings.nhn_sms_sender_number,
+            "recipientList": [{"recipientNo": phone}],
+        }
+
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload, headers=headers)
+                resp.raise_for_status()
+                return True
+        except Exception as e:
+            print(f"[SMS ERROR] {e}")
+            return False

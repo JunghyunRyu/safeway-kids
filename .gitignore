@@ -1,24 +1,28 @@
-# Secrets
+# Secrets & Keys
 .env
 .env.*
 secrets/
 config/credentials.json
+*.key
+*.key.pub
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+.expo/
 
 # Claude local overrides
 .claude/settings.local.json
 CLAUDE.local.md
 
-# Generated artifacts (created in user projects, not in plugin repo)
-artifacts/reports/
-artifacts/handoffs/
-artifacts/gap-notes/
-artifacts/verification/
-artifacts/specs/
-artifacts/plans/
-artifacts/reviews/
-
 # Local scratch output
-reports/
 tmp/
 dist/
 build/
@@ -29,3 +33,4 @@ coverage/
 .DS_Store
 .vscode/
 .idea/
+*.db
