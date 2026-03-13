@@ -5,14 +5,26 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import settings
 from app.database import Base
+from app.modules.academy_management.models import Academy  # noqa: F401
 
 # Import all models so Alembic can detect them
 from app.modules.auth.models import User  # noqa: F401
-from app.modules.student_management.models import Student, Enrollment  # noqa: F401
-from app.modules.academy_management.models import Academy  # noqa: F401
-from app.modules.vehicle_telemetry.models import Vehicle, VehicleAssignment, GpsHistory  # noqa: F401
-from app.modules.scheduling.models import ScheduleTemplate, DailyScheduleInstance, RoutePlan  # noqa: F401
-from app.modules.compliance.models import GuardianConsent, Contract, DataRetentionPolicy  # noqa: F401
+from app.modules.compliance.models import (  # noqa: F401
+    Contract,
+    DataRetentionPolicy,
+    GuardianConsent,
+)
+from app.modules.scheduling.models import (  # noqa: F401
+    DailyScheduleInstance,
+    RoutePlan,
+    ScheduleTemplate,
+)
+from app.modules.student_management.models import Enrollment, Student  # noqa: F401
+from app.modules.vehicle_telemetry.models import (  # noqa: F401
+    GpsHistory,
+    Vehicle,
+    VehicleAssignment,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url_sync)

@@ -39,8 +39,9 @@ async def get_my_route(
     current_user: User = Depends(require_roles(UserRole.DRIVER)),
 ) -> RouteResponse | None:
     """기사 본인 오늘 노선 조회"""
-    from app.modules.vehicle_telemetry.models import VehicleAssignment
     from sqlalchemy import select
+
+    from app.modules.vehicle_telemetry.models import VehicleAssignment
 
     # Find driver's vehicle assignment
     stmt = select(VehicleAssignment).where(
@@ -81,7 +82,9 @@ async def get_route(
     vehicle_id: uuid.UUID,
     plan_date: date,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.DRIVER, UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
+    current_user: User = Depends(
+        require_roles(UserRole.DRIVER, UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)
+    ),
 ) -> RouteResponse | None:
     """차량별 노선 조회 (기사 / 관리자)"""
     plan = await service.get_route_plan(db, vehicle_id, plan_date)

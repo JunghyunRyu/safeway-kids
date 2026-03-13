@@ -6,33 +6,38 @@ Usage: python scripts/seed.py
 
 import asyncio
 import random
-import uuid
 from datetime import UTC, date, datetime, time, timedelta
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import async_session_factory, engine, Base
-from app.modules.auth.models import User, UserRole
-from app.modules.student_management.models import Enrollment, Student
+from app.database import async_session_factory
 from app.modules.academy_management.models import Academy
-from app.modules.vehicle_telemetry.models import Vehicle, VehicleAssignment
-from app.modules.scheduling.models import ScheduleTemplate
+from app.modules.auth.models import User, UserRole
 from app.modules.compliance.models import Contract, DataRetentionPolicy, GuardianConsent
+from app.modules.scheduling.models import ScheduleTemplate
+from app.modules.student_management.models import Enrollment, Student
+from app.modules.vehicle_telemetry.models import Vehicle, VehicleAssignment
 
 # Korean data
-FAMILY_NAMES = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임", "한", "오", "서", "신", "권", "황"]
+FAMILY_NAMES = [
+    "김", "이", "박", "최", "정", "강", "조", "윤", "장", "임", "한", "오", "서", "신", "권", "황",
+]
 GIVEN_NAMES_M = ["민수", "준호", "성현", "지훈", "현우", "동현", "승민", "태영", "재현", "영호"]
 GIVEN_NAMES_F = ["서연", "지은", "하은", "수빈", "유진", "민지", "예린", "소영", "현주", "다은"]
 CHILD_NAMES_M = ["도윤", "시우", "예준", "하준", "지호", "서준", "이준", "유찬", "건우", "주원"]
 CHILD_NAMES_F = ["서윤", "하윤", "지유", "서아", "하은", "소율", "다인", "지아", "윤서", "채원"]
 
 ACADEMIES_DATA = [
-    {"name": "해피 영어학원", "address": "서울시 강남구 테헤란로 123", "lat": 37.5012, "lng": 127.0396},
-    {"name": "브레인 수학학원", "address": "서울시 강남구 역삼로 45", "lat": 37.4987, "lng": 127.0365},
-    {"name": "아이비 피아노학원", "address": "서울시 강남구 강남대로 234", "lat": 37.4970, "lng": 127.0280},
-    {"name": "스마트 코딩학원", "address": "서울시 강남구 봉은사로 67", "lat": 37.5130, "lng": 127.0580},
-    {"name": "챔피언 태권도장", "address": "서울시 강남구 선릉로 89", "lat": 37.5045, "lng": 127.0490},
+    {"name": "해피 영어학원", "address": "서울시 강남구 테헤란로 123",
+     "lat": 37.5012, "lng": 127.0396},
+    {"name": "브레인 수학학원", "address": "서울시 강남구 역삼로 45",
+     "lat": 37.4987, "lng": 127.0365},
+    {"name": "아이비 피아노학원", "address": "서울시 강남구 강남대로 234",
+     "lat": 37.4970, "lng": 127.0280},
+    {"name": "스마트 코딩학원", "address": "서울시 강남구 봉은사로 67",
+     "lat": 37.5130, "lng": 127.0580},
+    {"name": "챔피언 태권도장", "address": "서울시 강남구 선릉로 89",
+     "lat": 37.5045, "lng": 127.0490},
 ]
 
 PICKUP_LOCATIONS = [
@@ -78,11 +83,26 @@ async def seed_data() -> None:
 
         # 1. Data retention policies
         policies = [
-            DataRetentionPolicy(data_category="gps_history", retention_days=90, legal_basis="서비스 운영 목적", auto_purge=True),
-            DataRetentionPolicy(data_category="boarding_logs", retention_days=365, legal_basis="운송 기록 보관", auto_purge=True),
-            DataRetentionPolicy(data_category="consent_records", retention_days=1095, legal_basis="개인정보보호법 제39조", auto_purge=False),
-            DataRetentionPolicy(data_category="facial_embeddings", retention_days=7, legal_basis="생체정보 최소보관", auto_purge=True),
-            DataRetentionPolicy(data_category="cctv_inference_logs", retention_days=30, legal_basis="사고 조사 목적", auto_purge=True),
+            DataRetentionPolicy(
+                data_category="gps_history", retention_days=90,
+                legal_basis="서비스 운영 목적", auto_purge=True,
+            ),
+            DataRetentionPolicy(
+                data_category="boarding_logs", retention_days=365,
+                legal_basis="운송 기록 보관", auto_purge=True,
+            ),
+            DataRetentionPolicy(
+                data_category="consent_records", retention_days=1095,
+                legal_basis="개인정보보호법 제39조", auto_purge=False,
+            ),
+            DataRetentionPolicy(
+                data_category="facial_embeddings", retention_days=7,
+                legal_basis="생체정보 최소보관", auto_purge=True,
+            ),
+            DataRetentionPolicy(
+                data_category="cctv_inference_logs", retention_days=30,
+                legal_basis="사고 조사 목적", auto_purge=True,
+            ),
         ]
         for p in policies:
             db.add(p)
@@ -117,14 +137,20 @@ async def seed_data() -> None:
 
         # 4. Drivers + Safety Escorts
         drivers = []
-        for i in range(10):
-            driver = User(role=UserRole.DRIVER, phone=korean_phone(), name=korean_name(is_male=True))
+        for _i in range(10):
+            driver = User(
+                role=UserRole.DRIVER, phone=korean_phone(),
+                name=korean_name(is_male=True),
+            )
             db.add(driver)
             drivers.append(driver)
 
         escorts = []
-        for i in range(10):
-            escort = User(role=UserRole.SAFETY_ESCORT, phone=korean_phone(), name=korean_name(is_male=False))
+        for _i in range(10):
+            escort = User(
+                role=UserRole.SAFETY_ESCORT, phone=korean_phone(),
+                name=korean_name(is_male=False),
+            )
             db.add(escort)
             escorts.append(escort)
 
@@ -171,7 +197,7 @@ async def seed_data() -> None:
         # 8. Parents + Students + Enrollments + Consents + Schedules
         parents = []
         students = []
-        for i in range(50):
+        for _i in range(50):
             is_male_parent = random.choice([True, False])
             parent = User(
                 role=UserRole.PARENT,
@@ -248,12 +274,12 @@ async def seed_data() -> None:
 
         await db.commit()
         print("✅ Seed data complete!")
-        print(f"   - 1 platform admin")
-        print(f"   - 5 academy admins + 5 academies")
-        print(f"   - 10 drivers + 10 safety escorts")
-        print(f"   - 5 vehicles with contracts")
-        print(f"   - 50 parents + 50 students")
-        print(f"   - Enrollments, consents, and schedule templates generated")
+        print("   - 1 platform admin")
+        print("   - 5 academy admins + 5 academies")
+        print("   - 10 drivers + 10 safety escorts")
+        print("   - 5 vehicles with contracts")
+        print("   - 50 parents + 50 students")
+        print("   - Enrollments, consents, and schedule templates generated")
 
 
 if __name__ == "__main__":

@@ -41,7 +41,10 @@ async def gps_flush_loop() -> None:
 
                 if total > 0:
                     await db.commit()
-                    logger.info("GPS flush: %d records written for %d vehicles", total, len(vehicle_ids))
+                    logger.info(
+                        "GPS flush: %d records written for %d vehicles",
+                        total, len(vehicle_ids),
+                    )
 
                 # Remove inactive vehicles from tracking set
                 for vid_str in inactive:
@@ -56,6 +59,7 @@ async def gps_flush_loop() -> None:
 def _start_daily_cron() -> None:
     """Start APScheduler cron job for daily pipeline."""
     from datetime import date, timedelta
+
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from apscheduler.triggers.cron import CronTrigger
 
@@ -108,10 +112,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Shutdown
     scheduler.shutdown(wait=False)
     flush_task.cancel()
-    try:
+    import contextlib
+    with contextlib.suppress(asyncio.CancelledError):
         await flush_task
-    except asyncio.CancelledError:
-        pass
     await redis_client.aclose()
 
 

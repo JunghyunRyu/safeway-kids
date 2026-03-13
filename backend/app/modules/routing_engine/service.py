@@ -7,8 +7,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.academy_management.models import Academy
-from app.modules.routing_engine.schemas import GenerateRouteResponse, RouteResponse, RouteStopResponse
-from app.modules.routing_engine.solver import Depot, RouteSolution, SolverResult, Stop, VehicleSpec, solve_vrp_tw
+from app.modules.routing_engine.schemas import (
+    GenerateRouteResponse,
+    RouteResponse,
+    RouteStopResponse,
+)
+from app.modules.routing_engine.solver import (
+    Depot,
+    SolverResult,
+    Stop,
+    VehicleSpec,
+    solve_vrp_tw,
+)
 from app.modules.scheduling.models import DailyScheduleInstance, RoutePlan
 from app.modules.student_management.models import Student
 from app.modules.vehicle_telemetry.models import Vehicle, VehicleAssignment
@@ -100,7 +110,7 @@ async def generate_route_plan(
             .where(VehicleAssignment.assigned_date == plan_date)
         )
         va_result = await db.execute(va_stmt)
-        for assignment, vehicle in va_result.all():
+        for _assignment, vehicle in va_result.all():
             vid = str(vehicle.id)
             if vid not in vehicle_map:
                 vehicles.append(VehicleSpec(id=vid, capacity=vehicle.capacity))

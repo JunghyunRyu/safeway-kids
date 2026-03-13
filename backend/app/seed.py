@@ -18,8 +18,6 @@ import logging
 import uuid
 from datetime import date, time, timedelta
 
-from sqlalchemy import select
-
 from app.database import async_session_factory
 from app.modules.academy_management.models import Academy
 from app.modules.auth.models import User, UserRole
@@ -124,9 +122,13 @@ async def seed() -> None:
 
         # --- Parents + Students ---
         parent_data = [
-            ("박보호자", "01033333333", [("박민준", "2018-03-15", "2학년"), ("박서윤", "2020-07-22", "유치원")]),
+            ("박보호자", "01033333333", [
+                ("박민준", "2018-03-15", "2학년"), ("박서윤", "2020-07-22", "유치원"),
+            ]),
             ("최학부모", "01044444444", [("최도윤", "2017-09-10", "3학년")]),
-            ("정엄마", "01055555555", [("정하은", "2019-01-05", "1학년"), ("정지호", "2016-11-30", "4학년")]),
+            ("정엄마", "01055555555", [
+                ("정하은", "2019-01-05", "1학년"), ("정지호", "2016-11-30", "4학년"),
+            ]),
         ]
 
         all_students: list[Student] = []
@@ -160,7 +162,7 @@ async def seed() -> None:
             db.add(enrollment)
 
         # --- Guardian Consents ---
-        for i, parent_id in enumerate(PARENT_IDS):
+        for _i, parent_id in enumerate(PARENT_IDS):
             parent_students = [s for s in all_students if s.guardian_id == parent_id]
             for student in parent_students:
                 consent = GuardianConsent(

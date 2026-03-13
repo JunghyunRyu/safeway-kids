@@ -7,6 +7,7 @@ from unittest.mock import patch
 import fakeredis.aioredis
 import pytest
 from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from app.database import get_db
 from app.main import app
@@ -20,51 +21,65 @@ class TestWebSocketAuth:
     def fake_redis(self):
         return fakeredis.aioredis.FakeRedis(decode_responses=True)
 
-    async def test_ws_rejects_missing_token(self, db_session, fake_redis):
+    async def test_ws_rejects_missing_token(  # noqa: SIM117
+        self, db_session, fake_redis,
+    ):
         """WebSocket without token should be closed with 4001."""
         vehicle_id = uuid.uuid4()
+        with (
+            patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis),
+            patch("app.main.redis_client", fake_redis),
+            TestClient(app) as tc,
+            pytest.raises(WebSocketDisconnect),
+        ):
+            with tc.websocket_connect(
+                f"/api/v1/telemetry/ws/vehicles/{vehicle_id}"
+            ):
+                pass
 
-        with patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis), \
-             patch("app.main.redis_client", fake_redis):
-            with TestClient(app) as tc:
-                with pytest.raises(Exception):
-                    with tc.websocket_connect(
-                        f"/api/v1/telemetry/ws/vehicles/{vehicle_id}"
-                    ):
-                        pass
-
-    async def test_ws_rejects_invalid_token(self, db_session, fake_redis):
+    async def test_ws_rejects_invalid_token(  # noqa: SIM117
+        self, db_session, fake_redis,
+    ):
         """WebSocket with invalid JWT should be closed with 4001."""
         vehicle_id = uuid.uuid4()
+        with (
+            patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis),
+            patch("app.main.redis_client", fake_redis),
+            TestClient(app) as tc,
+            pytest.raises(WebSocketDisconnect),
+        ):
+            with tc.websocket_connect(
+                f"/api/v1/telemetry/ws/vehicles/{vehicle_id}?token=invalid-jwt"
+            ):
+                pass
 
-        with patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis), \
-             patch("app.main.redis_client", fake_redis):
-            with TestClient(app) as tc:
-                with pytest.raises(Exception):
-                    with tc.websocket_connect(
-                        f"/api/v1/telemetry/ws/vehicles/{vehicle_id}?token=invalid-jwt"
-                    ):
-                        pass
-
-    async def test_ws_accepts_valid_token_and_connects(
-        self, db_session, parent_user, parent_token, fake_redis
+    async def test_ws_accepts_valid_token(  # noqa: SIM117
+        self, db_session, parent_user, parent_token, fake_redis,
     ):
-        """WebSocket with valid JWT should be accepted (connection not rejected)."""
+        """WebSocket with valid JWT should be accepted."""
+
         async def override_get_db():
             yield db_session
 
         app.dependency_overrides[get_db] = override_get_db
         vehicle_id = uuid.uuid4()
-
-        with patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis), \
-             patch("app.modules.vehicle_telemetry.router.async_session_factory", TestSessionLocal), \
-             patch("app.main.redis_client", fake_redis):
-            with TestClient(app) as tc:
-                with tc.websocket_connect(
-                    f"/api/v1/telemetry/ws/vehicles/{vehicle_id}?token={parent_token}"
-                ):
-                    pass  # auth succeeded, connection is open
-
+        with (
+            patch(
+                "app.modules.vehicle_telemetry.router.redis_client",
+                fake_redis,
+            ),
+            patch(
+                "app.modules.vehicle_telemetry.router.async_session_factory",
+                TestSessionLocal,
+            ),
+            patch("app.main.redis_client", fake_redis),
+            TestClient(app) as tc,
+        ):
+            with tc.websocket_connect(
+                f"/api/v1/telemetry/ws/vehicles/{vehicle_id}"
+                f"?token={parent_token}"
+            ):
+                pass  # auth succeeded, connection is open
         app.dependency_overrides.clear()
 
 
@@ -72,13 +87,12 @@ class TestGpsBufferFlush:
     """GPS buffer flush to PostgreSQL tests."""
 
     async def test_flush_writes_gps_history(self, db_session):
-        """flush_gps_buffer should write buffered GPS data to gps_history table."""
+        """flush_gps_buffer should write buffered GPS data."""
         from app.modules.vehicle_telemetry.models import GpsHistory, Vehicle
         from app.modules.vehicle_telemetry.service import flush_gps_buffer
 
         fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
 
-        # Create a vehicle
         vehicle = Vehicle(
             id=uuid.uuid4(),
             license_plate="12가3456",
@@ -87,7 +101,6 @@ class TestGpsBufferFlush:
         db_session.add(vehicle)
         await db_session.flush()
 
-        # Buffer some GPS data
         buffer_key = f"gps_buffer:{vehicle.id}"
         for i in range(3):
             data = json.dumps({
@@ -100,12 +113,11 @@ class TestGpsBufferFlush:
             })
             await fake_redis.rpush(buffer_key, data)
 
-        # Flush
         count = await flush_gps_buffer(fake_redis, db_session, vehicle.id)
         assert count == 3
 
-        # Verify gps_history rows
         from sqlalchemy import select
+
         result = await db_session.execute(
             select(GpsHistory).where(GpsHistory.vehicle_id == vehicle.id)
         )

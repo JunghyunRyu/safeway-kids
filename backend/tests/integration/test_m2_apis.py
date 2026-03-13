@@ -13,14 +13,13 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.academy_management.models import Academy
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.service import create_access_token
-from app.modules.academy_management.models import Academy
-from app.modules.student_management.models import Student, Enrollment
 from app.modules.compliance.models import GuardianConsent
+from app.modules.scheduling.models import ScheduleTemplate
+from app.modules.student_management.models import Enrollment, Student
 from app.modules.vehicle_telemetry.models import Vehicle, VehicleAssignment
-from app.modules.scheduling.models import ScheduleTemplate, DailyScheduleInstance
-
 from tests.conftest import auth_header
 
 
@@ -46,7 +45,7 @@ async def setup_full_scenario(
     academy_admin_user: User,
     safety_escort_user: User,
 ) -> dict:
-    """Set up a complete scenario: academy, student, consent, vehicle, assignment, template, daily instance."""
+    """Set up a complete scenario with all entities."""
     # Academy
     academy = Academy(
         id=uuid.uuid4(),

@@ -8,17 +8,16 @@ Caches results in Redis with 24h TTL.
 import hashlib
 import json
 import logging
-from datetime import timedelta
 
 from redis.asyncio import Redis
 
 from app.common.map_provider.base import GeoPoint, MapProvider
 from app.config import settings
 from app.modules.routing_engine.solver import (
+    AVERAGE_SPEED_KMH,
     Depot,
     Stop,
     _euclidean_distance_km,
-    AVERAGE_SPEED_KMH,
 )
 
 logger = logging.getLogger(__name__)

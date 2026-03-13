@@ -6,14 +6,13 @@ Can be run as:
 """
 
 import logging
-import uuid
 from datetime import date, timedelta
 
 from sqlalchemy import distinct, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.models import User, UserRole
-from app.modules.scheduling.models import DailyScheduleInstance, ScheduleTemplate
+from app.modules.scheduling.models import DailyScheduleInstance
 from app.modules.scheduling.service import materialize_daily_schedules
 from app.modules.vehicle_telemetry.models import Vehicle, VehicleAssignment
 
@@ -38,7 +37,9 @@ async def auto_assign_vehicles(
         return []
 
     # Get active vehicles
-    vehicle_stmt = select(Vehicle).where(Vehicle.is_active.is_(True)).order_by(Vehicle.license_plate)
+    vehicle_stmt = (
+        select(Vehicle).where(Vehicle.is_active.is_(True)).order_by(Vehicle.license_plate)
+    )
     vehicles = list((await db.execute(vehicle_stmt)).scalars().all())
     if not vehicles:
         logger.warning("No active vehicles found")

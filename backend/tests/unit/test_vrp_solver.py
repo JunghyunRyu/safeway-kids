@@ -6,8 +6,8 @@ from app.modules.routing_engine.solver import (
     Depot,
     Stop,
     VehicleSpec,
-    solve_vrp_tw,
     _euclidean_distance_km,
+    solve_vrp_tw,
 )
 
 

@@ -8,7 +8,7 @@ Solves the Vehicle Routing Problem with Time Windows:
 """
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
@@ -205,7 +205,6 @@ def solve_vrp_tw(
     time_dimension = routing.GetDimensionOrDie("Time")
 
     # Set time windows for depot (wide open)
-    depot_index = routing.Start(0)
     time_dimension.CumulVar(routing.Start(0)).SetRange(0, 1440)
     time_dimension.CumulVar(routing.End(0)).SetRange(0, 1440)
 

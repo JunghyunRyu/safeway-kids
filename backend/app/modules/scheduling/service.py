@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.common.exceptions import ConflictError, NotFoundError
 from app.middleware.consent import require_consent
 from app.modules.scheduling.models import DailyScheduleInstance, ScheduleTemplate
-from app.modules.scheduling.schemas import DriverDailyScheduleResponse, ScheduleTemplateCreateRequest
+from app.modules.scheduling.schemas import (
+    DriverDailyScheduleResponse,
+    ScheduleTemplateCreateRequest,
+)
 from app.modules.student_management.service import get_student
 
 
@@ -172,9 +175,9 @@ async def get_driver_daily_schedules(
     db: AsyncSession, driver_id: uuid.UUID, target_date: date
 ) -> list[DriverDailyScheduleResponse]:
     """Get all daily schedules assigned to a driver's vehicle for a date."""
-    from app.modules.vehicle_telemetry.models import VehicleAssignment
-    from app.modules.student_management.models import Student
     from app.modules.academy_management.models import Academy
+    from app.modules.student_management.models import Student
+    from app.modules.vehicle_telemetry.models import VehicleAssignment
 
     # Find driver's vehicle assignment for the date
     assignment_stmt = select(VehicleAssignment).where(
@@ -249,10 +252,11 @@ async def _send_boarding_push(
 ) -> None:
     """Send boarding push notification to parent (fire-and-forget)."""
     import logging
-    from app.modules.student_management.models import Student
+
     from app.modules.auth.models import User
-    from app.modules.vehicle_telemetry.models import Vehicle
     from app.modules.notification import service as notif_service
+    from app.modules.student_management.models import Student
+    from app.modules.vehicle_telemetry.models import Vehicle
 
     logger = logging.getLogger(__name__)
     try:
@@ -285,9 +289,10 @@ async def _send_alighting_push(
 ) -> None:
     """Send alighting push notification to parent (fire-and-forget)."""
     import logging
-    from app.modules.student_management.models import Student
+
     from app.modules.auth.models import User
     from app.modules.notification import service as notif_service
+    from app.modules.student_management.models import Student
 
     logger = logging.getLogger(__name__)
     try:

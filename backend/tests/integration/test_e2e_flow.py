@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.service import create_access_token
-
 from tests.conftest import auth_header
 
 

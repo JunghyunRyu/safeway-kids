@@ -8,7 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.exceptions import NotFoundError
 from app.modules.vehicle_telemetry.models import GpsHistory, Vehicle, VehicleAssignment
-from app.modules.vehicle_telemetry.schemas import GpsUpdateRequest, VehicleAssignmentResponse, VehicleCreateRequest
+from app.modules.vehicle_telemetry.schemas import (
+    GpsUpdateRequest,
+    VehicleAssignmentResponse,
+    VehicleCreateRequest,
+)
 
 
 async def create_vehicle(
