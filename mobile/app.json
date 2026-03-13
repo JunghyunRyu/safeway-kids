@@ -42,7 +42,7 @@
     },
     "extra": {
       "apiBaseUrl": "http://192.168.44.128:8000/api/v1",
-      "kakaoMapApiKey": "",
+      "kakaoMapApiKey": "c1b5a36cbbeb9613c8a01c4d3c987461",
       "eas": {
         "projectId": "your-expo-project-id"
       }
