@@ -33,6 +33,17 @@ async def get_academy(db: AsyncSession, academy_id: uuid.UUID) -> Academy:
     return academy
 
 
+async def get_academy_by_admin(
+    db: AsyncSession, admin_id: uuid.UUID
+) -> Academy | None:
+    stmt = select(Academy).where(
+        Academy.admin_id == admin_id,
+        Academy.deleted_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def list_academies(db: AsyncSession) -> list[Academy]:
     stmt = (
         select(Academy)

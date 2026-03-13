@@ -157,6 +157,11 @@ def create_app() -> FastAPI:
     )
     application.include_router(routing_router, prefix="/api/v1/routes", tags=["routes"])
 
+    from app.modules.billing.router import router as billing_router
+    from app.modules.escort.router import router as escort_router
+    application.include_router(billing_router, prefix="/api/v1/billing", tags=["billing"])
+    application.include_router(escort_router, prefix="/api/v1/escorts", tags=["escorts"])
+
     @application.get("/health")
     async def health_check() -> dict:
         """서비스 상태 확인"""

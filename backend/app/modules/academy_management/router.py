@@ -38,6 +38,20 @@ async def list_academies(
     return [AcademyResponse.model_validate(a) for a in academies]
 
 
+@router.get("/mine", response_model=AcademyResponse | None)
+async def my_academy(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ACADEMY_ADMIN)
+    ),
+) -> AcademyResponse | None:
+    """내 학원 조회 (학원 관리자)"""
+    academy = await service.get_academy_by_admin(db, current_user.id)
+    if not academy:
+        return None
+    return AcademyResponse.model_validate(academy)
+
+
 @router.get("/{academy_id}", response_model=AcademyResponse)
 async def get_academy(
     academy_id: uuid.UUID,
