@@ -1,7 +1,7 @@
 import React from "react";
-import { Text } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
+import { createTabScreenOptions } from "./tabConfig";
 import DriverHomeScreen from "../screens/driver/HomeScreen";
 import DriverRouteScreen from "../screens/driver/RouteScreen";
 import DriverMapScreen from "../screens/driver/MapScreen";
@@ -20,18 +20,7 @@ export default function DriverTabNavigator() {
   const { t } = useTranslation();
 
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: "#4CAF50",
-        tabBarInactiveTintColor: "#999",
-        tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
-        lazy: true,
-        tabBarIcon: ({ color }) => (
-          <Text style={{ fontSize: 20, color }}>{ICONS[route.name] ?? "·"}</Text>
-        ),
-      })}
-    >
+    <Tab.Navigator screenOptions={createTabScreenOptions("#4CAF50", ICONS)}>
       <Tab.Screen
         name="DriverHome"
         component={DriverHomeScreen}

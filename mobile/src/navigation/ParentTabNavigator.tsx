@@ -1,7 +1,7 @@
 import React from "react";
-import { Text } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
+import { createTabScreenOptions } from "./tabConfig";
 import ParentHomeScreen from "../screens/parent/HomeScreen";
 import ScheduleScreen from "../screens/parent/ScheduleScreen";
 import MapScreen from "../screens/parent/MapScreen";
@@ -22,18 +22,7 @@ export default function ParentTabNavigator() {
   const { t } = useTranslation();
 
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: "#2196F3",
-        tabBarInactiveTintColor: "#999",
-        tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
-        lazy: true,
-        tabBarIcon: ({ color }) => (
-          <Text style={{ fontSize: 20, color }}>{ICONS[route.name] ?? "·"}</Text>
-        ),
-      })}
-    >
+    <Tab.Navigator screenOptions={createTabScreenOptions("#2196F3", ICONS)}>
       <Tab.Screen
         name="ParentHome"
         component={ParentHomeScreen}

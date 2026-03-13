@@ -2,12 +2,36 @@ import axios from 'axios';
 
 const API_BASE = '/api/v1';
 
+function getToken(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function setToken(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Storage unavailable (incognito/quota exceeded)
+  }
+}
+
+function clearTokens(): void {
+  try {
+    localStorage.clear();
+  } catch {
+    // Storage unavailable
+  }
+}
+
 const api = axios.create({
   baseURL: API_BASE,
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = getToken('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -18,23 +42,23 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 401) {
-      const refreshToken = localStorage.getItem('refresh_token');
+      const refreshToken = getToken('refresh_token');
       if (refreshToken && !error.config._retry) {
         error.config._retry = true;
         try {
           const { data } = await axios.post(`${API_BASE}/auth/refresh`, {
             refresh_token: refreshToken,
           });
-          localStorage.setItem('access_token', data.access_token);
-          localStorage.setItem('refresh_token', data.refresh_token);
+          setToken('access_token', data.access_token);
+          setToken('refresh_token', data.refresh_token);
           error.config.headers.Authorization = `Bearer ${data.access_token}`;
           return api(error.config);
         } catch {
-          localStorage.clear();
+          clearTokens();
           window.location.href = '/login';
         }
       } else {
-        localStorage.clear();
+        clearTokens();
         window.location.href = '/login';
       }
     }

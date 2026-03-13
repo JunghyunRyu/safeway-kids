@@ -1,5 +1,6 @@
 import React from "react";
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -14,6 +15,7 @@ const ROLE_LABELS: Record<string, string> = {
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const handleLogout = () => {
     if (Platform.OS === "web") {
@@ -29,25 +31,25 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <Text style={styles.title}>{t("tabs.profile")}</Text>
-      {user && (
+      {user ? (
         <View style={styles.infoCard}>
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.detail}>{user.phone}</Text>
           <Text style={styles.detail}>{ROLE_LABELS[user.role] ?? user.role}</Text>
         </View>
-      )}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+      ) : null}
+      <Pressable style={styles.logoutBtn} onPress={handleLogout}>
         <Text style={styles.logoutText}>{t("auth.logout")}</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f8f9fa" },
-  title: { fontSize: 20, fontWeight: "bold", marginTop: 40, marginBottom: 20 },
+  title: { fontSize: 20, fontWeight: "bold", marginBottom: 20 },
   infoCard: {
     backgroundColor: "#fff",
     borderRadius: 12,

@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
@@ -20,6 +21,7 @@ function todayStr(): string {
 export default function DriverProfileScreen() {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
+  const insets = useSafeAreaInsets();
   const [assignment, setAssignment] = useState<VehicleAssignment | null>(null);
 
   useFocusEffect(
@@ -49,18 +51,18 @@ export default function DriverProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <Text style={styles.title}>{t("tabs.profile")}</Text>
 
-      {user && (
+      {user ? (
         <View style={styles.card}>
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.detail}>{user.phone}</Text>
           <Text style={styles.detail}>{ROLE_LABELS[user.role] ?? user.role}</Text>
         </View>
-      )}
+      ) : null}
 
-      {assignment && (
+      {assignment ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("driver.vehicleInfo")}</Text>
           <Text style={styles.detail}>
@@ -70,18 +72,18 @@ export default function DriverProfileScreen() {
             {t("driver.operator")}: {assignment.operator_name ?? "-"}
           </Text>
         </View>
-      )}
+      ) : null}
 
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+      <Pressable style={styles.logoutBtn} onPress={handleLogout}>
         <Text style={styles.logoutText}>{t("auth.logout")}</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f0f4e8" },
-  title: { fontSize: 20, fontWeight: "bold", marginTop: 40, marginBottom: 20 },
+  title: { fontSize: 20, fontWeight: "bold", marginBottom: 20 },
   card: {
     backgroundColor: "#fff",
     borderRadius: 12,

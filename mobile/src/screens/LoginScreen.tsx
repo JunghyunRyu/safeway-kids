@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   Alert,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,10 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = async () => {
+  const selectParent = useCallback(() => setRole("parent"), []);
+  const selectDriver = useCallback(() => setRole("driver"), []);
+
+  const handleLogin = useCallback(async () => {
     setError("");
     if (!phone.trim()) {
       setError("전화번호를 입력해 주세요");
@@ -41,7 +44,7 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [phone, name, role, onLoginSuccess]);
 
   return (
     <View style={styles.container}>
@@ -52,22 +55,22 @@ export default function LoginScreen() {
 
       {/* Role selector */}
       <View style={styles.roleRow}>
-        <TouchableOpacity
-          style={[styles.roleBtn, role === "parent" && styles.roleBtnActive]}
-          onPress={() => setRole("parent")}
+        <Pressable
+          style={[styles.roleBtn, role === "parent" ? styles.roleBtnActive : undefined]}
+          onPress={selectParent}
         >
-          <Text style={[styles.roleTxt, role === "parent" && styles.roleTxtActive]}>
+          <Text style={[styles.roleTxt, role === "parent" ? styles.roleTxtActive : undefined]}>
             학부모
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.roleBtn, role === "driver" && styles.roleBtnActive]}
-          onPress={() => setRole("driver")}
+        </Pressable>
+        <Pressable
+          style={[styles.roleBtn, role === "driver" ? styles.roleBtnActive : undefined]}
+          onPress={selectDriver}
         >
-          <Text style={[styles.roleTxt, role === "driver" && styles.roleTxtActive]}>
+          <Text style={[styles.roleTxt, role === "driver" ? styles.roleTxtActive : undefined]}>
             기사
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <TextInput
@@ -83,15 +86,15 @@ export default function LoginScreen() {
         value={name}
         onChangeText={setName}
       />
-      <TouchableOpacity
-        style={[styles.btn, loading && styles.disabled]}
+      <Pressable
+        style={[styles.btn, loading ? styles.disabled : undefined]}
         onPress={handleLogin}
         disabled={loading}
       >
         <Text style={styles.btnText}>
           {loading ? t("common.loading") : t("auth.login")}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
 
       <Text style={styles.hint}>
         테스트 계정: 01033333333 / 박보호자 (학부모){"\n"}

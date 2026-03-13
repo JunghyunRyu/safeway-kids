@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Constants from "expo-constants";
 let WebView: any = null;
 if (Platform.OS !== "web") {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -10,8 +12,7 @@ import { useTranslation } from "react-i18next";
 import { listDailySchedules, DailySchedule } from "../../api/schedules";
 import { useVehicleTracking } from "../../hooks/useVehicleTracking";
 
-// Kakao Maps API key — replace with real key or load from config
-const KAKAO_MAP_API_KEY = "YOUR_KAKAO_JS_API_KEY";
+const KAKAO_MAP_API_KEY = Constants.expoConfig?.extra?.kakaoMapApiKey ?? "";
 
 // Default center: Gangnam-gu
 const DEFAULT_CENTER = { lat: 37.4979, lng: 127.0276 };
@@ -24,6 +25,7 @@ function todayStr(): string {
 
 export default function MapScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const webViewRef = useRef<any>(null);
   const [schedules, setSchedules] = useState<DailySchedule[]>([]);
   const [vehicleIds, setVehicleIds] = useState<string[]>([]);
@@ -131,7 +133,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.title}>{t("map.tracking")}</Text>
         <View style={styles.statusRow}>
           <View
@@ -152,7 +154,7 @@ export default function MapScreen() {
           <Text style={styles.empty}>
             지도 기능은 모바일 앱에서만 사용 가능합니다.
           </Text>
-          <Text style={[styles.empty, { marginTop: 8, fontSize: 12 }]}>
+          <Text style={styles.emptySubtext}>
             차량 {vehicleIds.length}대 추적 중
             {connected ? " (연결됨)" : " (연결 대기)"}
           </Text>
@@ -178,7 +180,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8f9fa" },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 44,
     paddingBottom: 8,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
@@ -192,5 +193,6 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 12, color: "#666" },
   emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   empty: { fontSize: 14, color: "#888" },
+  emptySubtext: { marginTop: 8, fontSize: 12, color: "#888" },
   webview: { flex: 1 },
 });

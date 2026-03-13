@@ -1,14 +1,21 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import api from '../api/client';
 import type { DailySchedule } from '../types';
 
+const STATUS_COLOR: Record<string, string> = {
+  scheduled: 'bg-blue-100 text-blue-700',
+  boarded: 'bg-yellow-100 text-yellow-700',
+  completed: 'bg-green-100 text-green-700',
+  cancelled: 'bg-red-100 text-red-700',
+};
+
 export default function SchedulesPage() {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [schedules, setSchedules] = useState<DailySchedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [pipelineResult, setPipelineResult] = useState<Record<string, unknown> | null>(null);
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get(`/schedules/daily?target_date=${date}`);
@@ -18,9 +25,9 @@ export default function SchedulesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [date]);
 
-  const runPipeline = async () => {
+  const runPipeline = useCallback(async () => {
     setLoading(true);
     setPipelineResult(null);
     try {
@@ -33,14 +40,7 @@ export default function SchedulesPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const statusColor: Record<string, string> = {
-    scheduled: 'bg-blue-100 text-blue-700',
-    boarded: 'bg-yellow-100 text-yellow-700',
-    completed: 'bg-green-100 text-green-700',
-    cancelled: 'bg-red-100 text-red-700',
-  };
+  }, [date, fetchSchedules]);
 
   return (
     <div>
@@ -69,14 +69,14 @@ export default function SchedulesPage() {
         </button>
       </div>
 
-      {pipelineResult && (
+      {pipelineResult ? (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
           <h4 className="text-sm font-semibold text-blue-700 mb-2">파이프라인 결과</h4>
           <pre className="text-xs text-blue-800 whitespace-pre-wrap">
             {JSON.stringify(pipelineResult, null, 2)}
           </pre>
         </div>
-      )}
+      ) : null}
 
       {schedules.length === 0 ? (
         <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
@@ -102,7 +102,7 @@ export default function SchedulesPage() {
                   <td className="px-6 py-4 text-sm text-gray-700">{s.schedule_date}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{s.pickup_time}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${statusColor[s.status] || 'bg-gray-100 text-gray-700'}`}>
+                    <span className={`px-2 py-1 text-xs rounded-full ${STATUS_COLOR[s.status] || 'bg-gray-100 text-gray-700'}`}>
                       {s.status}
                     </span>
                   </td>

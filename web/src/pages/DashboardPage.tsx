@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
 import type { Academy } from '../types';
 
@@ -10,16 +11,19 @@ export default function DashboardPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: acad } = await api.get<Academy | null>('/academies/mine');
+        const today = new Date().toISOString().slice(0, 10);
+
+        // Parallel: fetch academy + vehicles + schedules at once
+        const [acadRes, vehiclesRes, schedulesRes] = await Promise.allSettled([
+          api.get<Academy | null>('/academies/mine'),
+          api.get('/vehicles/vehicles'),
+          api.get(`/schedules/daily?target_date=${today}`),
+        ]);
+
+        const acad = acadRes.status === 'fulfilled' ? acadRes.value.data : null;
         setAcademy(acad);
 
         if (acad) {
-          const today = new Date().toISOString().slice(0, 10);
-          const [vehiclesRes, schedulesRes] = await Promise.allSettled([
-            api.get('/vehicles/vehicles'),
-            api.get(`/schedules/daily?target_date=${today}`),
-          ]);
-
           setStats({
             students: 0,
             vehicles: vehiclesRes.status === 'fulfilled' ? vehiclesRes.value.data.length : 0,
@@ -57,10 +61,10 @@ export default function DashboardPage() {
           <div className="mt-8 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">빠른 작업</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <QuickAction href="/schedules" label="일일 파이프라인 실행" icon="🚀" />
-              <QuickAction href="/vehicles" label="차량 등록" icon="🚐" />
-              <QuickAction href="/billing" label="청구서 생성" icon="💰" />
-              <QuickAction href="/students" label="학생 조회" icon="👨‍🎓" />
+              <QuickAction to="/schedules" label="일일 파이프라인 실행" icon="🚀" />
+              <QuickAction to="/vehicles" label="차량 등록" icon="🚐" />
+              <QuickAction to="/billing" label="청구서 생성" icon="💰" />
+              <QuickAction to="/students" label="학생 조회" icon="👨‍🎓" />
             </div>
           </div>
         </>
@@ -89,14 +93,14 @@ function StatCard({ label, value, color }: { label: string; value: number | stri
   );
 }
 
-function QuickAction({ href, label, icon }: { href: string; label: string; icon: string }) {
+function QuickAction({ to, label, icon }: { to: string; label: string; icon: string }) {
   return (
-    <a
-      href={href}
+    <Link
+      to={to}
       className="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-center"
     >
       <span className="text-2xl">{icon}</span>
       <span className="text-xs text-gray-600">{label}</span>
-    </a>
+    </Link>
   );
 }

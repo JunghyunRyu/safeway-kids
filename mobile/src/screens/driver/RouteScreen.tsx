@@ -1,13 +1,14 @@
-import React, { useCallback, useState } from "react";
+import React, { memo, useCallback, useState } from "react";
 import {
   Alert,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import {
@@ -26,8 +27,88 @@ function fmtTime(t: string): string {
   return t?.length >= 5 ? t.slice(0, 5) : t;
 }
 
+interface StopCardProps {
+  id: string;
+  index: number;
+  studentName: string;
+  academyName: string;
+  pickupTime: string;
+  status: string;
+  isBoarded: boolean;
+  isCompleted: boolean;
+  isCancelled: boolean;
+  onBoard: (id: string) => void;
+  onAlight: (id: string) => void;
+}
+
+const StopCard = memo(function StopCard({
+  id,
+  index,
+  studentName,
+  academyName,
+  pickupTime,
+  status,
+  isBoarded,
+  isCompleted,
+  isCancelled,
+  onBoard,
+  onAlight,
+}: StopCardProps) {
+  const { t } = useTranslation();
+
+  const handleBoard = useCallback(() => onBoard(id), [id, onBoard]);
+  const handleAlight = useCallback(() => onAlight(id), [id, onAlight]);
+
+  return (
+    <View style={[styles.card, isCancelled ? styles.cardCancelled : undefined]}>
+      <View
+        style={[
+          styles.indexCircle,
+          isCompleted ? styles.indexCircleCompleted : undefined,
+        ]}
+      >
+        <Text style={styles.indexText}>{index + 1}</Text>
+      </View>
+      <View style={styles.cardBody}>
+        <Text style={styles.studentName}>{studentName}</Text>
+        <Text style={styles.detail}>{academyName}</Text>
+        <Text style={styles.detail}>
+          {t("schedule.pickupTime")}: {fmtTime(pickupTime)}
+        </Text>
+
+        {isCancelled ? (
+          <Text style={styles.cancelledText}>
+            {t("schedule.cancelled")}
+          </Text>
+        ) : isCompleted ? (
+          <Text style={styles.completedText}>
+            {t("schedule.completed")}
+          </Text>
+        ) : (
+          <View style={styles.actions}>
+            {!isBoarded ? (
+              <Pressable style={styles.boardBtn} onPress={handleBoard}>
+                <Text style={styles.btnText}>
+                  {t("driver.markBoarded")}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable style={styles.alightBtn} onPress={handleAlight}>
+                <Text style={styles.btnText}>
+                  {t("driver.markAlighted")}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+});
+
 export default function DriverRouteScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [schedules, setSchedules] = useState<DriverDailySchedule[]>([]);
   const [routePlan, setRoutePlan] = useState<RoutePlan | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -66,29 +147,59 @@ export default function DriverRouteScreen() {
     }, [load])
   );
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await load();
     setRefreshing(false);
-  };
+  }, [load]);
 
-  const handleBoard = async (item: DriverDailySchedule) => {
-    try {
-      await markBoarded(item.id);
-      await load();
-    } catch {
-      Alert.alert(t("common.error"));
-    }
-  };
+  const handleBoard = useCallback(
+    async (itemId: string) => {
+      try {
+        await markBoarded(itemId);
+        await load();
+      } catch {
+        Alert.alert(t("common.error"));
+      }
+    },
+    [load, t]
+  );
 
-  const handleAlight = async (item: DriverDailySchedule) => {
-    try {
-      await markAlighted(item.id);
-      await load();
-    } catch {
-      Alert.alert(t("common.error"));
-    }
-  };
+  const handleAlight = useCallback(
+    async (itemId: string) => {
+      try {
+        await markAlighted(itemId);
+        await load();
+      } catch {
+        Alert.alert(t("common.error"));
+      }
+    },
+    [load, t]
+  );
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: DriverDailySchedule; index: number }) => (
+      <StopCard
+        id={item.id}
+        index={index}
+        studentName={item.student_name}
+        academyName={item.academy_name}
+        pickupTime={item.pickup_time}
+        status={item.status}
+        isBoarded={!!item.boarded_at}
+        isCompleted={item.status === "completed"}
+        isCancelled={item.status === "cancelled"}
+        onBoard={handleBoard}
+        onAlight={handleAlight}
+      />
+    ),
+    [handleBoard, handleAlight]
+  );
+
+  const keyExtractor = useCallback(
+    (item: DriverDailySchedule) => item.id,
+    []
+  );
 
   const completedCount = schedules.filter(
     (s) => s.status === "completed"
@@ -98,11 +209,11 @@ export default function DriverRouteScreen() {
   ).length;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <Text style={styles.title}>{t("driver.stopList")}</Text>
 
       {/* Route info banner */}
-      {routePlan && (
+      {routePlan ? (
         <View style={styles.routeBanner}>
           <Text style={styles.routeBannerText}>
             AI 최적화 노선 v{routePlan.version}
@@ -113,9 +224,9 @@ export default function DriverRouteScreen() {
             {totalActive} 완료
           </Text>
         </View>
-      )}
+      ) : null}
 
-      {!routePlan && schedules.length > 0 && (
+      {!routePlan && schedules.length > 0 ? (
         <View style={[styles.routeBanner, styles.routeBannerFallback]}>
           <Text style={styles.routeBannerText}>
             픽업 시간순 (최적화 노선 없음)
@@ -124,74 +235,18 @@ export default function DriverRouteScreen() {
             {completedCount}/{totalActive} 완료
           </Text>
         </View>
-      )}
+      ) : null}
 
       {schedules.length === 0 ? (
         <Text style={styles.empty}>{t("driver.noAssignment")}</Text>
       ) : (
         <FlatList
           data={schedules}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          renderItem={({ item, index }) => {
-            const isBoarded = !!item.boarded_at;
-            const isCompleted = item.status === "completed";
-            const isCancelled = item.status === "cancelled";
-
-            return (
-              <View style={[styles.card, isCancelled && styles.cardCancelled]}>
-                <View
-                  style={[
-                    styles.indexCircle,
-                    isCompleted && styles.indexCircleCompleted,
-                  ]}
-                >
-                  <Text style={styles.indexText}>{index + 1}</Text>
-                </View>
-                <View style={styles.cardBody}>
-                  <Text style={styles.studentName}>{item.student_name}</Text>
-                  <Text style={styles.detail}>{item.academy_name}</Text>
-                  <Text style={styles.detail}>
-                    {t("schedule.pickupTime")}: {fmtTime(item.pickup_time)}
-                  </Text>
-
-                  {isCancelled ? (
-                    <Text style={styles.cancelledText}>
-                      {t("schedule.cancelled")}
-                    </Text>
-                  ) : isCompleted ? (
-                    <Text style={styles.completedText}>
-                      {t("schedule.completed")}
-                    </Text>
-                  ) : (
-                    <View style={styles.actions}>
-                      {!isBoarded ? (
-                        <TouchableOpacity
-                          style={styles.boardBtn}
-                          onPress={() => handleBoard(item)}
-                        >
-                          <Text style={styles.btnText}>
-                            {t("driver.markBoarded")}
-                          </Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity
-                          style={styles.alightBtn}
-                          onPress={() => handleAlight(item)}
-                        >
-                          <Text style={styles.btnText}>
-                            {t("driver.markAlighted")}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-                </View>
-              </View>
-            );
-          }}
+          renderItem={renderItem}
         />
       )}
     </View>
@@ -203,7 +258,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "bold",
-    marginTop: 40,
     marginBottom: 12,
   },
   routeBanner: {

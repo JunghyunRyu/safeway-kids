@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../api/client';
 import type { Academy, BillingPlan, Invoice } from '../types';
 
@@ -14,19 +14,24 @@ export default function BillingPage() {
 
   // Invoice generation
   const [billingMonth, setBillingMonth] = useState(
-    new Date().toISOString().slice(0, 7)
+    () => new Date().toISOString().slice(0, 7)
   );
   const [genResult, setGenResult] = useState<Record<string, unknown> | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
-      const { data: acad } = await api.get<Academy | null>('/academies/mine');
+      // Parallel: fetch academy + plans + invoices at once
+      const [acadRes, plansRes, invoicesRes] = await Promise.allSettled([
+        api.get<Academy | null>('/academies/mine'),
+        api.get('/billing/plans'),
+        api.get('/billing/invoices'),
+      ]);
+
+      const acad = acadRes.status === 'fulfilled' ? acadRes.value.data : null;
       setAcademy(acad);
+
       if (acad) {
-        const [plansRes, invoicesRes] = await Promise.allSettled([
-          api.get(`/billing/plans?academy_id=${acad.id}`),
-          api.get(`/billing/invoices?academy_id=${acad.id}`),
-        ]);
+        // Filter client-side if needed, or rely on backend filtering
         if (plansRes.status === 'fulfilled') setPlans(plansRes.value.data);
         if (invoicesRes.status === 'fulfilled') setInvoices(invoicesRes.value.data);
       }
@@ -35,11 +40,11 @@ export default function BillingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const createPlan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,14 +79,17 @@ export default function BillingPage() {
     }
   };
 
-  const markPaid = async (invoiceId: string) => {
-    try {
-      await api.post(`/billing/invoices/${invoiceId}/mark-paid`);
-      await load();
-    } catch {
-      alert('결제 처리 실패');
-    }
-  };
+  const markPaid = useCallback(
+    async (invoiceId: string) => {
+      try {
+        await api.post(`/billing/invoices/${invoiceId}/mark-paid`);
+        await load();
+      } catch {
+        alert('결제 처리 실패');
+      }
+    },
+    [load]
+  );
 
   if (loading) return <div className="text-gray-500">로딩 중...</div>;
   if (!academy) return <p className="text-gray-500">등록된 학원이 없습니다.</p>;
@@ -102,7 +110,7 @@ export default function BillingPage() {
           </button>
         </div>
 
-        {showPlanForm && (
+        {showPlanForm ? (
           <form onSubmit={createPlan} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <input
@@ -133,7 +141,7 @@ export default function BillingPage() {
               생성
             </button>
           </form>
-        )}
+        ) : null}
 
         {plans.length === 0 ? (
           <p className="text-sm text-gray-400">등록된 요금제가 없습니다.</p>
@@ -144,7 +152,9 @@ export default function BillingPage() {
                 <div className="font-medium text-gray-800">{p.name}</div>
                 <div className="text-sm text-gray-500 mt-1">
                   건당 {p.price_per_ride.toLocaleString()}원
-                  {p.monthly_cap && ` / 월 상한 ${p.monthly_cap.toLocaleString()}원`}
+                  {p.monthly_cap != null && p.monthly_cap > 0
+                    ? ` / 월 상한 ${p.monthly_cap.toLocaleString()}원`
+                    : null}
                 </div>
               </div>
             ))}
@@ -169,11 +179,11 @@ export default function BillingPage() {
             청구서 일괄 생성
           </button>
         </div>
-        {genResult && (
+        {genResult ? (
           <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
             생성 {(genResult as { invoices_created?: number }).invoices_created}건 / 총액 {((genResult as { total_amount?: number }).total_amount || 0).toLocaleString()}원
           </div>
-        )}
+        ) : null}
       </section>
 
       {/* Invoice List */}
@@ -215,14 +225,14 @@ export default function BillingPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700">{inv.due_date}</td>
                     <td className="px-6 py-4">
-                      {inv.status !== 'paid' && (
+                      {inv.status !== 'paid' ? (
                         <button
                           onClick={() => markPaid(inv.id)}
                           className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                         >
                           결제 처리
                         </button>
-                      )}
+                      ) : null}
                     </td>
                   </tr>
                 ))}

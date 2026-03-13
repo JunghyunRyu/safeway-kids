@@ -1,35 +1,38 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
-import type { Academy, Enrollment, Student } from '../types';
+import type { Academy, Enrollment } from '../types';
 
 export default function StudentsPage() {
   const [academy, setAcademy] = useState<Academy | null>(null);
-  const [enrollments, setEnrollments] = useState<(Enrollment & { student?: Student })[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: acad } = await api.get<Academy | null>('/academies/mine');
+        const today = new Date().toISOString().slice(0, 10);
+
+        // Parallel: fetch academy + schedules at once
+        const [acadRes, schedulesRes] = await Promise.allSettled([
+          api.get<Academy | null>('/academies/mine'),
+          api.get(`/schedules/daily?target_date=${today}`),
+        ]);
+
+        const acad = acadRes.status === 'fulfilled' ? acadRes.value.data : null;
         setAcademy(acad);
-        if (acad) {
-          // Fetch daily schedules to find student_ids associated with this academy
-          const today = new Date().toISOString().slice(0, 10);
-          try {
-            const { data: schedules } = await api.get(`/schedules/daily?target_date=${today}`);
-            const studentIds = [...new Set(schedules.map((s: { student_id: string }) => s.student_id))] as string[];
-            setEnrollments(
-              studentIds.map((sid) => ({
-                id: sid,
-                student_id: sid,
-                academy_id: acad.id,
-                status: 'active',
-                enrolled_at: '',
-              }))
-            );
-          } catch {
-            setEnrollments([]);
-          }
+
+        if (acad && schedulesRes.status === 'fulfilled') {
+          const schedules = schedulesRes.value.data;
+          const studentIds = [...new Set(schedules.map((s: { student_id: string }) => s.student_id))] as string[];
+          setEnrollments(
+            studentIds.map((sid) => ({
+              id: sid,
+              student_id: sid,
+              academy_id: acad.id,
+              status: 'active',
+              enrolled_at: '',
+            }))
+          );
         }
       } catch {
         // ignore
@@ -46,9 +49,9 @@ export default function StudentsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-800">학생 관리</h2>
-        {academy && (
+        {academy ? (
           <span className="text-sm text-gray-500">{academy.name}</span>
-        )}
+        ) : null}
       </div>
 
       {!academy ? (

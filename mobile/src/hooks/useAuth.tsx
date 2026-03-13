@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, use, useCallback, useEffect, useState } from "react";
 import { getMe, isLoggedIn, logout, UserResponse } from "../api/auth";
 
 interface AuthContextValue {
@@ -19,50 +19,44 @@ const AuthContext = createContext<AuthContextValue>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserResponse | null>(null);
-  const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const bootstrap = async () => {
-    try {
-      const loggedIn = await isLoggedIn();
-      if (loggedIn) {
-        const me = await getMe();
-        setUser(me);
-        setAuthenticated(true);
-      }
-    } catch {
-      setAuthenticated(false);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // `authenticated` is derived from `user` — no separate state needed
+  const authenticated = user !== null;
 
   useEffect(() => {
-    bootstrap();
+    (async () => {
+      try {
+        const loggedIn = await isLoggedIn();
+        if (loggedIn) {
+          const me = await getMe();
+          setUser(me);
+        }
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  const onLoginSuccess = async () => {
+  const onLoginSuccess = useCallback(async () => {
     const me = await getMe();
     setUser(me);
-    setAuthenticated(true);
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await logout();
     setUser(null);
-    setAuthenticated(false);
-  };
+  }, []);
 
   return (
-    <AuthContext.Provider
-      value={{ user, authenticated, loading, onLoginSuccess, signOut }}
-    >
+    <AuthContext value={{ user, authenticated, loading, onLoginSuccess, signOut }}>
       {children}
-    </AuthContext.Provider>
+    </AuthContext>
   );
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  return use(AuthContext);
 }

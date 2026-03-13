@@ -1,13 +1,14 @@
-import React, { useCallback, useState } from "react";
+import React, { memo, useCallback, useState } from "react";
 import {
   FlatList,
   Platform,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
@@ -30,9 +31,44 @@ function todayStr(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+interface ScheduleCardProps {
+  studentName: string;
+  status: string;
+  pickupTime: string;
+}
+
+const ScheduleCard = memo(function ScheduleCard({
+  studentName,
+  status,
+  pickupTime,
+}: ScheduleCardProps) {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.studentName}>{studentName}</Text>
+        <View
+          style={[
+            styles.badge,
+            { backgroundColor: STATUS_COLORS[status] ?? "#999" },
+          ]}
+        >
+          <Text style={styles.badgeText}>
+            {t(`schedule.${status}` as any, status)}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.cardTime}>
+        {t("schedule.pickupTime")}: {fmtTime(pickupTime)}
+      </Text>
+    </View>
+  );
+});
+
 export default function ParentHomeScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [students, setStudents] = useState<Student[]>([]);
   const [schedules, setSchedules] = useState<DailySchedule[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,14 +92,30 @@ export default function ParentHomeScreen() {
     }, [load])
   );
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await load();
     setRefreshing(false);
-  };
+  }, [load]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: DailySchedule }) => {
+      const student = students.find((s) => s.id === item.student_id);
+      return (
+        <ScheduleCard
+          studentName={student?.name ?? "학생"}
+          status={item.status}
+          pickupTime={item.pickup_time}
+        />
+      );
+    },
+    [students]
+  );
+
+  const keyExtractor = useCallback((item: DailySchedule) => item.id, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <Text style={styles.greeting}>
         {t("home.greeting")}, {user?.name}
       </Text>
@@ -81,35 +133,11 @@ export default function ParentHomeScreen() {
       ) : (
         <FlatList
           data={schedules}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          renderItem={({ item }) => {
-            const student = students.find((s) => s.id === item.student_id);
-            return (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.studentName}>
-                    {student?.name ?? "학생"}
-                  </Text>
-                  <View
-                    style={[
-                      styles.badge,
-                      { backgroundColor: STATUS_COLORS[item.status] ?? "#999" },
-                    ]}
-                  >
-                    <Text style={styles.badgeText}>
-                      {t(`schedule.${item.status}` as any, item.status)}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.cardTime}>
-                  {t("schedule.pickupTime")}: {fmtTime(item.pickup_time)}
-                </Text>
-              </View>
-            );
-          }}
+          renderItem={renderItem}
         />
       )}
     </View>
@@ -118,7 +146,7 @@ export default function ParentHomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f8f9fa" },
-  greeting: { fontSize: 22, fontWeight: "bold", marginBottom: 20, marginTop: 40 },
+  greeting: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
   section: { marginBottom: 16 },
   sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 8, color: "#333" },
   empty: { fontSize: 14, color: "#888", textAlign: "center", marginTop: 40 },

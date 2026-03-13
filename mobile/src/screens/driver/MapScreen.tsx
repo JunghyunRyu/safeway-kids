@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
@@ -9,7 +10,9 @@ import { getMyAssignment } from "../../api/vehicles";
 import { getMyRoute, RoutePlan } from "../../api/routes";
 import { useGpsTracking } from "../../hooks/useGpsTracking";
 
-const KAKAO_MAP_API_KEY = "YOUR_KAKAO_JS_API_KEY";
+import Constants from "expo-constants";
+
+const KAKAO_MAP_API_KEY = Constants.expoConfig?.extra?.kakaoMapApiKey ?? "";
 const DEFAULT_CENTER = { lat: 37.4979, lng: 127.0276 };
 const MAP_HTML = require("../../../assets/kakao-map.html");
 
@@ -19,6 +22,7 @@ function todayStr(): string {
 
 export default function DriverMapScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const [mapReady, setMapReady] = useState(false);
   const [schedules, setSchedules] = useState<DriverDailySchedule[]>([]);
@@ -131,7 +135,7 @@ export default function DriverMapScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.title}>{t("map.busLocation")}</Text>
         <View style={styles.gpsRow}>
           <View
@@ -162,7 +166,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f0f4e8" },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 44,
     paddingBottom: 8,
     backgroundColor: "#fff",
     borderBottomWidth: 1,

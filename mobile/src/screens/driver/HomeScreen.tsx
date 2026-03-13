@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
@@ -13,6 +14,7 @@ function todayStr(): string {
 export default function DriverHomeScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [assignment, setAssignment] = useState<VehicleAssignment | null>(null);
   const [schedules, setSchedules] = useState<DriverDailySchedule[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,11 +39,11 @@ export default function DriverHomeScreen() {
     }, [load])
   );
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await load();
     setRefreshing(false);
-  };
+  }, [load]);
 
   const boardedCount = schedules.filter(
     (s) => s.boarded_at !== null || s.status === "completed"
@@ -50,6 +52,7 @@ export default function DriverHomeScreen() {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={{ paddingTop: insets.top + 12 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <Text style={styles.greeting}>
@@ -70,16 +73,16 @@ export default function DriverHomeScreen() {
             <Text style={styles.cardRow}>
               {t("driver.capacity")}: {assignment.capacity}명
             </Text>
-            {assignment.operator_name && (
+            {assignment.operator_name ? (
               <Text style={styles.cardRow}>
                 {t("driver.operator")}: {assignment.operator_name}
               </Text>
-            )}
-            {assignment.safety_escort_name && (
+            ) : null}
+            {assignment.safety_escort_name ? (
               <Text style={styles.cardRow}>
                 {t("driver.safetyEscort")}: {assignment.safety_escort_name}
               </Text>
-            )}
+            ) : null}
           </View>
 
           <View style={styles.card}>
@@ -95,7 +98,7 @@ export default function DriverHomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f0f4e8" },
-  greeting: { fontSize: 22, fontWeight: "bold", marginTop: 40, marginBottom: 20 },
+  greeting: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
   sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 12, color: "#333" },
   empty: { fontSize: 14, color: "#888", textAlign: "center", marginTop: 40 },
   card: {
