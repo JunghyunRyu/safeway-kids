@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GpsLocation } from "../api/vehicles";
-import { API_BASE_URL } from "../api/client";
+import { API_BASE_URL, tokenStorage } from "../api/client";
 
 const INITIAL_RETRY_MS = 3000;
 const MAX_RETRY_MS = 30000;
+// Close codes that indicate auth/permission failure — do not retry
+const NO_RETRY_CODES = new Set([4001, 4003, 403, 1008]);
 
 interface VehicleTrackingOptions {
   vehicleIds: string[];
@@ -26,12 +28,16 @@ export function useVehicleTracking({
   const retryDelays = useRef<Map<string, number>>(new Map());
 
   const connectWs = useCallback(
-    (vehicleId: string) => {
+    async (vehicleId: string) => {
       if (!enabled) return;
 
-      // Build WebSocket URL from API base
+      // Build WebSocket URL from API base, include auth token
       const wsBase = API_BASE_URL.replace(/^http/, "ws");
-      const ws = new WebSocket(`${wsBase}/telemetry/ws/vehicles/${vehicleId}`);
+      const token = await tokenStorage.getItem("access_token");
+      const url = token
+        ? `${wsBase}/telemetry/ws/vehicles/${vehicleId}?token=${token}`
+        : `${wsBase}/telemetry/ws/vehicles/${vehicleId}`;
+      const ws = new WebSocket(url);
 
       ws.onopen = () => {
         setConnected(true);
@@ -51,9 +57,15 @@ export function useVehicleTracking({
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         setConnected(false);
         if (!enabled) return;
+
+        // Do not retry on auth/permission errors
+        if (NO_RETRY_CODES.has(event.code)) {
+          console.warn(`WebSocket closed with code ${event.code}, not retrying`);
+          return;
+        }
 
         // Exponential backoff reconnect
         const currentDelay = retryDelays.current.get(vehicleId) ?? INITIAL_RETRY_MS;
@@ -69,6 +81,7 @@ export function useVehicleTracking({
       };
 
       ws.onerror = () => {
+        // Let onclose handle retry logic
         ws.close();
       };
 

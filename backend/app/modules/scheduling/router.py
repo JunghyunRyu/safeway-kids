@@ -87,8 +87,11 @@ async def list_daily_schedules(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[DailyScheduleResponse]:
-    """일일 스케줄 조회"""
-    instances = await service.list_daily_schedules(db, target_date, student_id)
+    """일일 스케줄 조회 — 학부모는 본인 자녀만 조회"""
+    instances = await service.list_daily_schedules(
+        db, target_date, student_id,
+        guardian_id=current_user.id if current_user.role == UserRole.PARENT else None,
+    )
     return [DailyScheduleResponse.model_validate(i) for i in instances]
 
 

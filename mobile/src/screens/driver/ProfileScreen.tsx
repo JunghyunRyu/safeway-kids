@@ -1,9 +1,17 @@
 import React, { useCallback, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
 import { getMyAssignment, VehicleAssignment } from "../../api/vehicles";
+
+const ROLE_LABELS: Record<string, string> = {
+  parent: "학부모",
+  driver: "기사",
+  safety_escort: "안전도우미",
+  academy_admin: "학원 관리자",
+  platform_admin: "플랫폼 관리자",
+};
 
 function todayStr(): string {
   return new Date().toISOString().split("T")[0];
@@ -28,10 +36,16 @@ export default function DriverProfileScreen() {
   );
 
   const handleLogout = () => {
-    Alert.alert(t("auth.logout"), "", [
-      { text: t("common.cancel"), style: "cancel" },
-      { text: t("common.confirm"), onPress: signOut },
-    ]);
+    if (Platform.OS === "web") {
+      if (window.confirm("로그아웃 하시겠습니까?")) {
+        signOut();
+      }
+    } else {
+      Alert.alert(t("auth.logout"), "", [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("common.confirm"), onPress: signOut },
+      ]);
+    }
   };
 
   return (
@@ -42,6 +56,7 @@ export default function DriverProfileScreen() {
         <View style={styles.card}>
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.detail}>{user.phone}</Text>
+          <Text style={styles.detail}>{ROLE_LABELS[user.role] ?? user.role}</Text>
         </View>
       )}
 

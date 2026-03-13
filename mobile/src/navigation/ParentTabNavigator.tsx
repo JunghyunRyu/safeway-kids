@@ -1,4 +1,5 @@
 import React from "react";
+import { Text } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
 import ParentHomeScreen from "../screens/parent/HomeScreen";
@@ -9,17 +10,29 @@ import ProfileScreen from "../screens/parent/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
+const ICONS: Record<string, string> = {
+  ParentHome: "🏠",
+  Schedule: "📅",
+  Map: "📍",
+  Billing: "💰",
+  Profile: "👤",
+};
+
 export default function ParentTabNavigator() {
   const { t } = useTranslation();
 
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: "#2196F3",
         tabBarInactiveTintColor: "#999",
         tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
-      }}
+        lazy: true,
+        tabBarIcon: ({ color }) => (
+          <Text style={{ fontSize: 20, color }}>{ICONS[route.name] ?? "·"}</Text>
+        ),
+      })}
     >
       <Tab.Screen
         name="ParentHome"

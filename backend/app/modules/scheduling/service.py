@@ -139,13 +139,25 @@ async def cancel_daily_schedule(
 
 
 async def list_daily_schedules(
-    db: AsyncSession, target_date: date, student_id: uuid.UUID | None = None
+    db: AsyncSession,
+    target_date: date,
+    student_id: uuid.UUID | None = None,
+    guardian_id: uuid.UUID | None = None,
 ) -> list[DailyScheduleInstance]:
     stmt = select(DailyScheduleInstance).where(
         DailyScheduleInstance.schedule_date == target_date
     )
     if student_id:
         stmt = stmt.where(DailyScheduleInstance.student_id == student_id)
+    if guardian_id:
+        # Filter to only this parent's students
+        from app.modules.student_management.models import Student
+        student_ids_subq = (
+            select(Student.id)
+            .where(Student.guardian_id == guardian_id)
+            .scalar_subquery()
+        )
+        stmt = stmt.where(DailyScheduleInstance.student_id.in_(student_ids_subq))
     stmt = stmt.order_by(DailyScheduleInstance.pickup_time)
     result = await db.execute(stmt)
     return list(result.scalars().all())

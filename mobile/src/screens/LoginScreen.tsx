@@ -20,15 +20,24 @@ export default function LoginScreen() {
   const [name, setName] = useState("");
   const [role, setRole] = useState<RoleOption>("parent");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleLogin = async () => {
-    if (!phone.trim() || !name.trim()) return;
+    setError("");
+    if (!phone.trim()) {
+      setError("전화번호를 입력해 주세요");
+      return;
+    }
+    if (!name.trim()) {
+      setError("이름을 입력해 주세요");
+      return;
+    }
     setLoading(true);
     try {
       await devLogin(phone, name, role);
       await onLoginSuccess();
     } catch {
-      Alert.alert(t("common.error"), "로그인에 실패했습니다. 서버 연결을 확인해주세요.");
+      setError("로그인에 실패했습니다. 서버 연결을 확인해주세요.");
     } finally {
       setLoading(false);
     }
@@ -38,6 +47,8 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>SAFEWAY KIDS</Text>
       <Text style={styles.subtitle}>개발 모드 로그인</Text>
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {/* Role selector */}
       <View style={styles.roleRow}>
@@ -140,6 +151,15 @@ const styles = StyleSheet.create({
   },
   btnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
   disabled: { opacity: 0.5 },
+  error: {
+    backgroundColor: "#FEE2E2",
+    color: "#DC2626",
+    padding: 12,
+    borderRadius: 8,
+    textAlign: "center",
+    fontSize: 14,
+    marginBottom: 16,
+  },
   hint: {
     marginTop: 24,
     textAlign: "center",

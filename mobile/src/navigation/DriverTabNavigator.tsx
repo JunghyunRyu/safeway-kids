@@ -1,4 +1,5 @@
 import React from "react";
+import { Text } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
 import DriverHomeScreen from "../screens/driver/HomeScreen";
@@ -8,17 +9,28 @@ import DriverProfileScreen from "../screens/driver/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
+const ICONS: Record<string, string> = {
+  DriverHome: "🏠",
+  Route: "🗺️",
+  DriverMap: "📍",
+  DriverProfile: "👤",
+};
+
 export default function DriverTabNavigator() {
   const { t } = useTranslation();
 
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: "#4CAF50",
         tabBarInactiveTintColor: "#999",
         tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
-      }}
+        lazy: true,
+        tabBarIcon: ({ color }) => (
+          <Text style={{ fontSize: 20, color }}>{ICONS[route.name] ?? "·"}</Text>
+        ),
+      })}
     >
       <Tab.Screen
         name="DriverHome"

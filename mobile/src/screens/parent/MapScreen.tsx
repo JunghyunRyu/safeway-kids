@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { WebView } from "react-native-webview";
+import { Platform, StyleSheet, Text, View } from "react-native";
+let WebView: any = null;
+if (Platform.OS !== "web") {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  WebView = require("react-native-webview").WebView;
+}
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { listDailySchedules, DailySchedule } from "../../api/schedules";
@@ -20,7 +24,7 @@ function todayStr(): string {
 
 export default function MapScreen() {
   const { t } = useTranslation();
-  const webViewRef = useRef<WebView>(null);
+  const webViewRef = useRef<any>(null);
   const [schedules, setSchedules] = useState<DailySchedule[]>([]);
   const [vehicleIds, setVehicleIds] = useState<string[]>([]);
   const [mapReady, setMapReady] = useState(false);
@@ -142,6 +146,16 @@ export default function MapScreen() {
       {vehicleIds.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.empty}>{t("map.noLocation")}</Text>
+        </View>
+      ) : Platform.OS === "web" || !WebView ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.empty}>
+            지도 기능은 모바일 앱에서만 사용 가능합니다.
+          </Text>
+          <Text style={[styles.empty, { marginTop: 8, fontSize: 12 }]}>
+            차량 {vehicleIds.length}대 추적 중
+            {connected ? " (연결됨)" : " (연결 대기)"}
+          </Text>
         </View>
       ) : (
         <WebView

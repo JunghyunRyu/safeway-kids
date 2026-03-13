@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import {
   FlatList,
+  Platform,
   RefreshControl,
   StyleSheet,
   Text,
@@ -12,6 +13,11 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
 import { listStudents, Student } from "../../api/students";
 import { listDailySchedules, DailySchedule } from "../../api/schedules";
+
+/** Strip seconds from "HH:MM:SS" → "HH:MM" */
+function fmtTime(t: string): string {
+  return t?.length >= 5 ? t.slice(0, 5) : t;
+}
 
 const STATUS_COLORS: Record<string, string> = {
   scheduled: "#2196F3",
@@ -99,7 +105,7 @@ export default function ParentHomeScreen() {
                   </View>
                 </View>
                 <Text style={styles.cardTime}>
-                  {t("schedule.pickupTime")}: {item.pickup_time}
+                  {t("schedule.pickupTime")}: {fmtTime(item.pickup_time)}
                 </Text>
               </View>
             );
@@ -121,12 +127,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
+      : { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 }),
+  } as any,
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   studentName: { fontSize: 16, fontWeight: "600" },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },

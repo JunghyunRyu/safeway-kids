@@ -22,6 +22,10 @@ function todayStr(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+function fmtTime(t: string): string {
+  return t?.length >= 5 ? t.slice(0, 5) : t;
+}
+
 export default function DriverRouteScreen() {
   const { t } = useTranslation();
   const [schedules, setSchedules] = useState<DriverDailySchedule[]>([]);
@@ -105,7 +109,7 @@ export default function DriverRouteScreen() {
           </Text>
           <Text style={styles.routeBannerDetail}>
             {routePlan.total_distance_km?.toFixed(1)}km · 약{" "}
-            {routePlan.total_duration_min?.toFixed(0)}분 · {completedCount}/
+            {Math.round((routePlan.total_distance_km ?? 0) * 2)}분 (운행) · {completedCount}/
             {totalActive} 완료
           </Text>
         </View>
@@ -150,7 +154,7 @@ export default function DriverRouteScreen() {
                   <Text style={styles.studentName}>{item.student_name}</Text>
                   <Text style={styles.detail}>{item.academy_name}</Text>
                   <Text style={styles.detail}>
-                    {t("schedule.pickupTime")}: {item.pickup_time}
+                    {t("schedule.pickupTime")}: {fmtTime(item.pickup_time)}
                   </Text>
 
                   {isCancelled ? (

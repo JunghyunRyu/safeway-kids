@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import {
   Alert,
   FlatList,
+  Platform,
   RefreshControl,
   StyleSheet,
   Text,
@@ -19,6 +20,10 @@ import { listStudents, Student } from "../../api/students";
 
 function todayStr(): string {
   return new Date().toISOString().split("T")[0];
+}
+
+function fmtTime(t: string): string {
+  return t?.length >= 5 ? t.slice(0, 5) : t;
 }
 
 export default function ScheduleScreen() {
@@ -53,21 +58,29 @@ export default function ScheduleScreen() {
   };
 
   const handleCancel = (item: DailySchedule) => {
-    Alert.alert(t("schedule.cancelRide"), t("schedule.cancelConfirm"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("common.confirm"),
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await cancelSchedule(item.id);
-            await load();
-          } catch {
-            Alert.alert(t("common.error"));
-          }
-        },
-      },
-    ]);
+    const doCancel = async () => {
+      try {
+        await cancelSchedule(item.id);
+        await load();
+      } catch {
+        if (Platform.OS === "web") {
+          window.alert("취소 처리에 실패했습니다");
+        } else {
+          Alert.alert(t("common.error"));
+        }
+      }
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm(t("schedule.cancelConfirm"))) {
+        doCancel();
+      }
+    } else {
+      Alert.alert(t("schedule.cancelRide"), t("schedule.cancelConfirm"), [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("common.confirm"), style: "destructive", onPress: doCancel },
+      ]);
+    }
   };
 
   return (
@@ -90,7 +103,7 @@ export default function ScheduleScreen() {
               <View style={styles.card}>
                 <Text style={styles.studentName}>{student?.name ?? "학생"}</Text>
                 <Text style={styles.time}>
-                  {t("schedule.pickupTime")}: {item.pickup_time}
+                  {t("schedule.pickupTime")}: {fmtTime(item.pickup_time)}
                 </Text>
                 <Text style={styles.status}>
                   {t(`schedule.${item.status}` as any, item.status)}

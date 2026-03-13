@@ -110,6 +110,10 @@ async def otp_login_or_register(
     user = result.scalar_one_or_none()
 
     if user:
+        # Update name if changed (e.g., dev-login with different name)
+        if name and user.name != name:
+            user.name = name
+            await db.flush()
         return user, False
 
     user = User(role=role, phone=phone, name=name)

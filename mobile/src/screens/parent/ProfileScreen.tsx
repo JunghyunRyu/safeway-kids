@@ -1,17 +1,31 @@
 import React from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
+
+const ROLE_LABELS: Record<string, string> = {
+  parent: "학부모",
+  driver: "기사",
+  safety_escort: "안전도우미",
+  academy_admin: "학원 관리자",
+  platform_admin: "플랫폼 관리자",
+};
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
 
   const handleLogout = () => {
-    Alert.alert(t("auth.logout"), "", [
-      { text: t("common.cancel"), style: "cancel" },
-      { text: t("common.confirm"), onPress: signOut },
-    ]);
+    if (Platform.OS === "web") {
+      if (window.confirm("로그아웃 하시겠습니까?")) {
+        signOut();
+      }
+    } else {
+      Alert.alert(t("auth.logout"), "", [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("common.confirm"), onPress: signOut },
+      ]);
+    }
   };
 
   return (
@@ -21,7 +35,7 @@ export default function ProfileScreen() {
         <View style={styles.infoCard}>
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.detail}>{user.phone}</Text>
-          <Text style={styles.detail}>{user.role}</Text>
+          <Text style={styles.detail}>{ROLE_LABELS[user.role] ?? user.role}</Text>
         </View>
       )}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
