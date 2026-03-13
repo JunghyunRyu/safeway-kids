@@ -81,3 +81,20 @@ async def refresh_token(
 async def get_me(current_user: User = Depends(get_current_user)) -> User:
     """현재 로그인한 사용자 정보"""
     return current_user
+
+
+@router.post("/dev-login", response_model=TokenResponse)
+async def dev_login(
+    request: OtpVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """개발용 바로 로그인 (OTP 검증 생략) — production에서는 비활성화"""
+    from app.config import settings as _settings
+    if _settings.environment == "production":
+        from app.common.exceptions import UnauthorizedError
+        raise UnauthorizedError(detail="Not available in production")
+
+    user, _is_new = await service.otp_login_or_register(
+        db, request.phone, request.name, request.role
+    )
+    return service.create_token_response(user)

@@ -38,6 +38,23 @@ export async function verifyOtp(
   return data;
 }
 
+export async function devLogin(
+  phone: string,
+  name: string,
+  role: string = "parent"
+): Promise<TokenResponse> {
+  const resp = await apiClient.post("/auth/dev-login", {
+    phone,
+    code: "000000",
+    name,
+    role,
+  });
+  const data: TokenResponse = resp.data;
+  await SecureStore.setItemAsync("access_token", data.access_token);
+  await SecureStore.setItemAsync("refresh_token", data.refresh_token);
+  return data;
+}
+
 export async function getMe(): Promise<UserResponse> {
   const resp = await apiClient.get("/auth/me");
   return resp.data;
