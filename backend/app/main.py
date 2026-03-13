@@ -119,11 +119,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
+    from fastapi.middleware.cors import CORSMiddleware
+
     application = FastAPI(
         title="SAFEWAY KIDS API",
         description="AI-Powered Children's School Shuttle Bus Sharing Platform",
         version="0.1.0",
         lifespan=lifespan,
+    )
+
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # Register routers
