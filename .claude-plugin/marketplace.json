@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "claude-forge",
-      "source": ".",
+      "source": "./",
       "description": "9-phase evidence-first development workflow framework",
       "version": "1.0.0"
     }
