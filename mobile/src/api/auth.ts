@@ -1,5 +1,4 @@
-import * as SecureStore from "expo-secure-store";
-import apiClient from "./client";
+import apiClient, { tokenStorage } from "./client";
 
 export interface TokenResponse {
   access_token: string;
@@ -33,8 +32,8 @@ export async function verifyOtp(
     role,
   });
   const data: TokenResponse = resp.data;
-  await SecureStore.setItemAsync("access_token", data.access_token);
-  await SecureStore.setItemAsync("refresh_token", data.refresh_token);
+  await tokenStorage.setItem("access_token", data.access_token);
+  await tokenStorage.setItem("refresh_token", data.refresh_token);
   return data;
 }
 
@@ -50,8 +49,8 @@ export async function devLogin(
     role,
   });
   const data: TokenResponse = resp.data;
-  await SecureStore.setItemAsync("access_token", data.access_token);
-  await SecureStore.setItemAsync("refresh_token", data.refresh_token);
+  await tokenStorage.setItem("access_token", data.access_token);
+  await tokenStorage.setItem("refresh_token", data.refresh_token);
   return data;
 }
 
@@ -61,11 +60,11 @@ export async function getMe(): Promise<UserResponse> {
 }
 
 export async function logout(): Promise<void> {
-  await SecureStore.deleteItemAsync("access_token");
-  await SecureStore.deleteItemAsync("refresh_token");
+  await tokenStorage.deleteItem("access_token");
+  await tokenStorage.deleteItem("refresh_token");
 }
 
 export async function isLoggedIn(): Promise<boolean> {
-  const token = await SecureStore.getItemAsync("access_token");
+  const token = await tokenStorage.getItem("access_token");
   return !!token;
 }
