@@ -17,6 +17,7 @@ import {
   preparePayment,
   confirmPayment,
 } from "../../api/billing";
+import { showError } from "../../utils/toast";
 import {
   Colors,
   Typography,
@@ -34,7 +35,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 // ── Summary Header ───────────────────────────────────────────
-function SummaryHeader({
+const SummaryHeader = memo(function SummaryHeader({
   pendingCount,
   pendingAmount,
 }: {
@@ -68,7 +69,7 @@ function SummaryHeader({
       </View>
     </View>
   );
-}
+});
 
 // ── Invoice Card (accordion) ─────────────────────────────────
 interface InvoiceCardProps {
@@ -137,15 +138,15 @@ const InvoiceCard = memo(function InvoiceCard({
       {expanded && (
         <View style={styles.cardBody}>
           <View style={styles.detailDivider} />
-          <InfoRow label="탑승 횟수" value={`${invoice.total_rides}회`} />
-          <InfoRow
+          <BillingInfoRow label="탑승 횟수" value={`${invoice.total_rides}회`} />
+          <BillingInfoRow
             label="청구 금액"
             value={`${invoice.amount.toLocaleString("ko-KR")}원`}
             valueStyle={styles.amountText}
           />
-          <InfoRow label="납부 기한" value={invoice.due_date} />
+          <BillingInfoRow label="납부 기한" value={invoice.due_date} />
           {invoice.paid_at ? (
-            <InfoRow
+            <BillingInfoRow
               label="납부일"
               value={invoice.paid_at.slice(0, 10)}
               valueStyle={{ color: Colors.success }}
@@ -182,7 +183,7 @@ const InvoiceCard = memo(function InvoiceCard({
   );
 });
 
-function InfoRow({
+const BillingInfoRow = memo(function BillingInfoRow({
   label,
   value,
   valueStyle,
@@ -197,7 +198,7 @@ function InfoRow({
       <Text style={[styles.infoValue, valueStyle]}>{value}</Text>
     </View>
   );
-}
+});
 
 // ── Main Screen ──────────────────────────────────────────────
 export default function BillingScreen() {
@@ -212,7 +213,7 @@ export default function BillingScreen() {
       const data = await getMyInvoices();
       setInvoices(data);
     } catch {
-      // ignore
+      showError('청구 내역을 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
       setRefreshing(false);

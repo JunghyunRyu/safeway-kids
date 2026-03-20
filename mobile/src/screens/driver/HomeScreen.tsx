@@ -8,6 +8,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { getMyAssignment, VehicleAssignment } from "../../api/vehicles";
 import { getDriverDailySchedules, DriverDailySchedule } from "../../api/schedules";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
+import { showError } from "../../utils/toast";
 
 function todayStr(): string {
   return new Date().toISOString().split("T")[0];
@@ -31,7 +32,7 @@ export default function DriverHomeScreen() {
       setAssignment(a);
       setSchedules(s);
     } catch {
-      // silent
+      showError('데이터를 불러오는데 실패했습니다');
     }
   }, []);
 

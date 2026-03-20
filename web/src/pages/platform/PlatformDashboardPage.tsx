@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import KpiCard from '../../components/KpiCard';
 import { StatusPieChart } from '../../components/Charts';
+import { showToast } from '../../components/Toast';
 import type { User } from '../../types';
 
 interface Stats {
@@ -68,7 +69,7 @@ export default function PlatformDashboardPage() {
           expiringDocs: toArr(expiringRes).length,
         });
       } catch {
-        // ignore
+        showToast('대시보드 데이터를 불러오는데 실패했습니다', 'error');
       } finally {
         setLoading(false);
       }

@@ -12,10 +12,24 @@ interface SeedResult {
   [key: string]: unknown;
 }
 
+const IS_PROD = import.meta.env.PROD;
+
+function ProdGuard() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center max-w-md">
+        <p className="text-yellow-800 font-medium">이 기능은 개발 환경에서만 사용할 수 있습니다.</p>
+      </div>
+    </div>
+  );
+}
+
 export default function PlatformSeedPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SeedResult | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  if (IS_PROD) return <ProdGuard />;
 
   const handleSeed = async () => {
     setShowConfirm(false);

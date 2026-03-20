@@ -1,5 +1,9 @@
+import logging
+
 from app.config import settings
 from app.modules.notification.providers.base import NotificationProvider
+
+logger = logging.getLogger(__name__)
 
 
 class FCMProvider(NotificationProvider):
@@ -9,7 +13,7 @@ class FCMProvider(NotificationProvider):
         self, device_token: str, title: str, body: str, data: dict | None = None
     ) -> bool:
         if settings.environment != "production":
-            print(f"[DEV FCM] token={device_token[:20]}... title={title} body={body}")
+            logger.info("[DEV FCM] token=%s... title=%s body=%s", device_token[:20], title, body)
             return True
 
         try:
@@ -23,14 +27,14 @@ class FCMProvider(NotificationProvider):
             messaging.send(message)
             return True
         except Exception as e:
-            print(f"[FCM ERROR] {e}")
+            logger.error("[FCM ERROR] %s", e)
             return False
 
     async def send_topic(
         self, topic: str, title: str, body: str, data: dict | None = None
     ) -> bool:
         if settings.environment != "production":
-            print(f"[DEV FCM TOPIC] topic={topic} title={title} body={body}")
+            logger.info("[DEV FCM TOPIC] topic=%s title=%s body=%s", topic, title, body)
             return True
 
         try:
@@ -44,5 +48,5 @@ class FCMProvider(NotificationProvider):
             messaging.send(message)
             return True
         except Exception as e:
-            print(f"[FCM TOPIC ERROR] {e}")
+            logger.error("[FCM TOPIC ERROR] %s", e)
             return False

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { showError } from "../../utils/toast";
 import {
   getMyAvailability,
   registerAvailability,
@@ -82,7 +83,7 @@ export default function AvailabilityScreen() {
       const data = await getMyAvailability();
       setItems(data);
     } catch {
-      // ignore
+      showError('가용시간을 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
       setRefreshing(false);

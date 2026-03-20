@@ -22,6 +22,7 @@ import {
   STATUS_COLORS,
   STATUS_BG_COLORS,
 } from "../../constants/theme";
+import { showError } from "../../utils/toast";
 
 function fmtTime(t: string): string {
   return t?.length >= 5 ? t.slice(0, 5) : t;
@@ -87,7 +88,7 @@ export default function ParentHomeScreen() {
       setStudents(s);
       setSchedules(d);
     } catch {
-      // silently fail on load
+      showError('데이터를 불러오는데 실패했습니다');
     }
   }, []);
 

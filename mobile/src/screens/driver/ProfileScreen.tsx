@@ -14,7 +14,9 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
 import { getMyAssignment, VehicleAssignment } from "../../api/vehicles";
+import InfoRow from "../../components/InfoRow";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
+import { showError } from "../../utils/toast";
 
 const ROLE_LABELS: Record<string, string> = {
   parent: "학부모",
@@ -33,28 +35,6 @@ function todayStr(): string {
   return new Date().toISOString().split("T")[0];
 }
 
-function InfoRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoIcon}>
-        <Ionicons name={icon} size={18} color={Colors.textSecondary} />
-      </View>
-      <View style={styles.infoContent}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
 export default function DriverProfileScreen() {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
@@ -71,7 +51,7 @@ export default function DriverProfileScreen() {
           const a = await getMyAssignment(todayStr());
           setAssignment(a);
         } catch {
-          // silent
+          showError('프로필 데이터를 불러오는데 실패했습니다');
         }
       })();
     }, [])
@@ -205,34 +185,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-  },
-  infoIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.surfaceElevated,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: Spacing.md,
-  },
-  infoContent: { flex: 1 },
-  infoLabel: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.textDisabled,
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: Typography.sizes.base,
-    color: Colors.textPrimary,
-    fontWeight: Typography.weights.medium,
   },
   logoutBtn: {
     flexDirection: "row",

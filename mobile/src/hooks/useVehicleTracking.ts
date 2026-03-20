@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GpsLocation, getVehicleLocation } from "../api/vehicles";
 import { API_BASE_URL, tokenStorage, refreshAccessToken } from "../api/client";
+import { debugLog, debugWarn } from "../utils/debug";
 
 const INITIAL_RETRY_MS = 3000;
 const MAX_RETRY_MS = 30000;
@@ -57,12 +58,12 @@ async function ensureValidToken(): Promise<string | null> {
   const token = await tokenStorage.getItem("access_token");
   if (isTokenValid(token)) return token;
 
-  console.log("[WS] Token missing or expired, attempting refresh...");
+  debugLog("[WS] Token missing or expired, attempting refresh...");
   const newToken = await refreshAccessToken();
   if (newToken) {
-    console.log("[WS] Token refreshed successfully");
+    debugLog("[WS] Token refreshed successfully");
   } else {
-    console.warn("[WS] Token refresh failed");
+    debugWarn("[WS] Token refresh failed");
   }
   return newToken;
 }
@@ -106,7 +107,7 @@ export function useVehicleTracking({
   const startPolling = useCallback(
     (ids: string[]) => {
       if (pollIntervalRef.current) return; // already polling
-      console.log("[WS] Switching to HTTP polling fallback");
+      debugLog("[WS] Switching to HTTP polling fallback");
       setConnectionState("polling");
 
       const poll = async () => {
@@ -141,30 +142,30 @@ export function useVehicleTracking({
       try {
         token = await ensureValidToken();
       } catch (err) {
-        console.warn("[WS] Token fetch error:", err);
+        debugWarn("[WS] Token fetch error:", err);
       }
       if (!token) {
-        console.warn("[WS] No valid token available, setting auth_failed");
+        debugWarn("[WS] No valid token available, setting auth_failed");
         if (mountedRef.current) setConnectionState("auth_failed");
         return;
       }
 
       const wsBase = API_BASE_URL.replace(/^http/, "ws");
       const url = `${wsBase}/telemetry/ws/vehicles/${vehicleId}?token=${token}`;
-      console.log(`[WS] Connecting: vehicle=${vehicleId.slice(0, 8)}...`);
+      debugLog(`[WS] Connecting: vehicle=${vehicleId.slice(0, 8)}...`);
       if (mountedRef.current) setConnectionState("connecting");
 
       let ws: WebSocket;
       try {
         ws = new WebSocket(url);
       } catch (err) {
-        console.warn("[WS] WebSocket constructor error:", err);
+        debugWarn("[WS] WebSocket constructor error:", err);
         if (mountedRef.current) setConnectionState("error");
         return;
       }
 
       ws.onopen = () => {
-        console.log(`[WS] Connected: vehicle=${vehicleId.slice(0, 8)}`);
+        debugLog(`[WS] Connected: vehicle=${vehicleId.slice(0, 8)}`);
         if (mountedRef.current) {
           setConnectionState("connected");
           wsFailCount.current = 0;
@@ -191,36 +192,36 @@ export function useVehicleTracking({
       };
 
       ws.onclose = (event) => {
-        console.warn(`[WS] Closed: code=${event.code} reason="${event.reason}" vehicle=${vehicleId.slice(0, 8)}`);
+        debugWarn(`[WS] Closed: code=${event.code} reason="${event.reason}" vehicle=${vehicleId.slice(0, 8)}`);
         if (!mountedRef.current || !enabled) return;
 
         // Permanent failure — never retry
         if (PERMANENT_CLOSE_CODES.has(event.code)) {
-          console.warn(`[WS] Permanent failure (code ${event.code}), not retrying`);
+          debugWarn(`[WS] Permanent failure (code ${event.code}), not retrying`);
           setConnectionState("error");
           return;
         }
 
         // Auth failure (4001) — try token refresh once
         if (event.code === 4001 && !authRetried.current) {
-          console.log("[WS] Auth failure, attempting token refresh + retry...");
+          debugLog("[WS] Auth failure, attempting token refresh + retry...");
           authRetried.current = true;
           refreshAccessToken()
             .then((newToken) => {
               if (!mountedRef.current) return;
               if (newToken) {
-                console.log("[WS] Token refreshed, retrying WS connection...");
+                debugLog("[WS] Token refreshed, retrying WS connection...");
                 setConnectionState("reconnecting");
                 connectWs(vehicleId, allIds).catch((err) =>
-                  console.warn("[WS] reconnect error:", err)
+                  debugWarn("[WS] reconnect error:", err)
                 );
               } else {
-                console.warn("[WS] Token refresh failed, auth_failed");
+                debugWarn("[WS] Token refresh failed, auth_failed");
                 setConnectionState("auth_failed");
               }
             })
             .catch((err) => {
-              console.warn("[WS] refreshAccessToken error:", err);
+              debugWarn("[WS] refreshAccessToken error:", err);
               if (mountedRef.current) setConnectionState("auth_failed");
             });
           return;
@@ -228,7 +229,7 @@ export function useVehicleTracking({
 
         // Auth failure after retry — give up
         if (event.code === 4001 && authRetried.current) {
-          console.warn("[WS] Auth still failing after refresh, auth_failed");
+          debugWarn("[WS] Auth still failing after refresh, auth_failed");
           setConnectionState("auth_failed");
           return;
         }
@@ -241,11 +242,11 @@ export function useVehicleTracking({
           startPolling(allIds);
           // Periodically retry WS from polling mode
           wsRetryFromPollRef.current = setTimeout(() => {
-            console.log("[WS] Retrying WS from polling mode...");
+            debugLog("[WS] Retrying WS from polling mode...");
             wsFailCount.current = 0;
             cleanupPolling();
             connectWs(vehicleId, allIds).catch((err) =>
-              console.warn("[WS] poll-retry error:", err)
+              debugWarn("[WS] poll-retry error:", err)
             );
           }, WS_RETRY_FROM_POLL_MS);
           return;
@@ -256,7 +257,7 @@ export function useVehicleTracking({
         const currentDelay = retryDelays.current.get(vehicleId) ?? INITIAL_RETRY_MS;
         const timeout = setTimeout(() => {
           connectWs(vehicleId, allIds).catch((err) =>
-            console.warn("[WS] retry error:", err)
+            debugWarn("[WS] retry error:", err)
           );
         }, currentDelay);
         retryTimeouts.current.push(timeout);
@@ -264,7 +265,7 @@ export function useVehicleTracking({
       };
 
       ws.onerror = (err) => {
-        console.warn(`[WS] Error: vehicle=${vehicleId.slice(0, 8)}`, err);
+        debugWarn(`[WS] Error: vehicle=${vehicleId.slice(0, 8)}`, err);
         ws.close();
       };
 
@@ -290,7 +291,7 @@ export function useVehicleTracking({
     // Connect to each vehicle
     vehicleIds.forEach((vid) => {
       connectWs(vid, vehicleIds).catch((err) => {
-        console.warn("[WS] connectWs unhandled error:", err);
+        debugWarn("[WS] connectWs unhandled error:", err);
       });
     });
 
