@@ -14,7 +14,7 @@ import Constants from "expo-constants";
 
 const KAKAO_MAP_API_KEY = Constants.expoConfig?.extra?.kakaoMapApiKey ?? "";
 const DEFAULT_CENTER = { lat: 37.4979, lng: 127.0276 };
-const MAP_HTML = require("../../../assets/kakao-map.html");
+import { MAP_HTML_CONTENT } from "../../constants/mapHtml";
 
 function todayStr(): string {
   return new Date().toISOString().split("T")[0];
@@ -149,7 +149,7 @@ export default function DriverMapScreen() {
 
       <WebView
         ref={webViewRef}
-        source={MAP_HTML}
+        source={{ html: MAP_HTML_CONTENT }}
         style={styles.webview}
         onMessage={onMessage}
         onLoad={onWebViewLoad}

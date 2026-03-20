@@ -8,8 +8,11 @@ from app.database import Base
 from app.modules.academy_management.models import Academy  # noqa: F401
 
 # Import all models so Alembic can detect them
+from app.modules.admin.models import AuditLog  # noqa: F401
 from app.modules.auth.models import User  # noqa: F401
+from app.modules.billing.models import BillingPlan, Invoice, Payment  # noqa: F401
 from app.modules.compliance.models import (  # noqa: F401
+    ComplianceDocument,
     Contract,
     DataRetentionPolicy,
     GuardianConsent,

@@ -2,14 +2,15 @@ import React, { memo, useCallback, useState } from "react";
 import {
   Alert,
   FlatList,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
+  Pressable,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import {
   DriverDailySchedule,
@@ -18,6 +19,7 @@ import {
   markBoarded,
 } from "../../api/schedules";
 import { getMyRoute, RoutePlan } from "../../api/routes";
+import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
 
 function todayStr(): string {
   return new Date().toISOString().split("T")[0];
@@ -59,15 +61,26 @@ const StopCard = memo(function StopCard({
   const handleBoard = useCallback(() => onBoard(id), [id, onBoard]);
   const handleAlight = useCallback(() => onAlight(id), [id, onAlight]);
 
+  const indexBgColor = isCompleted
+    ? Colors.statusCompleted
+    : isCancelled
+    ? Colors.neutral
+    : Colors.roleDriver;
+
   return (
-    <View style={[styles.card, isCancelled ? styles.cardCancelled : undefined]}>
-      <View
-        style={[
-          styles.indexCircle,
-          isCompleted ? styles.indexCircleCompleted : undefined,
-        ]}
-      >
-        <Text style={styles.indexText}>{index + 1}</Text>
+    <View
+      style={[
+        styles.card,
+        Shadows.sm,
+        isCancelled && styles.cardCancelled,
+      ]}
+    >
+      <View style={[styles.indexCircle, { backgroundColor: indexBgColor }]}>
+        {isCompleted ? (
+          <Ionicons name="checkmark" size={16} color={Colors.textInverse} />
+        ) : (
+          <Text style={styles.indexText}>{index + 1}</Text>
+        )}
       </View>
       <View style={styles.cardBody}>
         <Text style={styles.studentName}>{studentName}</Text>
@@ -77,26 +90,32 @@ const StopCard = memo(function StopCard({
         </Text>
 
         {isCancelled ? (
-          <Text style={styles.cancelledText}>
+          <Text style={[styles.statusText, { color: Colors.neutral }]}>
             {t("schedule.cancelled")}
           </Text>
         ) : isCompleted ? (
-          <Text style={styles.completedText}>
+          <Text style={[styles.statusText, { color: Colors.success }]}>
             {t("schedule.completed")}
           </Text>
         ) : (
           <View style={styles.actions}>
             {!isBoarded ? (
-              <Pressable style={styles.boardBtn} onPress={handleBoard}>
-                <Text style={styles.btnText}>
-                  {t("driver.markBoarded")}
-                </Text>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: Colors.info }]}
+                onPress={handleBoard}
+               
+              >
+                <Ionicons name="enter-outline" size={14} color={Colors.textInverse} />
+                <Text style={styles.btnText}>{t("driver.markBoarded")}</Text>
               </Pressable>
             ) : (
-              <Pressable style={styles.alightBtn} onPress={handleAlight}>
-                <Text style={styles.btnText}>
-                  {t("driver.markAlighted")}
-                </Text>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: Colors.warning }]}
+                onPress={handleAlight}
+               
+              >
+                <Ionicons name="exit-outline" size={14} color={Colors.textInverse} />
+                <Text style={styles.btnText}>{t("driver.markAlighted")}</Text>
               </Pressable>
             )}
           </View>
@@ -120,7 +139,6 @@ export default function DriverRouteScreen() {
         getMyRoute(todayStr()).catch(() => null),
       ]);
 
-      // If route plan exists, reorder schedules by optimized stop order
       if (routeData && routeData.stops.length > 0) {
         setRoutePlan(routeData);
         const orderMap = new Map(
@@ -201,52 +219,55 @@ export default function DriverRouteScreen() {
     []
   );
 
-  const completedCount = schedules.filter(
-    (s) => s.status === "completed"
-  ).length;
-  const totalActive = schedules.filter(
-    (s) => s.status !== "cancelled"
-  ).length;
+  const completedCount = schedules.filter((s) => s.status === "completed").length;
+  const totalActive = schedules.filter((s) => s.status !== "cancelled").length;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
-      <Text style={styles.title}>{t("driver.stopList")}</Text>
-
-      {/* Route info banner */}
-      {routePlan ? (
-        <View style={styles.routeBanner}>
-          <Text style={styles.routeBannerText}>
-            AI 최적화 노선 v{routePlan.version}
-          </Text>
-          <Text style={styles.routeBannerDetail}>
-            {routePlan.total_distance_km?.toFixed(1)}km · 약{" "}
-            {Math.round((routePlan.total_distance_km ?? 0) * 2)}분 (운행) · {completedCount}/
-            {totalActive} 완료
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>{t("driver.stopList")}</Text>
+        <View style={[styles.progressBadge, { backgroundColor: Colors.successLight }]}>
+          <Text style={[styles.progressText, { color: Colors.success }]}>
+            {completedCount}/{totalActive} 완료
           </Text>
         </View>
-      ) : null}
+      </View>
 
-      {!routePlan && schedules.length > 0 ? (
-        <View style={[styles.routeBanner, styles.routeBannerFallback]}>
-          <Text style={styles.routeBannerText}>
-            픽업 시간순 (최적화 노선 없음)
+      {/* Route Banner */}
+      {routePlan ? (
+        <View style={[styles.routeBanner, { borderLeftColor: Colors.success, backgroundColor: Colors.successLight }]}>
+          <Ionicons name="navigate" size={14} color={Colors.success} />
+          <Text style={[styles.routeBannerText, { color: Colors.success }]}>
+            AI 최적화 노선 v{routePlan.version} · {routePlan.total_distance_km?.toFixed(1)}km
           </Text>
-          <Text style={styles.routeBannerDetail}>
-            {completedCount}/{totalActive} 완료
+        </View>
+      ) : schedules.length > 0 ? (
+        <View style={[styles.routeBanner, { borderLeftColor: Colors.warning, backgroundColor: Colors.warningLight }]}>
+          <Ionicons name="time-outline" size={14} color={Colors.warning} />
+          <Text style={[styles.routeBannerText, { color: Colors.warningDark }]}>
+            픽업 시간순 (최적화 노선 없음)
           </Text>
         </View>
       ) : null}
 
       {schedules.length === 0 ? (
-        <Text style={styles.empty}>{t("driver.noAssignment")}</Text>
+        <View style={styles.emptyState}>
+          <Ionicons name="map-outline" size={56} color={Colors.textDisabled} />
+          <Text style={styles.emptyText}>{t("driver.noAssignment")}</Text>
+        </View>
       ) : (
         <FlatList
           data={schedules}
           keyExtractor={keyExtractor}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.roleDriver}
+            />
           }
           renderItem={renderItem}
+          contentContainerStyle={styles.list}
         />
       )}
     </View>
@@ -254,70 +275,109 @@ export default function DriverRouteScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#f0f4e8" },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 12,
+  container: { flex: 1, backgroundColor: Colors.background },
+  pageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  pageTitle: {
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+  },
+  progressBadge: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+  },
+  progressText: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semibold,
   },
   routeBanner: {
-    backgroundColor: "#E8F5E9",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: "#4CAF50",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    borderLeftWidth: 3,
   },
-  routeBannerFallback: {
-    backgroundColor: "#FFF3E0",
-    borderLeftColor: "#FF9800",
+  routeBannerText: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.medium,
   },
-  routeBannerText: { fontSize: 13, fontWeight: "600", color: "#333" },
-  routeBannerDetail: { fontSize: 12, color: "#666", marginTop: 2 },
-  empty: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
-    marginTop: 40,
-  },
+  list: { padding: Spacing.base, gap: Spacing.sm },
   card: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    elevation: 2,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
   },
   cardCancelled: { opacity: 0.5 },
   indexCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#4CAF50",
+    width: 36,
+    height: 36,
+    borderRadius: Radius.full,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
-    marginTop: 4,
+    marginRight: Spacing.md,
+    marginTop: 2,
   },
-  indexCircleCompleted: { backgroundColor: "#999" },
-  indexText: { color: "#fff", fontWeight: "bold" },
+  indexText: {
+    color: Colors.textInverse,
+    fontWeight: Typography.weights.bold,
+    fontSize: Typography.sizes.base,
+  },
   cardBody: { flex: 1 },
-  studentName: { fontSize: 16, fontWeight: "600", marginBottom: 2 },
-  detail: { fontSize: 13, color: "#666", marginBottom: 2 },
-  actions: { flexDirection: "row", marginTop: 8, gap: 8 },
-  boardBtn: {
-    backgroundColor: "#2196F3",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
+  studentName: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textPrimary,
+    marginBottom: 2,
   },
-  alightBtn: {
-    backgroundColor: "#FF9800",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
+  detail: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+    marginBottom: 2,
   },
-  btnText: { color: "#fff", fontWeight: "600", fontSize: 13 },
-  cancelledText: { color: "#999", fontStyle: "italic", marginTop: 4 },
-  completedText: { color: "#4CAF50", fontWeight: "500", marginTop: 4 },
+  statusText: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.medium,
+    marginTop: Spacing.xs,
+  },
+  actions: {
+    flexDirection: "row",
+    marginTop: Spacing.sm,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    minHeight: 40,
+  },
+  btnText: {
+    color: Colors.textInverse,
+    fontWeight: Typography.weights.semibold,
+    fontSize: Typography.sizes.sm,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  emptyText: {
+    fontSize: Typography.sizes.base,
+    color: Colors.textDisabled,
+  },
 });

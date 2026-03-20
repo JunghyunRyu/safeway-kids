@@ -6,17 +6,29 @@ import {
   StyleSheet,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   Alert,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { getMyShifts, checkIn, checkOut, EscortShift } from "../../api/escort";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  Radius,
+  Shadows,
+  STATUS_COLORS,
+  STATUS_BG_COLORS,
+} from "../../constants/theme";
 
-const STATUS_INFO: Record<string, { text: string; color: string }> = {
-  assigned: { text: "배정됨", color: "#3B82F6" },
-  checked_in: { text: "출근", color: "#F59E0B" },
-  completed: { text: "완료", color: "#10B981" },
-  no_show: { text: "결근", color: "#EF4444" },
+const STATUS_LABELS: Record<string, string> = {
+  assigned: "배정됨",
+  checked_in: "출근",
+  completed: "완료",
+  no_show: "결근",
 };
+
+const timeFmt = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit" });
 
 interface ShiftCardProps {
   id: string;
@@ -39,73 +51,75 @@ const ShiftCard = memo(function ShiftCard({
   onCheckIn,
   onCheckOut,
 }: ShiftCardProps) {
-  const st = STATUS_INFO[status] || STATUS_INFO.assigned;
+  const statusColor = STATUS_COLORS[status] ?? Colors.neutral;
+  const statusBg = STATUS_BG_COLORS[status] ?? Colors.neutralLight;
 
   const handleCheckIn = useCallback(() => onCheckIn(id), [id, onCheckIn]);
   const handleCheckOut = useCallback(() => onCheckOut(id), [id, onCheckOut]);
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, Shadows.sm]}>
       <View style={styles.cardHeader}>
-        <Text style={styles.date}>{shiftDate}</Text>
-        <View style={[styles.badge, { backgroundColor: st.color + "20" }]}>
-          <Text style={[styles.badgeText, { color: st.color }]}>
-            {st.text}
+        <Text style={styles.dateText}>{shiftDate}</Text>
+        <View style={[styles.badge, { backgroundColor: statusBg }]}>
+          <Text style={[styles.badgeText, { color: statusColor }]}>
+            {STATUS_LABELS[status] ?? status}
           </Text>
         </View>
       </View>
-      <View style={styles.row}>
-        <Text style={styles.label}>수당</Text>
-        <Text style={styles.amount}>
-          {compensationAmount.toLocaleString()}원
+
+      <View style={styles.infoRow}>
+        <Text style={styles.infoLabel}>수당</Text>
+        <Text style={[styles.infoValue, { color: Colors.primary, fontWeight: Typography.weights.bold }]}>
+          {compensationAmount.toLocaleString("ko-KR")}원
         </Text>
       </View>
       {checkInAt ? (
-        <View style={styles.row}>
-          <Text style={styles.label}>출근 시간</Text>
-          <Text style={styles.value}>
-            {new Date(checkInAt).toLocaleTimeString("ko-KR")}
-          </Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>출근 시간</Text>
+          <Text style={styles.infoValue}>{timeFmt.format(new Date(checkInAt))}</Text>
         </View>
       ) : null}
       {checkOutAt ? (
-        <View style={styles.row}>
-          <Text style={styles.label}>퇴근 시간</Text>
-          <Text style={styles.value}>
-            {new Date(checkOutAt).toLocaleTimeString("ko-KR")}
-          </Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>퇴근 시간</Text>
+          <Text style={styles.infoValue}>{timeFmt.format(new Date(checkOutAt))}</Text>
         </View>
       ) : null}
 
-      {/* Action buttons */}
       <View style={styles.actions}>
-        {status === "assigned" ? (
+        {status === "assigned" && (
           <Pressable
-            style={[styles.button, styles.buttonCheckIn]}
+            style={[styles.actionBtn, { backgroundColor: Colors.info }]}
             onPress={handleCheckIn}
+           
           >
-            <Text style={styles.buttonText}>출근</Text>
+            <Ionicons name="enter-outline" size={16} color={Colors.textInverse} />
+            <Text style={styles.actionBtnText}>출근</Text>
           </Pressable>
-        ) : null}
-        {status === "checked_in" ? (
+        )}
+        {status === "checked_in" && (
           <Pressable
-            style={[styles.button, styles.buttonCheckOut]}
+            style={[styles.actionBtn, { backgroundColor: Colors.success }]}
             onPress={handleCheckOut}
+           
           >
-            <Text style={styles.buttonText}>퇴근</Text>
+            <Ionicons name="exit-outline" size={16} color={Colors.textInverse} />
+            <Text style={styles.actionBtnText}>퇴근</Text>
           </Pressable>
-        ) : null}
+        )}
       </View>
     </View>
   );
 });
 
 export default function ShiftsScreen() {
+  const insets = useSafeAreaInsets();
   const [shifts, setShifts] = useState<EscortShift[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await getMyShifts();
       setShifts(data);
@@ -113,12 +127,11 @@ export default function ShiftsScreen() {
       // ignore
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const handleCheckIn = useCallback(
     async (shiftId: string) => {
@@ -162,76 +175,127 @@ export default function ShiftsScreen() {
 
   const keyExtractor = useCallback((item: EscortShift) => item.id, []);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    load();
+  }, [load]);
+
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>내 근무</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <Text style={styles.title}>내 근무</Text>
+        <View style={[styles.countBadge, { backgroundColor: Colors.roleEscort + "15" }]}>
+          <Text style={[styles.countText, { color: Colors.roleEscort }]}>
+            {shifts.length}건
+          </Text>
+        </View>
+      </View>
       <FlatList
         data={shifts}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={load} />
+          <RefreshControl
+            refreshing={refreshing || loading}
+            onRefresh={onRefresh}
+            tintColor={Colors.roleEscort}
+          />
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>배정된 근무가 없습니다</Text>
-          </View>
+          !loading ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="briefcase-outline" size={56} color={Colors.textDisabled} />
+              <Text style={styles.emptyTitle}>배정된 근무가 없습니다</Text>
+            </View>
+          ) : null
         }
         contentContainerStyle={styles.list}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1E293B",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
-  list: { padding: 16 },
+  title: {
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+  },
+  countBadge: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+  },
+  countText: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.semibold },
+  list: { padding: Spacing.base, gap: Spacing.md },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
-  date: { fontSize: 18, fontWeight: "700", color: "#1E293B" },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { fontSize: 12, fontWeight: "600" },
-  row: {
+  dateText: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+  },
+  badge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+  },
+  badgeText: { fontSize: Typography.sizes.xs, fontWeight: Typography.weights.semibold },
+  infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 4,
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
-  label: { fontSize: 14, color: "#64748B" },
-  value: { fontSize: 14, color: "#334155" },
-  amount: { fontSize: 16, fontWeight: "700", color: "#2563EB" },
-  actions: { marginTop: 12, flexDirection: "row", gap: 8 },
-  button: {
+  infoLabel: { fontSize: Typography.sizes.base, color: Colors.textSecondary },
+  infoValue: { fontSize: Typography.sizes.base, color: Colors.textPrimary },
+  actions: { marginTop: Spacing.md, flexDirection: "row", gap: Spacing.sm },
+  actionBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.xs,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+    minHeight: 48,
   },
-  buttonCheckIn: { backgroundColor: "#3B82F6" },
-  buttonCheckOut: { backgroundColor: "#10B981" },
-  buttonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-  empty: { alignItems: "center", paddingTop: 60 },
-  emptyText: { fontSize: 16, color: "#94A3B8" },
+  actionBtnText: {
+    color: Colors.textInverse,
+    fontWeight: Typography.weights.bold,
+    fontSize: Typography.sizes.base,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 60,
+    gap: Spacing.sm,
+  },
+  emptyTitle: {
+    fontSize: Typography.sizes.base,
+    color: Colors.textDisabled,
+  },
 });

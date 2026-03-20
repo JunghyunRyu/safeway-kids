@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { showToast } from '../components/Toast';
 
 const API_BASE = '/api/v1';
 
@@ -62,6 +63,19 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+
+    // User-friendly error messages for non-401 errors
+    if (error.response?.status !== 401) {
+      const status = error.response?.status;
+      if (!error.response) {
+        showToast('네트워크 연결을 확인해 주세요', 'error');
+      } else if (status === 403) {
+        showToast('접근 권한이 없습니다', 'error');
+      } else if (status && status >= 500) {
+        showToast('서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요', 'error');
+      }
+    }
+
     return Promise.reject(error);
   }
 );

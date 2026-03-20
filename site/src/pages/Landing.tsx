@@ -128,13 +128,13 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="#contact"
-              className="inline-flex items-center justify-center px-8 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-2xl transition-all shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center px-8 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-2xl transition shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
             >
               도입 문의하기
             </a>
             <a
               href="#features"
-              className="inline-flex items-center justify-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-2xl transition-all border border-gray-200 hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-2xl transition border border-gray-200 hover:-translate-y-0.5"
             >
               더 알아보기 ↓
             </a>
@@ -172,7 +172,7 @@ export default function Landing() {
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="group p-8 bg-gray-50 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1 border border-transparent hover:border-gray-100"
+                className="group p-8 bg-gray-50 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-gray-200/50 transition duration-300 hover:-translate-y-1 border border-transparent hover:border-gray-100"
               >
                 <div className="text-4xl mb-5 group-hover:scale-110 transition-transform">{f.icon}</div>
                 <h3 className="text-lg font-bold mb-3">{f.title}</h3>
@@ -289,9 +289,11 @@ export default function Landing() {
                 <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">이름</label>
                 <input
                   id="name"
+                  name="name"
                   type="text"
                   required
-                  placeholder="홍길동"
+                  autoComplete="name"
+                  placeholder="홍길동…"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                 />
               </div>
@@ -299,9 +301,11 @@ export default function Landing() {
                 <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">연락처</label>
                 <input
                   id="phone"
+                  name="phone"
                   type="tel"
                   required
-                  placeholder="010-1234-5678"
+                  autoComplete="tel"
+                  placeholder="010-1234-5678…"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                 />
               </div>
@@ -311,6 +315,7 @@ export default function Landing() {
               <label htmlFor="type" className="block text-sm font-semibold text-gray-700 mb-2">구분</label>
               <select
                 id="type"
+                name="type"
                 required
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors bg-white"
               >
@@ -327,9 +332,10 @@ export default function Landing() {
               <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-2">문의 내용</label>
               <textarea
                 id="message"
+                name="message"
                 rows={4}
                 required
-                placeholder="문의하실 내용을 입력해주세요"
+                placeholder="문의하실 내용을 입력해주세요…"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-none"
               />
             </div>
@@ -337,7 +343,7 @@ export default function Landing() {
             <div className="text-center pt-4">
               <button
                 type="submit"
-                className="px-10 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-2xl transition-all shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5"
+                className="px-10 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-2xl transition shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5"
               >
                 문의 접수하기
               </button>

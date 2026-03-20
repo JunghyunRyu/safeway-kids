@@ -6,62 +6,78 @@ import {
   StyleSheet,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   Alert,
   TextInput,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import {
   getMyAvailability,
   registerAvailability,
   EscortAvailability,
 } from "../../api/escort";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  Radius,
+  Shadows,
+  STATUS_COLORS,
+  STATUS_BG_COLORS,
+} from "../../constants/theme";
 
-const STATUS_COLOR: Record<string, string> = {
-  available: "#10B981",
-  matched: "#3B82F6",
-  completed: "#6B7280",
-  cancelled: "#EF4444",
+const STATUS_LABELS: Record<string, string> = {
+  available: "가능",
+  matched: "배정됨",
+  completed: "완료",
+  cancelled: "취소됨",
 };
-
-interface AvailabilityCardProps {
-  availableDate: string;
-  status: string;
-  startTime: string;
-  endTime: string;
-}
 
 const AvailabilityCard = memo(function AvailabilityCard({
   availableDate,
   status,
   startTime,
   endTime,
-}: AvailabilityCardProps) {
-  const color = STATUS_COLOR[status] || "#6B7280";
+}: {
+  availableDate: string;
+  status: string;
+  startTime: string;
+  endTime: string;
+}) {
+  const statusColor = STATUS_COLORS[status] ?? Colors.neutral;
+  const statusBg = STATUS_BG_COLORS[status] ?? Colors.neutralLight;
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, Shadows.sm]}>
       <View style={styles.cardHeader}>
-        <Text style={styles.date}>{availableDate}</Text>
-        <View style={[styles.badge, { backgroundColor: color + "20" }]}>
-          <Text style={[styles.badgeText, { color }]}>{status}</Text>
+        <Text style={styles.dateText}>{availableDate}</Text>
+        <View style={[styles.badge, { backgroundColor: statusBg }]}>
+          <Text style={[styles.badgeText, { color: statusColor }]}>
+            {STATUS_LABELS[status] ?? status}
+          </Text>
         </View>
       </View>
-      <Text style={styles.time}>
-        {startTime} ~ {endTime}
-      </Text>
+      <View style={styles.timeRow}>
+        <Ionicons name="time-outline" size={14} color={Colors.textSecondary} />
+        <Text style={styles.timeText}>
+          {startTime?.slice(0, 5)} ~ {endTime?.slice(0, 5)}
+        </Text>
+      </View>
     </View>
   );
 });
 
 export default function AvailabilityScreen() {
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<EscortAvailability[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("07:00");
   const [endTime, setEndTime] = useState("09:00");
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await getMyAvailability();
       setItems(data);
@@ -69,12 +85,11 @@ export default function AvailabilityScreen() {
       // ignore
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const handleRegister = useCallback(async () => {
     if (!date) {
@@ -91,10 +106,6 @@ export default function AvailabilityScreen() {
     }
   }, [date, startTime, endTime, load]);
 
-  const toggleForm = useCallback(() => {
-    setShowForm((prev) => !prev);
-  }, []);
-
   const renderItem = useCallback(
     ({ item }: { item: EscortAvailability }) => (
       <AvailabilityCard
@@ -107,133 +118,212 @@ export default function AvailabilityScreen() {
     []
   );
 
-  const keyExtractor = useCallback((item: EscortAvailability) => item.id, []);
-
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.title}>가용시간</Text>
-        <Pressable onPress={toggleForm} style={styles.addButton}>
-          <Text style={styles.addButtonText}>
-            {showForm ? "취소" : "+ 등록"}
-          </Text>
+        <Pressable
+          onPress={() => setShowForm((p) => !p)}
+          style={[
+            styles.addBtn,
+            { backgroundColor: showForm ? Colors.neutral : Colors.roleEscort },
+          ]}
+         
+        >
+          <Ionicons
+            name={showForm ? "close" : "add"}
+            size={18}
+            color={Colors.textInverse}
+          />
+          <Text style={styles.addBtnText}>{showForm ? "취소" : "등록"}</Text>
         </Pressable>
       </View>
 
-      {showForm ? (
-        <View style={styles.form}>
+      {showForm && (
+        <View style={[styles.form, Shadows.sm]}>
+          <Text style={styles.formLabel}>날짜</Text>
           <TextInput
             style={styles.input}
-            placeholder="날짜 (2026-03-16)"
+            placeholder="2026-03-16"
             value={date}
             onChangeText={setDate}
+            placeholderTextColor={Colors.textDisabled}
           />
-          <View style={styles.timeRow}>
+          <Text style={styles.formLabel}>시간</Text>
+          <View style={styles.timeInputRow}>
             <TextInput
-              style={[styles.input, styles.timeInput]}
-              placeholder="시작 (07:00)"
+              style={[styles.input, { flex: 1 }]}
+              placeholder="07:00"
               value={startTime}
               onChangeText={setStartTime}
+              placeholderTextColor={Colors.textDisabled}
             />
             <Text style={styles.tilde}>~</Text>
             <TextInput
-              style={[styles.input, styles.timeInput]}
-              placeholder="종료 (09:00)"
+              style={[styles.input, { flex: 1 }]}
+              placeholder="09:00"
               value={endTime}
               onChangeText={setEndTime}
+              placeholderTextColor={Colors.textDisabled}
             />
           </View>
-          <Pressable style={styles.submitButton} onPress={handleRegister}>
-            <Text style={styles.submitText}>등록</Text>
+          <Pressable
+            style={styles.submitBtn}
+            onPress={handleRegister}
+           
+          >
+            <Text style={styles.submitText}>등록하기</Text>
           </Pressable>
         </View>
-      ) : null}
+      )}
 
       <FlatList
         data={items}
-        keyExtractor={keyExtractor}
+        keyExtractor={(item) => item.id}
         renderItem={renderItem}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={load} />
+          <RefreshControl
+            refreshing={refreshing || loading}
+            onRefresh={() => { setRefreshing(true); load(); }}
+            tintColor={Colors.roleEscort}
+          />
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>등록된 가용시간이 없습니다</Text>
-          </View>
+          !loading ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="time-outline" size={56} color={Colors.textDisabled} />
+              <Text style={styles.emptyTitle}>등록된 가용시간이 없습니다</Text>
+              <Text style={styles.emptyDesc}>상단 "등록"으로 가용시간을 추가하세요.</Text>
+            </View>
+          ) : null
         }
         contentContainerStyle={styles.list}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
-  title: { fontSize: 24, fontWeight: "bold", color: "#1E293B" },
-  addButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: "#3B82F6",
-    borderRadius: 8,
+  title: {
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
   },
-  addButtonText: { color: "#fff", fontWeight: "600", fontSize: 14 },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+  },
+  addBtnText: {
+    color: Colors.textInverse,
+    fontWeight: Typography.weights.semibold,
+    fontSize: Typography.sizes.sm,
+  },
   form: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
+    margin: Spacing.base,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
+  },
+  formLabel: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+    textTransform: "uppercase",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    marginBottom: 8,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    fontSize: Typography.sizes.base,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.background,
+    marginBottom: Spacing.sm,
   },
-  timeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  timeInput: { flex: 1 },
-  tilde: { fontSize: 18, color: "#64748B", marginBottom: 8 },
-  submitButton: {
-    backgroundColor: "#10B981",
-    borderRadius: 8,
-    paddingVertical: 12,
+  timeInputRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
+    gap: Spacing.sm,
   },
-  submitText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-  list: { padding: 16 },
+  tilde: {
+    fontSize: Typography.sizes.lg,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+  },
+  submitBtn: {
+    backgroundColor: Colors.roleEscort,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+    alignItems: "center",
+    marginTop: Spacing.xs,
+    minHeight: 48,
+  },
+  submitText: {
+    color: Colors.textInverse,
+    fontWeight: Typography.weights.bold,
+    fontSize: Typography.sizes.base,
+  },
+  list: { padding: Spacing.base, gap: Spacing.sm },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: Spacing.sm,
   },
-  date: { fontSize: 16, fontWeight: "700", color: "#1E293B" },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { fontSize: 12, fontWeight: "600" },
-  time: { fontSize: 14, color: "#64748B" },
-  empty: { alignItems: "center", paddingTop: 60 },
-  emptyText: { fontSize: 16, color: "#94A3B8" },
+  dateText: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+  },
+  badge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+  },
+  badgeText: { fontSize: Typography.sizes.xs, fontWeight: Typography.weights.semibold },
+  timeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  timeText: { fontSize: Typography.sizes.base, color: Colors.textSecondary },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    paddingTop: 60,
+    gap: Spacing.sm,
+  },
+  emptyTitle: {
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textSecondary,
+  },
+  emptyDesc: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textDisabled,
+    textAlign: "center",
+  },
 });

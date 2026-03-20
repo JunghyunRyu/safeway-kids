@@ -1,6 +1,7 @@
 import Constants from "expo-constants";
 import axios from "axios";
 import { Platform } from "react-native";
+import { showError } from "../utils/toast";
 
 // Web-safe token storage (SecureStore is native-only)
 let _memoryTokens: Record<string, string> = {};
@@ -79,8 +80,43 @@ apiClient.interceptors.response.use(
         }
       }
     }
+
+    // User-friendly error messages for non-401 errors
+    if (error.response?.status !== 401) {
+      const status = error.response?.status;
+      if (!error.response) {
+        // Network error (no response received)
+        showError("네트워크 연결을 확인해 주세요");
+      } else if (status === 403) {
+        showError("접근 권한이 없습니다");
+      } else if (status && status >= 500) {
+        showError("서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요");
+      }
+    }
+
     return Promise.reject(error);
   }
 );
+
+/**
+ * Attempt to refresh the access token using the stored refresh token.
+ * Returns the new access token on success, or null on failure.
+ */
+export async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = await tokenStorage.getItem("refresh_token");
+  if (!refreshToken) return null;
+  try {
+    const resp = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+      refresh_token: refreshToken,
+    });
+    await tokenStorage.setItem("access_token", resp.data.access_token);
+    await tokenStorage.setItem("refresh_token", resp.data.refresh_token);
+    return resp.data.access_token;
+  } catch {
+    await tokenStorage.deleteItem("access_token");
+    await tokenStorage.deleteItem("refresh_token");
+    return null;
+  }
+}
 
 export default apiClient;

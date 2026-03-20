@@ -2,7 +2,6 @@ import React, { memo, useCallback, useState } from "react";
 import {
   FlatList,
   Platform,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -14,22 +13,30 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
 import { listStudents, Student } from "../../api/students";
 import { listDailySchedules, DailySchedule } from "../../api/schedules";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  Radius,
+  Shadows,
+  STATUS_COLORS,
+  STATUS_BG_COLORS,
+} from "../../constants/theme";
 
-/** Strip seconds from "HH:MM:SS" → "HH:MM" */
 function fmtTime(t: string): string {
   return t?.length >= 5 ? t.slice(0, 5) : t;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: "#2196F3",
-  boarded: "#FF9800",
-  completed: "#4CAF50",
-  cancelled: "#999",
-};
-
 function todayStr(): string {
   return new Date().toISOString().split("T")[0];
 }
+
+const STATUS_LABELS: Record<string, string> = {
+  scheduled: "예정",
+  boarded: "탑승 중",
+  completed: "완료",
+  cancelled: "취소됨",
+};
 
 interface ScheduleCardProps {
   studentName: string;
@@ -43,18 +50,16 @@ const ScheduleCard = memo(function ScheduleCard({
   pickupTime,
 }: ScheduleCardProps) {
   const { t } = useTranslation();
+  const statusColor = STATUS_COLORS[status] ?? Colors.neutral;
+  const statusBg = STATUS_BG_COLORS[status] ?? Colors.neutralLight;
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, Shadows.sm]}>
       <View style={styles.cardHeader}>
         <Text style={styles.studentName}>{studentName}</Text>
-        <View
-          style={[
-            styles.badge,
-            { backgroundColor: STATUS_COLORS[status] ?? "#999" },
-          ]}
-        >
-          <Text style={styles.badgeText}>
-            {t(`schedule.${status}` as any, status)}
+        <View style={[styles.badge, { backgroundColor: statusBg }]}>
+          <Text style={[styles.badgeText, { color: statusColor }]}>
+            {STATUS_LABELS[status] ?? t(`schedule.${status}` as any, status)}
           </Text>
         </View>
       </View>
@@ -115,29 +120,52 @@ export default function ParentHomeScreen() {
   const keyExtractor = useCallback((item: DailySchedule) => item.id, []);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
-      <Text style={styles.greeting}>
-        {t("home.greeting")}, {user?.name}
-      </Text>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {t("home.childCount")}: {students.length}명
-        </Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* 인사 헤더 */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>
+            {t("home.greeting")}, {user?.name}
+          </Text>
+          <Text style={styles.date}>
+            {new Date().toLocaleDateString("ko-KR", {
+              month: "long",
+              day: "numeric",
+              weekday: "short",
+            })}
+          </Text>
+        </View>
+        <View style={[styles.childBadge, { backgroundColor: Colors.primaryLight }]}>
+          <Text style={[styles.childCount, { color: Colors.primary }]}>
+            {students.length}명
+          </Text>
+          <Text style={[styles.childLabel, { color: Colors.primary }]}>자녀</Text>
+        </View>
       </View>
 
-      <Text style={styles.sectionTitle}>{t("home.todaySchedule")}</Text>
+      {/* 오늘 일정 */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{t("home.todaySchedule")}</Text>
+        <Text style={styles.sectionCount}>{schedules.length}건</Text>
+      </View>
 
       {schedules.length === 0 ? (
-        <Text style={styles.empty}>{t("home.noSchedule")}</Text>
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>{t("home.noSchedule")}</Text>
+        </View>
       ) : (
         <FlatList
           data={schedules}
           keyExtractor={keyExtractor}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.primary}
+            />
           }
           renderItem={renderItem}
+          contentContainerStyle={styles.list}
         />
       )}
     </View>
@@ -145,23 +173,96 @@ export default function ParentHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#f8f9fa" },
-  greeting: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
-  section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 8, color: "#333" },
-  empty: { fontSize: 14, color: "#888", textAlign: "center", marginTop: 40 },
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  greeting: {
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+  },
+  date: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  childBadge: {
+    alignItems: "center",
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+  },
+  childCount: {
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+  },
+  childLabel: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.medium,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textPrimary,
+  },
+  sectionCount: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+  },
+  list: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.xl, gap: Spacing.sm },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    ...(Platform.OS === "web"
-      ? { boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
-      : { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 }),
-  } as any,
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  studentName: { fontSize: 16, fontWeight: "600" },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { color: "#fff", fontSize: 12, fontWeight: "600" },
-  cardTime: { fontSize: 14, color: "#666", marginTop: 6 },
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.xs,
+  },
+  studentName: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textPrimary,
+  },
+  badge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+  },
+  badgeText: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.semibold,
+  },
+  cardTime: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+  },
+  empty: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 60,
+  },
+  emptyText: {
+    fontSize: Typography.sizes.base,
+    color: Colors.textDisabled,
+  },
 });

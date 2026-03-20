@@ -11,6 +11,7 @@ from app.database import Base
 class UserRole(enum.StrEnum):
     PARENT = "parent"
     DRIVER = "driver"
+    STUDENT = "student"
     SAFETY_ESCORT = "safety_escort"
     ACADEMY_ADMIN = "academy_admin"
     PLATFORM_ADMIN = "platform_admin"

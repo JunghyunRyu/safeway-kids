@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: safeway-kids-config
+  namespace: safeway-kids
+  labels:
+    app.kubernetes.io/part-of: safeway-kids
+data:
+  ENVIRONMENT: "production"
+  DATABASE_URL: "postgresql+asyncpg://safeway:changeme@postgres:5432/safeway_kids"
+  REDIS_URL: "redis://redis:6379/0"
+  GPS_FLUSH_INTERVAL_SECONDS: "30"
+  PIPELINE_CRON_HOUR: "0"
+  LOG_LEVEL: "INFO"

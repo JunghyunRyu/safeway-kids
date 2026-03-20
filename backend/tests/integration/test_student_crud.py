@@ -30,7 +30,9 @@ class TestStudentCRUD:
             headers=auth_header(parent_token),
         )
         assert list_resp.status_code == 200
-        students = list_resp.json()
+        data = list_resp.json()
+        students = data["items"]
+        assert data["total"] == 1
         assert len(students) == 1
         assert students[0]["name"] == "김민수"
 

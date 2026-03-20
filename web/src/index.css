@@ -1,1 +1,89 @@
 @import "tailwindcss";
+
+/* Enable class-based dark mode toggling (Tailwind v4) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Dark mode CSS custom properties */
+.dark {
+  --color-bg: #1a1a2e;
+  --color-surface: #16213e;
+  --color-text: #e0e0e0;
+  --color-border: #334155;
+}
+
+/* Skip to main content link */
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.skip-to-main:focus {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  width: auto;
+  height: auto;
+  padding: 12px 24px;
+  background: #0d9488;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* Mobile card layout for DataTable */
+@media (max-width: 639px) {
+  .datatable-card-layout table,
+  .datatable-card-layout thead,
+  .datatable-card-layout tbody,
+  .datatable-card-layout th,
+  .datatable-card-layout td,
+  .datatable-card-layout tr {
+    display: block;
+  }
+
+  .datatable-card-layout thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .datatable-card-layout tbody tr {
+    margin-bottom: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px 0;
+  }
+
+  .dark .datatable-card-layout tbody tr {
+    border-color: #374151;
+  }
+
+  .datatable-card-layout tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 16px;
+    text-align: right;
+    border: none;
+  }
+
+  .datatable-card-layout tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    text-align: left;
+    flex-shrink: 0;
+    margin-right: 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+}

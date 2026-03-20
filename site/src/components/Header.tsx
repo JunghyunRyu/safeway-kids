@@ -24,7 +24,8 @@ export default function Header() {
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className="md:hidden p-2 text-gray-600"
-          aria-label="메뉴 열기"
+          aria-label={menuOpen ? "메뉴 닫기" : "메뉴 열기"}
+          aria-expanded={menuOpen}
         >
           <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             {menuOpen ? (

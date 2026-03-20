@@ -2,25 +2,27 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
 import { createTabScreenOptions } from "./tabConfig";
+import { Colors } from "../constants/theme";
 import DriverHomeScreen from "../screens/driver/HomeScreen";
 import DriverRouteScreen from "../screens/driver/RouteScreen";
 import DriverMapScreen from "../screens/driver/MapScreen";
 import DriverProfileScreen from "../screens/driver/ProfileScreen";
+import type { Ionicons } from "@expo/vector-icons";
 
 const Tab = createBottomTabNavigator();
 
-const ICONS: Record<string, string> = {
-  DriverHome: "🏠",
-  Route: "🗺️",
-  DriverMap: "📍",
-  DriverProfile: "👤",
+const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  DriverHome: "home",
+  Route: "navigate",
+  DriverMap: "location",
+  DriverProfile: "person",
 };
 
 export default function DriverTabNavigator() {
   const { t } = useTranslation();
 
   return (
-    <Tab.Navigator screenOptions={createTabScreenOptions("#4CAF50", ICONS)}>
+    <Tab.Navigator screenOptions={createTabScreenOptions(Colors.roleDriver, ICONS)}>
       <Tab.Screen
         name="DriverHome"
         component={DriverHomeScreen}

@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-pipeline
+  namespace: safeway-kids
+  labels:
+    app: daily-pipeline
+    app.kubernetes.io/part-of: safeway-kids
+spec:
+  # 00:00 KST = 15:00 UTC (previous day)
+  schedule: "0 15 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        metadata:
+          labels:
+            app: daily-pipeline
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: pipeline-trigger
+              image: curlimages/curl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  curl -f -X POST \
+                    -H "Content-Type: application/json" \
+                    http://backend.safeway-kids.svc.cluster.local:8000/api/v1/schedules/daily/pipeline
+              resources:
+                requests:
+                  memory: "32Mi"
+                  cpu: "25m"
+                limits:
+                  memory: "64Mi"
+                  cpu: "50m"

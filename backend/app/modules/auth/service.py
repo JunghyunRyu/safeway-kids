@@ -157,6 +157,100 @@ def decode_token(token: str) -> dict:
         raise UnauthorizedError(detail="유효하지 않은 토큰입니다") from e
 
 
+async def list_users(
+    db: AsyncSession,
+    role_filter: UserRole | None = None,
+    search: str | None = None,
+    skip: int = 0,
+    limit: int = 20,
+) -> dict:
+    """List users with optional role filter and name search, with pagination."""
+    from sqlalchemy import func
+
+    base = select(User).where(User.deleted_at.is_(None))
+    if role_filter is not None:
+        base = base.where(User.role == role_filter)
+    if search:
+        base = base.where(User.name.ilike(f"%{search}%"))
+
+    # Total count
+    count_stmt = select(func.count()).select_from(base.subquery())
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    # Paginated items
+    items_stmt = base.order_by(User.created_at.desc()).offset(skip).limit(limit)
+    result = await db.execute(items_stmt)
+    items = list(result.scalars().all())
+
+    return {"items": items, "total": total}
+
+
+async def create_user(
+    db: AsyncSession, phone: str, name: str, role: UserRole
+) -> User:
+    """Create a new user. Uses phone as the default password (bcrypt-hashed)."""
+    import bcrypt as _bcrypt
+
+    # Check for duplicate phone
+    stmt = select(User).where(User.phone == phone, User.deleted_at.is_(None))
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
+    if existing:
+        from app.common.exceptions import ConflictError
+        raise ConflictError(detail=f"이미 등록된 전화번호입니다: {phone}")
+
+    # Hash the phone as default password (stored but unused for OTP auth;
+    # kept for potential password-based admin login in the future).
+    _hashed_pw = _bcrypt.hashpw(phone.encode(), _bcrypt.gensalt()).decode()
+
+    user = User(role=role, phone=phone, name=name)
+    db.add(user)
+    await db.flush()
+    return user
+
+
+async def update_user(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    name: str | None = None,
+    role: UserRole | None = None,
+    is_active: bool | None = None,
+) -> User:
+    """Update user fields. Only non-None values are applied."""
+    from app.common.exceptions import NotFoundError
+
+    stmt = select(User).where(User.id == user_id, User.deleted_at.is_(None))
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise NotFoundError(detail="사용자를 찾을 수 없습니다")
+
+    if name is not None:
+        user.name = name
+    if role is not None:
+        user.role = role
+    if is_active is not None:
+        user.is_active = is_active
+
+    await db.flush()
+    return user
+
+
+async def deactivate_user(db: AsyncSession, user_id: uuid.UUID) -> User:
+    """Soft-deactivate a user by setting is_active = False."""
+    from app.common.exceptions import NotFoundError
+
+    stmt = select(User).where(User.id == user_id, User.deleted_at.is_(None))
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise NotFoundError(detail="사용자를 찾을 수 없습니다")
+
+    user.is_active = False
+    await db.flush()
+    return user
+
+
 def create_token_response(user: User) -> dict:
     access_token = create_access_token(user.id, user.role)
     refresh_token = create_refresh_token(user.id)

@@ -1,117 +1,289 @@
 import { useState, useCallback } from 'react';
 import api from '../api/client';
+import { showToast } from '../components/Toast';
+import DataTable, { type Column } from '../components/DataTable';
+import ConfirmDialog from '../components/ConfirmDialog';
+import StatusBadge from '../components/StatusBadge';
+import ExportButton from '../components/ExportButton';
 import type { DailySchedule } from '../types';
 
-const STATUS_COLOR: Record<string, string> = {
-  scheduled: 'bg-blue-100 text-blue-700',
-  boarded: 'bg-yellow-100 text-yellow-700',
-  completed: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-700',
+const scheduleStatusColorMap: Record<string, { bg: string; text: string }> = {
+  scheduled: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  boarded: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  completed: { bg: 'bg-green-100', text: 'text-green-700' },
+  cancelled: { bg: 'bg-gray-100', text: 'text-gray-500' },
 };
+
+const scheduleStatusLabels: Record<string, string> = {
+  scheduled: '예정',
+  boarded: '탑승',
+  completed: '완료',
+  cancelled: '취소',
+};
+
+interface PipelineResult {
+  schedules_created?: number;
+  routes_generated?: number;
+  students_assigned?: number;
+  error?: string;
+  [key: string]: unknown;
+}
 
 export default function SchedulesPage() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [schedules, setSchedules] = useState<DailySchedule[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pipelineResult, setPipelineResult] = useState<Record<string, unknown> | null>(null);
+  const [fetched, setFetched] = useState(false);
+
+  // Pipeline
+  const [pipelineConfirmOpen, setPipelineConfirmOpen] = useState(false);
+  const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null);
 
   const fetchSchedules = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get(`/schedules/daily?target_date=${date}`);
-      setSchedules(data);
+      setSchedules(Array.isArray(data) ? data : []);
+      setFetched(true);
     } catch {
       setSchedules([]);
+      showToast('스케줄 조회에 실패했습니다.', 'error');
     } finally {
       setLoading(false);
     }
   }, [date]);
 
   const runPipeline = useCallback(async () => {
-    setLoading(true);
+    setPipelineRunning(true);
     setPipelineResult(null);
     try {
       const { data } = await api.post(`/schedules/daily/pipeline?target_date=${date}`);
-      setPipelineResult(data);
+      setPipelineResult(data as PipelineResult);
+      showToast('파이프라인이 실행되었습니다.', 'success');
+      setPipelineConfirmOpen(false);
       await fetchSchedules();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail;
       setPipelineResult({ error: msg || '파이프라인 실행 실패' });
+      showToast('파이프라인 실행에 실패했습니다.', 'error');
+      setPipelineConfirmOpen(false);
     } finally {
-      setLoading(false);
+      setPipelineRunning(false);
     }
   }, [date, fetchSchedules]);
+
+  // Columns
+  const columns: Column<DailySchedule>[] = [
+    {
+      key: 'student_id',
+      label: '학생 ID',
+      render: (row) => (
+        <span className="font-mono text-gray-600">{row.student_id.slice(0, 8)}...</span>
+      ),
+    },
+    {
+      key: 'schedule_date',
+      label: '날짜',
+      sortable: true,
+    },
+    {
+      key: 'pickup_time',
+      label: '픽업 시간',
+      sortable: true,
+    },
+    {
+      key: 'status',
+      label: '상태',
+      sortable: true,
+      render: (row) => (
+        <StatusBadge
+          status={row.status}
+          colorMap={{
+            ...scheduleStatusColorMap,
+            // Add Korean labels through override trick - StatusBadge's default labels
+            // cover 'completed' and 'cancelled', but we need 'scheduled' and 'boarded'
+          }}
+        />
+      ),
+    },
+  ];
+
+  const exportColumns = [
+    { key: 'student_id', label: '학생 ID' },
+    { key: 'schedule_date', label: '날짜' },
+    { key: 'pickup_time', label: '픽업 시간' },
+    { key: 'status', label: '상태' },
+  ];
+
+  // Pipeline result display
+  const renderPipelineResult = () => {
+    if (!pipelineResult) return null;
+
+    if (pipelineResult.error) {
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium text-red-800">실행 오류</span>
+          </div>
+          <p className="text-sm text-red-700">{pipelineResult.error}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="font-medium text-teal-800">파이프라인 실행 완료</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {pipelineResult.schedules_created != null && (
+            <div className="bg-white rounded-lg p-3 border border-teal-100">
+              <p className="text-xs text-gray-500">생성된 스케줄</p>
+              <p className="text-lg font-bold text-gray-800">
+                {pipelineResult.schedules_created}건
+              </p>
+            </div>
+          )}
+          {pipelineResult.routes_generated != null && (
+            <div className="bg-white rounded-lg p-3 border border-teal-100">
+              <p className="text-xs text-gray-500">생성된 경로</p>
+              <p className="text-lg font-bold text-gray-800">
+                {pipelineResult.routes_generated}건
+              </p>
+            </div>
+          )}
+          {pipelineResult.students_assigned != null && (
+            <div className="bg-white rounded-lg p-3 border border-teal-100">
+              <p className="text-xs text-gray-500">배정된 학생</p>
+              <p className="text-lg font-bold text-gray-800">
+                {pipelineResult.students_assigned}명
+              </p>
+            </div>
+          )}
+        </div>
+        {/* Show any extra fields from the result */}
+        {Object.entries(pipelineResult).filter(
+          ([k]) => !['schedules_created', 'routes_generated', 'students_assigned', 'error'].includes(k),
+        ).length > 0 && (
+          <details className="mt-3">
+            <summary className="text-xs text-teal-600 cursor-pointer hover:underline">
+              상세 결과 보기
+            </summary>
+            <div className="mt-2 bg-white rounded-lg p-3 border border-teal-100 text-xs text-gray-600 overflow-x-auto">
+              {Object.entries(pipelineResult)
+                .filter(
+                  ([k]) =>
+                    !['schedules_created', 'routes_generated', 'students_assigned', 'error'].includes(k),
+                )
+                .map(([key, val]) => (
+                  <div key={key} className="flex gap-2 py-1">
+                    <span className="font-medium text-gray-700 min-w-[120px]">{key}:</span>
+                    <span>{typeof val === 'object' ? JSON.stringify(val) : String(val)}</span>
+                  </div>
+                ))}
+            </div>
+          </details>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">스케줄 관리</h2>
 
-      <div className="flex gap-3 mb-6">
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
-        />
-        <button
-          onClick={fetchSchedules}
-          disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-        >
-          조회
-        </button>
-        <button
-          onClick={runPipeline}
-          disabled={loading}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-        >
-          일일 파이프라인 실행
-        </button>
+      {/* Controls */}
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              대상 날짜
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => {
+                setDate(e.target.value);
+                setFetched(false);
+                setPipelineResult(null);
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400 outline-none text-sm"
+            />
+          </div>
+          <button
+            onClick={fetchSchedules}
+            disabled={loading}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm font-medium"
+          >
+            {loading ? '조회 중...' : '조회'}
+          </button>
+          <button
+            onClick={() => setPipelineConfirmOpen(true)}
+            disabled={loading || pipelineRunning}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
+          >
+            일일 파이프라인 실행
+          </button>
+          {fetched && schedules.length > 0 && (
+            <ExportButton
+              data={schedules as unknown as Record<string, unknown>[]}
+              columns={exportColumns}
+              filename={`스케줄_${date}`}
+            />
+          )}
+        </div>
       </div>
 
-      {pipelineResult ? (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-          <h4 className="text-sm font-semibold text-blue-700 mb-2">파이프라인 결과</h4>
-          <pre className="text-xs text-blue-800 whitespace-pre-wrap">
-            {JSON.stringify(pipelineResult, null, 2)}
-          </pre>
-        </div>
-      ) : null}
+      {/* Pipeline Result */}
+      {renderPipelineResult()}
 
-      {schedules.length === 0 ? (
-        <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
-          <p className="text-gray-500">해당 날짜에 스케줄이 없습니다.</p>
-        </div>
+      {/* Schedule Table */}
+      {fetched ? (
+        <DataTable<DailySchedule>
+          columns={columns}
+          data={schedules}
+          loading={loading}
+          emptyMessage="해당 날짜에 스케줄이 없습니다."
+        />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">학생 ID</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">날짜</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">픽업 시간</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">상태</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {schedules.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-700 font-mono">
-                    {s.student_id.slice(0, 8)}...
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{s.schedule_date}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{s.pickup_time}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${STATUS_COLOR[s.status] || 'bg-gray-100 text-gray-700'}`}>
-                      {s.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
+          <svg
+            className="w-12 h-12 mx-auto text-gray-300 mb-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+          <p className="text-gray-500">날짜를 선택하고 "조회" 버튼을 클릭해 주세요.</p>
         </div>
       )}
+
+      {/* Pipeline Confirmation */}
+      <ConfirmDialog
+        open={pipelineConfirmOpen}
+        title="일일 파이프라인 실행"
+        message={`${date} 날짜의 일일 파이프라인을 실행하시겠습니까? 스케줄 생성 및 경로 최적화가 수행됩니다.`}
+        confirmText="실행"
+        variant="warning"
+        loading={pipelineRunning}
+        onConfirm={runPipeline}
+        onCancel={() => setPipelineConfirmOpen(false)}
+      />
     </div>
   );
 }

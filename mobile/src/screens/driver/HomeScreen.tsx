@@ -2,10 +2,12 @@ import React, { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
 import { getMyAssignment, VehicleAssignment } from "../../api/vehicles";
 import { getDriverDailySchedules, DriverDailySchedule } from "../../api/schedules";
+import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
 
 function todayStr(): string {
   return new Date().toISOString().split("T")[0];
@@ -52,43 +54,83 @@ export default function DriverHomeScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingTop: insets.top + 12 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.roleDriver}
+        />
+      }
     >
-      <Text style={styles.greeting}>
-        {t("home.greeting")}, {user?.name}
-      </Text>
+      {/* 헤더 */}
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
+        <View>
+          <Text style={styles.greeting}>
+            {t("home.greeting")}, {user?.name}
+          </Text>
+          <Text style={styles.date}>
+            {new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" })}
+          </Text>
+        </View>
+        <View style={[styles.roleBadge, { backgroundColor: Colors.roleDriver + "20" }]}>
+          <Text style={[styles.roleBadgeText, { color: Colors.roleDriver }]}>기사</Text>
+        </View>
+      </View>
 
       <Text style={styles.sectionTitle}>{t("driver.todaySummary")}</Text>
 
       {!assignment ? (
-        <Text style={styles.empty}>{t("driver.noAssignment")}</Text>
+        <View style={styles.emptyCard}>
+          <Ionicons name="bus-outline" size={40} color={Colors.textDisabled} />
+          <Text style={styles.emptyText}>{t("driver.noAssignment")}</Text>
+        </View>
       ) : (
         <>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{t("driver.vehicleInfo")}</Text>
-            <Text style={styles.cardRow}>
-              {t("driver.licensePlate")}: {assignment.license_plate}
-            </Text>
-            <Text style={styles.cardRow}>
-              {t("driver.capacity")}: {assignment.capacity}명
-            </Text>
+          <View style={[styles.card, Shadows.md]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="car-outline" size={20} color={Colors.roleDriver} />
+              <Text style={styles.cardTitle}>{t("driver.vehicleInfo")}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>{t("driver.licensePlate")}</Text>
+              <Text style={styles.infoValue}>{assignment.license_plate}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>{t("driver.capacity")}</Text>
+              <Text style={styles.infoValue}>{assignment.capacity}명</Text>
+            </View>
             {assignment.operator_name ? (
-              <Text style={styles.cardRow}>
-                {t("driver.operator")}: {assignment.operator_name}
-              </Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t("driver.operator")}</Text>
+                <Text style={styles.infoValue}>{assignment.operator_name}</Text>
+              </View>
             ) : null}
             {assignment.safety_escort_name ? (
-              <Text style={styles.cardRow}>
-                {t("driver.safetyEscort")}: {assignment.safety_escort_name}
-              </Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t("driver.safetyEscort")}</Text>
+                <Text style={styles.infoValue}>{assignment.safety_escort_name}</Text>
+              </View>
             ) : null}
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>
-              {t("driver.studentCount")}: {boardedCount}/{schedules.length}
-            </Text>
+          <View style={[styles.statCard, Shadows.sm]}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{boardedCount}</Text>
+              <Text style={styles.statLabel}>탑승</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{schedules.length}</Text>
+              <Text style={styles.statLabel}>총 학생</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: Colors.success }]}>
+                {schedules.filter((s) => s.status === "completed").length}
+              </Text>
+              <Text style={styles.statLabel}>완료</Text>
+            </View>
           </View>
         </>
       )}
@@ -97,17 +139,104 @@ export default function DriverHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#f0f4e8" },
-  greeting: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 12, color: "#333" },
-  empty: { fontSize: 14, color: "#888", textAlign: "center", marginTop: 40 },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 2,
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.xxl },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingBottom: Spacing.md,
+    marginBottom: Spacing.md,
   },
-  cardTitle: { fontSize: 15, fontWeight: "600", marginBottom: 8 },
-  cardRow: { fontSize: 14, color: "#555", marginBottom: 4 },
+  greeting: {
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+  },
+  date: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  roleBadge: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+  },
+  roleBadgeText: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semibold,
+  },
+  sectionTitle: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  card: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
+    marginBottom: Spacing.md,
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  cardTitle: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textPrimary,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  infoLabel: {
+    fontSize: Typography.sizes.base,
+    color: Colors.textSecondary,
+  },
+  infoValue: {
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.medium,
+    color: Colors.textPrimary,
+  },
+  statCard: {
+    flexDirection: "row",
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
+  },
+  statItem: { flex: 1, alignItems: "center" },
+  statValue: {
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+  },
+  statLabel: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: Colors.borderLight,
+    marginHorizontal: Spacing.sm,
+  },
+  emptyCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.xxl,
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  emptyText: {
+    fontSize: Typography.sizes.base,
+    color: Colors.textDisabled,
+  },
 });

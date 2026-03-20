@@ -5,10 +5,17 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import async_session_factory
+from app.logging_config import setup_logging
+from app.rate_limit import limiter
 from app.redis import redis_client
+
+setup_logging(log_level=settings.log_level)
 
 logger = logging.getLogger(__name__)
 
@@ -128,9 +135,19 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Rate limiter
+    application.state.limiter = limiter
+    application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    # Request logging
+    from app.middleware.request_logging import RequestLoggingMiddleware
+
+    application.add_middleware(RequestLoggingMiddleware)
+
+    # CORS
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -157,8 +174,10 @@ def create_app() -> FastAPI:
     )
     application.include_router(routing_router, prefix="/api/v1/routes", tags=["routes"])
 
+    from app.modules.admin.router import router as admin_router
     from app.modules.billing.router import router as billing_router
     from app.modules.escort.router import router as escort_router
+    application.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
     application.include_router(billing_router, prefix="/api/v1/billing", tags=["billing"])
     application.include_router(escort_router, prefix="/api/v1/escorts", tags=["escorts"])
 
@@ -185,6 +204,9 @@ def create_app() -> FastAPI:
             checks["status"] = "degraded"
 
         return checks
+
+    # Prometheus metrics
+    Instrumentator().instrument(application).expose(application, endpoint="/metrics")
 
     return application
 

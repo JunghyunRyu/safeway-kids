@@ -3,7 +3,7 @@ import logging
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Query, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,7 @@ from app.modules.vehicle_telemetry.schemas import (
     VehicleAssignmentResponse,
     VehicleCreateRequest,
     VehicleResponse,
+    VehicleUpdateRequest,
 )
 from app.redis import redis_client
 
@@ -30,13 +31,26 @@ router = APIRouter()
 @router.post("/vehicles", response_model=VehicleResponse, status_code=201)
 async def create_vehicle(
     body: VehicleCreateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(
         require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)
     ),
 ) -> VehicleResponse:
     """차량 등록"""
+    from app.modules.admin.service import log_audit
+
     vehicle = await service.create_vehicle(db, body)
+    await log_audit(
+        db,
+        user_id=str(current_user.id),
+        user_name=current_user.name,
+        action="CREATE",
+        entity_type="vehicle",
+        entity_id=str(vehicle.id),
+        details={"license_plate": body.license_plate, "capacity": body.capacity},
+        ip_address=request.client.host if request.client else None,
+    )
     return VehicleResponse.model_validate(vehicle)
 
 
@@ -48,6 +62,67 @@ async def list_vehicles(
     """차량 목록"""
     vehicles = await service.list_vehicles(db)
     return [VehicleResponse.model_validate(v) for v in vehicles]
+
+
+@router.patch("/vehicles/{vehicle_id}", response_model=VehicleResponse)
+async def update_vehicle(
+    vehicle_id: uuid.UUID,
+    body: VehicleUpdateRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)
+    ),
+) -> VehicleResponse:
+    """차량 정보 수정 (학원/플랫폼 관리자)"""
+    from app.modules.admin.service import log_audit
+
+    vehicle = await service.update_vehicle(db, vehicle_id, body)
+    changes = {}
+    if body.license_plate is not None:
+        changes["license_plate"] = body.license_plate
+    if body.capacity is not None:
+        changes["capacity"] = body.capacity
+    if body.model_name is not None:
+        changes["model_name"] = body.model_name
+    if body.is_active is not None:
+        changes["is_active"] = body.is_active
+    await log_audit(
+        db,
+        user_id=str(current_user.id),
+        user_name=current_user.name,
+        action="UPDATE",
+        entity_type="vehicle",
+        entity_id=str(vehicle_id),
+        details=changes,
+        ip_address=request.client.host if request.client else None,
+    )
+    return VehicleResponse.model_validate(vehicle)
+
+
+@router.delete("/vehicles/{vehicle_id}", response_model=VehicleResponse)
+async def deactivate_vehicle(
+    vehicle_id: uuid.UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)
+    ),
+) -> VehicleResponse:
+    """차량 비활성화 (학원/플랫폼 관리자)"""
+    from app.modules.admin.service import log_audit
+
+    vehicle = await service.deactivate_vehicle(db, vehicle_id)
+    await log_audit(
+        db,
+        user_id=str(current_user.id),
+        user_name=current_user.name,
+        action="DELETE",
+        entity_type="vehicle",
+        entity_id=str(vehicle_id),
+        ip_address=request.client.host if request.client else None,
+    )
+    return VehicleResponse.model_validate(vehicle)
 
 
 @router.get("/vehicles/my-assignment", response_model=VehicleAssignmentResponse | None)

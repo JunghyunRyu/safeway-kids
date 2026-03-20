@@ -38,6 +38,13 @@ class VehicleResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class VehicleUpdateRequest(BaseModel):
+    license_plate: str | None = Field(default=None, max_length=20, description="차량 번호판")
+    capacity: int | None = Field(default=None, ge=1, le=100, description="탑승 인원")
+    model_name: str | None = Field(default=None, max_length=200, description="차량 모델명")
+    is_active: bool | None = Field(default=None, description="활성 상태")
+
+
 class VehicleAssignmentResponse(BaseModel):
     vehicle_id: uuid.UUID
     license_plate: str

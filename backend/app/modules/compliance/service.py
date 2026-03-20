@@ -1,12 +1,26 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
+import aiofiles
+from fastapi import UploadFile
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.exceptions import ConflictError, NotFoundError
-from app.modules.compliance.models import Contract, GuardianConsent
-from app.modules.compliance.schemas import ConsentCreateRequest, ContractCreateRequest
+from app.modules.compliance.models import (
+    ComplianceDocument,
+    Contract,
+    DocumentType,
+    GuardianConsent,
+)
+from app.modules.compliance.schemas import (
+    ConsentCreateRequest,
+    ContractCreateRequest,
+    DocumentUploadRequest,
+)
+
+UPLOAD_DIR = Path("uploads/compliance")
 
 
 async def create_consent(
@@ -51,9 +65,11 @@ async def get_consent(db: AsyncSession, consent_id: uuid.UUID) -> GuardianConsen
 async def list_consents_by_guardian(
     db: AsyncSession, guardian_id: uuid.UUID
 ) -> list[GuardianConsent]:
-    stmt = select(GuardianConsent).where(
-        GuardianConsent.guardian_id == guardian_id
-    ).order_by(GuardianConsent.granted_at.desc())
+    stmt = (
+        select(GuardianConsent)
+        .where(GuardianConsent.guardian_id == guardian_id)
+        .order_by(GuardianConsent.granted_at.desc())
+    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -65,6 +81,7 @@ async def withdraw_consent(
     consent = await get_consent(db, consent_id)
     if consent.guardian_id != guardian_id:
         from app.common.exceptions import ForbiddenError
+
         raise ForbiddenError(detail="본인의 동의만 철회할 수 있습니다")
 
     if consent.withdrawn_at:
@@ -74,6 +91,7 @@ async def withdraw_consent(
 
     # Cascade: deactivate related schedule templates
     from app.modules.scheduling.models import ScheduleTemplate
+
     stmt = (
         update(ScheduleTemplate)
         .where(
@@ -88,9 +106,7 @@ async def withdraw_consent(
     return consent
 
 
-async def create_contract(
-    db: AsyncSession, request: ContractCreateRequest
-) -> Contract:
+async def create_contract(db: AsyncSession, request: ContractCreateRequest) -> Contract:
     contract = Contract(
         academy_id=request.academy_id,
         operator_name=request.operator_name,
@@ -103,3 +119,97 @@ async def create_contract(
     db.add(contract)
     await db.flush()
     return contract
+
+
+# --- Compliance Document services ---
+
+
+async def upload_document(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    metadata: DocumentUploadRequest,
+    file: UploadFile,
+) -> ComplianceDocument:
+    """Save file to local storage and create DB record."""
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Validate document_type
+    try:
+        doc_type = DocumentType(metadata.document_type)
+    except ValueError as err:
+        from app.common.exceptions import ValidationError
+
+        raise ValidationError(
+            detail=f"유효하지 않은 문서 유형입니다: {metadata.document_type}"
+        ) from err
+
+    # Generate unique filename to avoid collisions
+    ext = Path(file.filename).suffix if file.filename else ""
+    stored_name = f"{uuid.uuid4().hex}{ext}"
+    stored_path = UPLOAD_DIR / stored_name
+
+    async with aiofiles.open(stored_path, "wb") as f:
+        content = await file.read()
+        await f.write(content)
+
+    document = ComplianceDocument(
+        academy_id=metadata.academy_id,
+        document_type=doc_type,
+        file_name=file.filename or stored_name,
+        file_path=str(stored_path),
+        expires_at=metadata.expires_at,
+        uploaded_by=user_id,
+    )
+    db.add(document)
+    await db.flush()
+    return document
+
+
+async def list_documents(
+    db: AsyncSession,
+    academy_id: uuid.UUID,
+    document_type: str | None = None,
+) -> list[ComplianceDocument]:
+    """List active documents, optionally filtered by type."""
+    stmt = select(ComplianceDocument).where(
+        ComplianceDocument.academy_id == academy_id,
+        ComplianceDocument.is_active.is_(True),
+    )
+    if document_type:
+        stmt = stmt.where(ComplianceDocument.document_type == DocumentType(document_type))
+    stmt = stmt.order_by(ComplianceDocument.uploaded_at.desc())
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def list_expiring_documents(
+    db: AsyncSession,
+    academy_id: uuid.UUID,
+    days: int = 30,
+) -> list[ComplianceDocument]:
+    """List active documents expiring within the given number of days."""
+    deadline = datetime.now(UTC) + timedelta(days=days)
+    stmt = (
+        select(ComplianceDocument)
+        .where(
+            ComplianceDocument.academy_id == academy_id,
+            ComplianceDocument.is_active.is_(True),
+            ComplianceDocument.expires_at.isnot(None),
+            ComplianceDocument.expires_at <= deadline,
+        )
+        .order_by(ComplianceDocument.expires_at.asc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def delete_document(db: AsyncSession, document_id: uuid.UUID) -> ComplianceDocument:
+    """Soft delete a compliance document."""
+    stmt = select(ComplianceDocument).where(ComplianceDocument.id == document_id)
+    result = await db.execute(stmt)
+    document = result.scalar_one_or_none()
+    if not document:
+        raise NotFoundError(detail="문서를 찾을 수 없습니다")
+    document.is_active = False
+    await db.flush()
+    return document

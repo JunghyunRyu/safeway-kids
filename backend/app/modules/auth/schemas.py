@@ -44,3 +44,36 @@ class UserResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class UserListItem(BaseModel):
+    id: uuid.UUID
+    phone: str
+    name: str
+    role: UserRole
+    is_active: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class UserListResponse(BaseModel):
+    users: list[UserListItem]
+    total: int
+
+
+class UserCreateRequest(BaseModel):
+    phone: str = Field(..., pattern=r"^01[0-9]{8,9}$", description="휴대폰 번호")
+    name: str = Field(..., min_length=1, max_length=100, description="사용자 이름")
+    role: UserRole = Field(..., description="사용자 역할")
+
+
+class UserUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100, description="사용자 이름")
+    role: UserRole | None = Field(default=None, description="사용자 역할")
+    is_active: bool | None = Field(default=None, description="활성 상태")
+
+
+class PaginatedUserListResponse(BaseModel):
+    items: list[UserListItem]
+    total: int

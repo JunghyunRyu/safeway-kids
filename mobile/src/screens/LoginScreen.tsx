@@ -1,17 +1,32 @@
 import React, { useCallback, useState } from "react";
 import {
-  Alert,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
+  Pressable,
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
 import { devLogin } from "../api/auth";
 import { useAuth } from "../hooks/useAuth";
+import { Colors, Typography, Spacing, Radius, Shadows } from "../constants/theme";
 
-type RoleOption = "parent" | "driver";
+type RoleOption = "parent" | "driver" | "safety_escort" | "academy_admin";
+
+const ROLE_OPTIONS: Array<{ value: RoleOption; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
+  { value: "parent", label: "학부모", icon: "people-outline" },
+  { value: "driver", label: "기사", icon: "car-outline" },
+  { value: "safety_escort", label: "안전도우미", icon: "shield-outline" },
+  { value: "academy_admin", label: "관리자", icon: "settings-outline" },
+];
+
+const ROLE_COLORS: Record<RoleOption, string> = {
+  parent: Colors.roleParent,
+  driver: Colors.roleDriver,
+  safety_escort: Colors.roleEscort,
+  academy_admin: Colors.roleAdmin,
+};
 
 export default function LoginScreen() {
   const { t } = useTranslation();
@@ -22,19 +37,10 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const selectParent = useCallback(() => setRole("parent"), []);
-  const selectDriver = useCallback(() => setRole("driver"), []);
-
   const handleLogin = useCallback(async () => {
     setError("");
-    if (!phone.trim()) {
-      setError("전화번호를 입력해 주세요");
-      return;
-    }
-    if (!name.trim()) {
-      setError("이름을 입력해 주세요");
-      return;
-    }
+    if (!phone.trim()) { setError("전화번호를 입력해 주세요"); return; }
+    if (!name.trim()) { setError("이름을 입력해 주세요"); return; }
     setLoading(true);
     try {
       await devLogin(phone, name, role);
@@ -46,36 +52,68 @@ export default function LoginScreen() {
     }
   }, [phone, name, role, onLoginSuccess]);
 
+  const activeColor = ROLE_COLORS[role];
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>SAFEWAY KIDS</Text>
-      <Text style={styles.subtitle}>개발 모드 로그인</Text>
-
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      {/* Role selector */}
-      <View style={styles.roleRow}>
-        <Pressable
-          style={[styles.roleBtn, role === "parent" ? styles.roleBtnActive : undefined]}
-          onPress={selectParent}
-        >
-          <Text style={[styles.roleTxt, role === "parent" ? styles.roleTxtActive : undefined]}>
-            학부모
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.roleBtn, role === "driver" ? styles.roleBtnActive : undefined]}
-          onPress={selectDriver}
-        >
-          <Text style={[styles.roleTxt, role === "driver" ? styles.roleTxtActive : undefined]}>
-            기사
-          </Text>
-        </Pressable>
+      {/* Logo */}
+      <View style={styles.logoArea}>
+        <View style={[styles.logoCircle, { backgroundColor: activeColor }]}>
+          <Ionicons name="shield-checkmark" size={36} color={Colors.textInverse} />
+        </View>
+        <Text style={[styles.title, { color: activeColor }]}>SAFEWAY KIDS</Text>
+        <Text style={styles.subtitle}>개발 모드 로그인</Text>
       </View>
 
+      {/* Error */}
+      {error ? (
+        <View style={styles.errorBox}>
+          <Ionicons name="alert-circle-outline" size={16} color={Colors.danger} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      {/* Role selector */}
+      <View style={styles.roleGrid}>
+        {ROLE_OPTIONS.map(({ value, label, icon }) => {
+          const isActive = role === value;
+          const roleColor = ROLE_COLORS[value];
+          return (
+            <Pressable
+              key={value}
+              style={[
+                styles.roleBtn,
+                isActive && {
+                  borderColor: roleColor,
+                  backgroundColor: roleColor + "15",
+                },
+              ]}
+              onPress={() => setRole(value)}
+             
+            >
+              <Ionicons
+                name={icon}
+                size={20}
+                color={isActive ? roleColor : Colors.textDisabled}
+              />
+              <Text
+                style={[
+                  styles.roleTxt,
+                  isActive && { color: roleColor, fontWeight: Typography.weights.bold },
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Inputs */}
       <TextInput
         style={styles.input}
         placeholder={t("auth.enterPhone")}
+        placeholderTextColor={Colors.textDisabled}
         keyboardType="phone-pad"
         value={phone}
         onChangeText={setPhone}
@@ -83,91 +121,135 @@ export default function LoginScreen() {
       <TextInput
         style={styles.input}
         placeholder={t("auth.enterName")}
+        placeholderTextColor={Colors.textDisabled}
         value={name}
         onChangeText={setName}
       />
+
+      {/* Login button */}
       <Pressable
-        style={[styles.btn, loading ? styles.disabled : undefined]}
+        style={[styles.loginBtn, { backgroundColor: activeColor }, loading && styles.disabled]}
         onPress={handleLogin}
         disabled={loading}
+       
       >
-        <Text style={styles.btnText}>
-          {loading ? t("common.loading") : t("auth.login")}
-        </Text>
+        {loading ? (
+          <Text style={styles.loginBtnText}>{t("common.loading")}</Text>
+        ) : (
+          <>
+            <Ionicons name="log-in-outline" size={20} color={Colors.textInverse} />
+            <Text style={styles.loginBtnText}>{t("auth.login")}</Text>
+          </>
+        )}
       </Pressable>
 
       <Text style={styles.hint}>
-        테스트 계정: 01033333333 / 박보호자 (학부모){"\n"}
-        01011111111 / 김기사 (기사)
+        테스트: 01033333333 / 박보호자{"\n"}
+        01011111111 / 김기사
       </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 32, backgroundColor: "#fff" },
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: Spacing.xl,
+    backgroundColor: Colors.background,
+  },
+  logoArea: {
+    alignItems: "center",
+    marginBottom: Spacing.xl,
+  },
+  logoCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: Radius.full,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+    ...Shadows.lg,
+  },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 8,
-    color: "#2196F3",
+    fontSize: Typography.sizes.xxl,
+    fontWeight: Typography.weights.extrabold,
+    letterSpacing: 1,
   },
   subtitle: {
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 32,
-    color: "#999",
+    fontSize: Typography.sizes.sm,
+    color: Colors.textDisabled,
+    marginTop: 4,
   },
-  roleRow: {
+  errorBox: {
     flexDirection: "row",
-    marginBottom: 20,
-    gap: 12,
+    alignItems: "center",
+    gap: Spacing.sm,
+    backgroundColor: Colors.dangerLight,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.base,
+  },
+  errorText: {
+    color: Colors.danger,
+    fontSize: Typography.sizes.sm,
+    flex: 1,
+  },
+  roleGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+    marginBottom: Spacing.base,
   },
   roleBtn: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
+    minWidth: "45%",
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.xs,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
   },
-  roleBtnActive: {
-    borderColor: "#2196F3",
-    backgroundColor: "#E3F2FD",
+  roleTxt: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
   },
-  roleTxt: { fontSize: 15, color: "#999" },
-  roleTxtActive: { color: "#2196F3", fontWeight: "bold" },
   input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 16,
-    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
+    fontSize: Typography.sizes.md,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.surface,
+    marginBottom: Spacing.md,
   },
-  btn: {
-    backgroundColor: "#2196F3",
-    padding: 14,
-    borderRadius: 8,
+  loginBtn: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.base,
+    borderRadius: Radius.lg,
+    minHeight: 52,
+    ...Shadows.md,
   },
-  btnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  loginBtnText: {
+    color: Colors.textInverse,
+    fontWeight: Typography.weights.bold,
+    fontSize: Typography.sizes.md,
+  },
   disabled: { opacity: 0.5 },
-  error: {
-    backgroundColor: "#FEE2E2",
-    color: "#DC2626",
-    padding: 12,
-    borderRadius: 8,
-    textAlign: "center",
-    fontSize: 14,
-    marginBottom: 16,
-  },
   hint: {
-    marginTop: 24,
+    marginTop: Spacing.lg,
     textAlign: "center",
-    color: "#aaa",
-    fontSize: 12,
-    lineHeight: 20,
+    color: Colors.textDisabled,
+    fontSize: Typography.sizes.xs,
+    lineHeight: 18,
   },
 });

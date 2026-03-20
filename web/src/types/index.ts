@@ -24,6 +24,7 @@ export interface Student {
   grade?: string;
   school_name?: string;
   is_active: boolean;
+  created_at?: string;
 }
 
 export interface Enrollment {
@@ -73,6 +74,15 @@ export interface Invoice {
   status: string;
   due_date: string;
   paid_at: string | null;
+}
+
+export interface UserResponse {
+  id: number;
+  phone: string;
+  name: string;
+  role: string;
+  is_active: boolean;
+  created_at?: string;
 }
 
 export interface TokenResponse {

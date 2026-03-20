@@ -156,6 +156,86 @@ Use plugin skills when appropriate:
 4. Separate facts, assumptions, and recommendations.
 5. If a reviewer or integration is unavailable, state that explicitly. Do not simulate missing reviewers.
 
+## 개발 환경 실행 가이드
+
+### 모바일 앱 테스트 (Expo Go on iPhone)
+VMware 환경에서 iPhone Expo Go로 앱을 테스트하려면:
+```bash
+cd mobile && ./start-dev.sh
+```
+이 스크립트가 Metro, 리버스 프록시, ngrok 터널을 한번에 시작하고 QR 코드를 출력한다.
+
+수동으로 실행해야 할 경우:
+1. 백엔드 실행 확인 (포트 8000)
+2. Metro 시작: `EXPO_PACKAGER_PROXY_URL=<ngrok_url> BROWSER=none npx expo start --host lan --port 8081`
+3. 프록시 시작: `node proxy.js` (포트 9000, `/api/*` → 8000, 나머지 → 8081)
+4. ngrok 시작: `~/.config/ngrok/ngrok http 9000`
+5. QR 코드의 URL 형식: `exp://<ngrok-domain>` (`:8081` 포트 붙이지 않음)
+
+**주의사항:**
+- iPhone App Store Expo Go는 SDK 54까지 지원 → 프로젝트는 SDK 54로 설정되어 있음
+- 무료 ngrok은 터널 1개 제한 → proxy.js로 Metro + Backend를 한 포트로 합침
+- KakaoMap 네이티브 SDK는 Expo Go에서 미지원
+
+### 백엔드 서버
+```bash
+cd backend && source .venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+### 웹 관리자 대시보드
+```bash
+cd web && npm run dev
+```
+- `http://localhost:5173` 접속
+- "플랫폼 관리자 로그인" → 전체 시스템 관리 (학원/사용자/차량/청구/컴플라이언스/감사로그/관제센터)
+- "학원 관리자 로그인" → 개별 학원 관리 (학생/스케줄/차량/청구)
+- 시드 데이터: 로그인 후 사이드바 "시드 데이터" → "시드 데이터 생성" 클릭
+
+### 랜딩 사이트
+```bash
+cd site && npm run dev
+```
+
+## 프로젝트 진행 현황 (2026-03-20 기준)
+
+### 완료된 마일스톤
+| 마일스톤 | 상태 | 날짜 |
+|----------|------|------|
+| M0 Foundation | COMPLETE | 2026-03-13 |
+| M1 Core Backend | COMPLETE | 2026-03-13 |
+| M2 Parent/Driver App | COMPLETE | 2026-03-13 |
+| M3 Compliance/Notifications | COMPLETE | 2026-03-13 |
+| M4 Real-time WebSocket | COMPLETE | 2026-03-13 |
+| M5 Operational Loop | COMPLETE | 2026-03-13 |
+| M6 Production Hardening | COMPLETE | 2026-03-13 |
+| M7 Billing System | COMPLETE | 2026-03-13 |
+| M8 Academy Web Dashboard | COMPLETE | 2026-03-13 |
+| M9 Safety Escort Matching | COMPLETE | 2026-03-13 |
+| Design System Redesign | COMPLETE | 2026-03-17 |
+| WebSocket Connection Fix | COMPLETE | 2026-03-17 |
+| 프로덕션 배포 준비 | COMPLETE | 2026-03-20 |
+| 플랫폼 운영자 대시보드 | COMPLETE | 2026-03-20 |
+| 웹 대시보드 품질 95점 달성 | COMPLETE | 2026-03-20 |
+
+### 검증 수치 (최신)
+- 백엔드 테스트: **95 passed, 0 failed**
+- 모바일 테스트: **10 suites, 36 passed**
+- 웹 테스트: **12 suites, 50 passed**
+- TypeScript: **0 errors** (모바일, 웹, 사이트 전체)
+- 총 코드: 백엔드 6,543 + 모바일 7,292 + 웹 4,000+ + 사이트 736 = **~18,500+ LOC**
+
+### 코드로 해결 불가능한 남은 항목
+- 엣지 AI 하드웨어 (NVIDIA Jetson, CCTV, 스마트 미러) — 하드웨어 필요
+- 규제 샌드박스 심사 대응 — 법무팀 필요 (신청은 완료)
+- PG사 가맹점 계약 — 사업팀 필요 (코드는 완료)
+- 실서버 K8s 프로비저닝 — DevOps 필요 (매니페스트는 완료)
+- 앱스토어/플레이스토어 제출 — 사업팀 + DevOps
+
+### 최신 아티팩트
+- 최신 마일스톤 보고서: `artifacts/reports/2026-03-20-dashboard-final-milestone.md`
+- 최신 핸드오프: `artifacts/handoffs/2026-03-20-session-final-handoff.md`
+- 진행 현황 보고서: `artifacts/reports/2026-03-20-project-progress-report.md`
+
 ## References
 - `@docs/framework-reference.md`
 - `@docs/customization.md`

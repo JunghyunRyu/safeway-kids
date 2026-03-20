@@ -34,17 +34,19 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "VIBRATE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiBaseUrl": "http://192.168.44.128:8000/api/v1",
-      "kakaoMapApiKey": "c1b5a36cbbeb9613c8a01c4d3c987461",
+      "apiBaseUrl": "https://kinematical-carole-bursate.ngrok-free.dev/api/v1",
+      "kakaoMapApiKey": "600dbaa6ce3c2fb2111e12aebb60257f",
       "eas": {
-        "projectId": "your-expo-project-id"
+        "projectId": "a767dc5e-cd24-4841-9e0d-1f14af2004a8"
       }
     },
     "plugins": [
@@ -60,7 +62,9 @@
           "icon": "./assets/icon.png",
           "color": "#2196F3"
         }
-      ]
-    ]
+      ],
+      "expo-secure-store"
+    ],
+    "owner": "patrickryu"
   }
 }

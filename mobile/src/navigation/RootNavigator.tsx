@@ -3,21 +3,23 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { useAuth } from "../hooks/useAuth";
 import { useNotifications } from "../hooks/useNotifications";
+import { Colors } from "../constants/theme";
 import ParentTabNavigator from "./ParentTabNavigator";
 import DriverTabNavigator from "./DriverTabNavigator";
 import EscortTabNavigator from "./EscortTabNavigator";
+import AdminTabNavigator from "./AdminTabNavigator";
+import StudentTabNavigator from "./StudentTabNavigator";
 import LoginScreen from "../screens/LoginScreen";
 
 export default function RootNavigator() {
   const { authenticated, loading, user } = useAuth();
 
-  // Register for push notifications when authenticated
   useNotifications(authenticated);
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -30,15 +32,18 @@ export default function RootNavigator() {
     );
   }
 
-  const isDriver = user?.role === "driver";
-  const isEscort = user?.role === "safety_escort";
+  const role = user?.role ?? "parent";
 
   return (
     <NavigationContainer>
-      {isEscort ? (
+      {role === "safety_escort" ? (
         <EscortTabNavigator />
-      ) : isDriver ? (
+      ) : role === "driver" ? (
         <DriverTabNavigator />
+      ) : role === "academy_admin" || role === "platform_admin" ? (
+        <AdminTabNavigator />
+      ) : role === "student" ? (
+        <StudentTabNavigator />
       ) : (
         <ParentTabNavigator />
       )}
@@ -47,5 +52,10 @@ export default function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.background,
+  },
 });

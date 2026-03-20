@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -14,6 +14,8 @@ from app.modules.compliance.schemas import (
     ConsentWithdrawRequest,
     ContractCreateRequest,
     ContractResponse,
+    DocumentResponse,
+    DocumentUploadRequest,
 )
 
 router = APIRouter()
@@ -74,3 +76,63 @@ async def create_contract(
     """운송 계약 등록"""
     contract = await service.create_contract(db, body)
     return ContractResponse.model_validate(contract)
+
+
+# --- Compliance Document endpoints ---
+
+
+@router.post("/documents", response_model=DocumentResponse, status_code=201)
+async def upload_document(
+    file: UploadFile = File(...),
+    academy_id: uuid.UUID = Form(...),
+    document_type: str = Form(...),
+    expires_at: str | None = Form(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
+) -> DocumentResponse:
+    """법적 준수 문서 업로드"""
+    from datetime import datetime as dt
+
+    parsed_expires = dt.fromisoformat(expires_at) if expires_at else None
+    metadata = DocumentUploadRequest(
+        academy_id=academy_id,
+        document_type=document_type,
+        expires_at=parsed_expires,
+    )
+    document = await service.upload_document(db, current_user.id, metadata, file)
+    return DocumentResponse.model_validate(document)
+
+
+@router.get("/documents", response_model=list[DocumentResponse])
+async def list_documents(
+    academy_id: uuid.UUID,
+    document_type: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
+) -> list[DocumentResponse]:
+    """학원별 법적 준수 문서 목록 조회"""
+    documents = await service.list_documents(db, academy_id, document_type)
+    return [DocumentResponse.model_validate(d) for d in documents]
+
+
+@router.get("/documents/expiring", response_model=list[DocumentResponse])
+async def list_expiring_documents(
+    academy_id: uuid.UUID,
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
+) -> list[DocumentResponse]:
+    """만료 임박 문서 조회 (기본 30일 이내)"""
+    documents = await service.list_expiring_documents(db, academy_id, days)
+    return [DocumentResponse.model_validate(d) for d in documents]
+
+
+@router.delete("/documents/{document_id}", response_model=DocumentResponse)
+async def delete_document(
+    document_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
+) -> DocumentResponse:
+    """법적 준수 문서 소프트 삭제"""
+    document = await service.delete_document(db, document_id)
+    return DocumentResponse.model_validate(document)

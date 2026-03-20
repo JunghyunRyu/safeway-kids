@@ -39,3 +39,21 @@ class EnrollmentResponse(BaseModel):
     withdrawn_at: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+class PaginatedStudentListResponse(BaseModel):
+    items: list[StudentResponse]
+    total: int
+
+
+class BulkUploadRowResult(BaseModel):
+    row: int = Field(..., description="엑셀 행 번호")
+    status: str = Field(..., description="success 또는 error")
+    message: str = Field(..., description="결과 메시지")
+
+
+class BulkUploadResponse(BaseModel):
+    total: int = Field(..., description="전체 행 수")
+    success_count: int = Field(..., description="성공 건수")
+    error_count: int = Field(..., description="실패 건수")
+    results: list[BulkUploadRowResult] = Field(..., description="행별 결과")

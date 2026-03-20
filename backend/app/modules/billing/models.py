@@ -82,3 +82,6 @@ class Payment(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     transaction_ref: Mapped[str | None] = mapped_column(String(200))
+    pg_payment_key: Mapped[str | None] = mapped_column(String(200))
+    pg_order_id: Mapped[str | None] = mapped_column(String(200))
+    pg_status: Mapped[str | None] = mapped_column(String(50))

@@ -20,31 +20,11 @@ DEFAULT_API_URL = "http://localhost:8000"
 async def get_vehicle_ids_and_token(api_url: str) -> tuple[list[str], str]:
     """Get vehicle IDs from the database and a driver token for auth."""
     async with httpx.AsyncClient(base_url=api_url) as client:
-        # Login as a driver via OTP
-        # First send OTP
-        await client.post("/api/v1/auth/otp/send", json={"phone": "01087654321"})
-
-        # For dev mode, we need to get the OTP from logs or use a known driver phone
-        # In dev mode, let's use a shortcut — directly fetch vehicles
-        # We'll create a simple admin endpoint or use the existing auth flow
-
-        # Get a driver token — use first driver phone from seed data
-        # In dev, OTP is printed to console. We'll use the API differently.
-        print("⚠️  Getting auth token... (using dev OTP flow)")
-
-        # Send OTP to the admin phone
-        phone = "01000000000"
-        await client.post("/api/v1/auth/otp/send", json={"phone": phone})
-
-        # In dev mode, OTP is stored in memory. We can't easily retrieve it here.
-        # So let's use a direct approach: import the service to get the OTP
-        from app.modules.auth.service import _otp_store
-
-        code = _otp_store.get(phone, "000000")
+        print("⚠️  Getting auth token... (using dev-login as driver)")
 
         resp = await client.post(
-            "/api/v1/auth/otp/verify",
-            json={"phone": phone, "code": code, "name": "시스템관리자", "role": "platform_admin"},
+            "/api/v1/auth/dev-login",
+            json={"phone": "01011111111", "code": "000000", "name": "김운전", "role": "driver"},
         )
         if resp.status_code != 200:
             print(f"❌ Auth failed: {resp.text}")

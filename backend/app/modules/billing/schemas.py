@@ -22,6 +22,13 @@ class BillingPlanResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BillingPlanUpdateRequest(BaseModel):
+    name: str | None = None
+    price_per_ride: int | None = None
+    monthly_cap: int | None = None
+    is_active: bool | None = None
+
+
 class InvoiceResponse(BaseModel):
     id: uuid.UUID
     parent_id: uuid.UUID
@@ -46,3 +53,39 @@ class GenerateInvoicesRequest(BaseModel):
 class GenerateInvoicesResponse(BaseModel):
     invoices_created: int
     total_amount: int
+
+
+# --- PG (Toss Payments) schemas ---
+
+
+class PaymentPrepareRequest(BaseModel):
+    invoice_id: uuid.UUID
+
+
+class PaymentPrepareResponse(BaseModel):
+    order_id: str
+    amount: int
+    order_name: str
+    client_key: str
+    customer_name: str | None = None
+
+
+class PaymentConfirmRequest(BaseModel):
+    payment_key: str
+    order_id: str
+    amount: int
+
+
+class PaymentConfirmResponse(BaseModel):
+    payment_id: uuid.UUID
+    invoice_id: uuid.UUID
+    amount: int
+    status: str
+    pg_payment_key: str
+    pg_status: str
+
+
+class TossWebhookPayload(BaseModel):
+    """Toss Payments webhook event body."""
+    event_type: str | None = None
+    data: dict | None = None

@@ -3,17 +3,27 @@ from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.service import create_access_token
 
-# Use SQLite for tests (async)
-TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+# Use in-memory SQLite for tests (async).
+# StaticPool keeps a single connection alive so the in-memory DB persists
+# across sessions and eliminates "database is locked" errors.
+TEST_DATABASE_URL = "sqlite+aiosqlite://"
 
-engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+engine = create_async_engine(
+    TEST_DATABASE_URL,
+    echo=False,
+    poolclass=StaticPool,
+    connect_args={"check_same_thread": False},
+)
+
 TestSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
@@ -30,6 +40,9 @@ async def setup_database() -> AsyncGenerator[None, None]:
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     async with TestSessionLocal() as session:
         yield session
+        # Ensure any pending transaction is rolled back before teardown.
+        if session.in_transaction():
+            await session.rollback()
 
 
 @pytest.fixture

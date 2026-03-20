@@ -56,3 +56,30 @@ class ContractResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# --- Compliance Document schemas ---
+
+
+class DocumentUploadRequest(BaseModel):
+    academy_id: uuid.UUID
+    document_type: str = Field(
+        description=(
+            "문서 유형: insurance_cert, police_report, safety_training, vehicle_inspection, other"
+        ),
+    )
+    expires_at: datetime | None = Field(default=None, description="만료일")
+
+
+class DocumentResponse(BaseModel):
+    id: uuid.UUID
+    academy_id: uuid.UUID
+    document_type: str
+    file_name: str
+    file_path: str
+    uploaded_at: datetime
+    expires_at: datetime | None
+    uploaded_by: uuid.UUID
+    is_active: bool
+
+    model_config = {"from_attributes": True}

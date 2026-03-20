@@ -101,7 +101,9 @@ class TestEndToEndFlow:
             headers=auth_header(parent_token),
         )
         assert resp.status_code == 200
-        students = resp.json()
+        data = resp.json()
+        students = data["items"]
+        assert data["total"] >= 1
         assert len(students) >= 1
         assert any(s["id"] == student_id for s in students)
 

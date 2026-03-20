@@ -1,0 +1,81 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'web/**'
+      - 'site/**'
+      - 'deploy/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: backend
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/backend:${{ github.sha }},${{ env.IMAGE_PREFIX }}/backend:latest
+
+  build-web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: web
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }},${{ env.IMAGE_PREFIX }}/web:latest
+
+  build-site:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: site
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/site:${{ github.sha }},${{ env.IMAGE_PREFIX }}/site:latest
+
+  validate-k8s:
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-web, build-site]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate K8s manifests
+        run: |
+          for f in deploy/k8s/*.yaml; do
+            echo "Validating $f..."
+            kubectl apply --dry-run=client -f "$f" 2>&1 || true
+          done

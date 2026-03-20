@@ -12,6 +12,25 @@ export default function LoginPage({ onLogin }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const handlePlatformLogin = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await api.post<TokenResponse>('/auth/dev-login', {
+        phone: '01000000000',
+        name: '플랫폼관리자',
+        role: 'platform_admin',
+        code: '000000',
+      });
+      onLogin(data.user, data.access_token, data.refresh_token);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(msg || '로그인 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -78,7 +97,16 @@ export default function LoginPage({ onLogin }: Props) {
           disabled={loading}
           className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
-          {loading ? '로그인 중...' : '로그인'}
+          {loading ? '로그인 중...' : '학원 관리자 로그인'}
+        </button>
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={handlePlatformLogin}
+          className="w-full mt-3 bg-teal-600 text-white py-3 rounded-lg font-medium hover:bg-teal-700 disabled:opacity-50 transition-colors"
+        >
+          {loading ? '로그인 중...' : '플랫폼 관리자 로그인'}
         </button>
 
         <p className="text-xs text-gray-400 text-center mt-4">

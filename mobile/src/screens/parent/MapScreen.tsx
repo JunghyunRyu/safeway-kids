@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
+import { Colors } from "../../constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Constants from "expo-constants";
 let WebView: any = null;
@@ -11,13 +12,15 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { listDailySchedules, DailySchedule } from "../../api/schedules";
 import { useVehicleTracking } from "../../hooks/useVehicleTracking";
+import { MAP_HTML_CONTENT } from "../../constants/mapHtml";
 
 const KAKAO_MAP_API_KEY = Constants.expoConfig?.extra?.kakaoMapApiKey ?? "";
 
 // Default center: Gangnam-gu
 const DEFAULT_CENTER = { lat: 37.4979, lng: 127.0276 };
 
-const MAP_HTML = require("../../../assets/kakao-map.html");
+// Stable source object — defined outside component to prevent WebView reload on re-render
+const WEBVIEW_SOURCE = { html: MAP_HTML_CONTENT, baseUrl: "http://localhost" };
 
 function todayStr(): string {
   return new Date().toISOString().split("T")[0];
@@ -31,7 +34,7 @@ export default function MapScreen() {
   const [vehicleIds, setVehicleIds] = useState<string[]>([]);
   const [mapReady, setMapReady] = useState(false);
 
-  const { locations, connected } = useVehicleTracking({
+  const { locations, connected, connectionState } = useVehicleTracking({
     vehicleIds,
     enabled: vehicleIds.length > 0,
   });
@@ -58,22 +61,12 @@ export default function MapScreen() {
     }, [])
   );
 
-  // Initialize map when WebView loads
-  const handleMapReady = () => {
-    setMapReady(true);
-    sendToMap({
-      type: "init",
-      apiKey: KAKAO_MAP_API_KEY,
-      center: DEFAULT_CENTER,
-    });
-  };
-
   // Handle messages from WebView
   const onMessage = (event: { nativeEvent: { data: string } }) => {
     try {
       const msg = JSON.parse(event.nativeEvent.data);
       if (msg.type === "mapReady") {
-        handleMapReady();
+        setMapReady(true);
       }
     } catch {
       // ignore
@@ -137,17 +130,36 @@ export default function MapScreen() {
         <Text style={styles.title}>{t("map.tracking")}</Text>
         <View style={styles.statusRow}>
           <View
-            style={[styles.dot, connected ? styles.dotGreen : styles.dotRed]}
+            style={[
+              styles.dot,
+              connectionState === "connected"
+                ? styles.dotGreen
+                : connectionState === "polling"
+                  ? styles.dotOrange
+                  : connectionState === "connecting" || connectionState === "reconnecting"
+                    ? styles.dotYellow
+                    : styles.dotRed,
+            ]}
           />
           <Text style={styles.statusText}>
-            {connected ? "연결됨" : t("map.disconnected")}
+            {connectionState === "connected"
+              ? "연결됨"
+              : connectionState === "polling"
+                ? "폴링 모드"
+                : connectionState === "connecting" || connectionState === "reconnecting"
+                  ? "연결 중..."
+                  : connectionState === "auth_failed"
+                    ? "인증 만료 — 다시 로그인해주세요"
+                    : connectionState === "idle"
+                      ? ""
+                      : t("map.disconnected")}
           </Text>
         </View>
       </View>
 
-      {vehicleIds.length === 0 ? (
+      {vehicleIds.length === 0 && connectionState === "idle" ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.empty}>{t("map.noLocation")}</Text>
+          <Text style={styles.empty}>오늘 운행 스케줄이 없습니다</Text>
         </View>
       ) : Platform.OS === "web" || !WebView ? (
         <View style={styles.emptyContainer}>
@@ -162,7 +174,7 @@ export default function MapScreen() {
       ) : (
         <WebView
           ref={webViewRef}
-          source={MAP_HTML}
+          source={WEBVIEW_SOURCE}
           style={styles.webview}
           onMessage={onMessage}
           onLoad={onWebViewLoad}
@@ -177,22 +189,24 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fa" },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
     paddingHorizontal: 20,
     paddingBottom: 8,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: Colors.borderLight,
   },
-  title: { fontSize: 20, fontWeight: "bold" },
+  title: { fontSize: 20, fontWeight: "bold", color: Colors.textPrimary },
   statusRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
   dot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  dotGreen: { backgroundColor: "#4CAF50" },
-  dotRed: { backgroundColor: "#f44" },
-  statusText: { fontSize: 12, color: "#666" },
+  dotGreen: { backgroundColor: Colors.success },
+  dotOrange: { backgroundColor: Colors.warning },
+  dotYellow: { backgroundColor: "#FFC107" },
+  dotRed: { backgroundColor: Colors.danger },
+  statusText: { fontSize: 12, color: Colors.textSecondary },
   emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  empty: { fontSize: 14, color: "#888" },
-  emptySubtext: { marginTop: 8, fontSize: 12, color: "#888" },
+  empty: { fontSize: 14, color: Colors.textSecondary },
+  emptySubtext: { marginTop: 8, fontSize: 12, color: Colors.textDisabled },
   webview: { flex: 1 },
 });

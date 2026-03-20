@@ -1,0 +1,12 @@
+.venv/
+tests/
+*.pyc
+__pycache__/
+.env
+.env.*
+*.key
+firebase-credentials.json
+test.db
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

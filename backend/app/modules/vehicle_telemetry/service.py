@@ -12,6 +12,7 @@ from app.modules.vehicle_telemetry.schemas import (
     GpsUpdateRequest,
     VehicleAssignmentResponse,
     VehicleCreateRequest,
+    VehicleUpdateRequest,
 )
 
 
@@ -34,6 +35,31 @@ async def get_vehicle(db: AsyncSession, vehicle_id: uuid.UUID) -> Vehicle:
     vehicle = result.scalar_one_or_none()
     if not vehicle:
         raise NotFoundError(detail="차량을 찾을 수 없습니다")
+    return vehicle
+
+
+async def update_vehicle(
+    db: AsyncSession, vehicle_id: uuid.UUID, request: VehicleUpdateRequest
+) -> Vehicle:
+    """Update vehicle fields. Only non-None values are applied."""
+    vehicle = await get_vehicle(db, vehicle_id)
+    if request.license_plate is not None:
+        vehicle.license_plate = request.license_plate
+    if request.capacity is not None:
+        vehicle.capacity = request.capacity
+    if request.model_name is not None:
+        vehicle.operator_name = request.model_name  # maps model_name to operator_name column
+    if request.is_active is not None:
+        vehicle.is_active = request.is_active
+    await db.flush()
+    return vehicle
+
+
+async def deactivate_vehicle(db: AsyncSession, vehicle_id: uuid.UUID) -> Vehicle:
+    """Soft-deactivate a vehicle by setting is_active = False."""
+    vehicle = await get_vehicle(db, vehicle_id)
+    vehicle.is_active = False
+    await db.flush()
     return vehicle
 
 

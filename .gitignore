@@ -30,8 +30,18 @@ build/
 coverage/
 *.log
 
+# Uploaded files
+uploads/
+
 # OS/editor
 .DS_Store
 .vscode/
 .idea/
 *.db
+
+vmware_ubuntu.key
+vmware_ubuntu.key.pub
+
+google-services.json
+GoogleService-Info.plist
+safeway-kids-firebase-adminsdk-fbsvc-0e13eee2eb.json
