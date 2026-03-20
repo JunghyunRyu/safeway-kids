@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
 import { listStudents, Student } from "../../api/students";
+import { showError } from "../../utils/toast";
 
 const StudentCard = memo(function StudentCard({ student }: { student: Student }) {
   const initials = student.name.charAt(0);
@@ -63,7 +64,8 @@ export default function AdminStudentsScreen() {
       const data = await listStudents();
       setStudents(data);
     } catch (err) {
-      console.error("Admin students load error:", err);
+      if (__DEV__) console.error("Admin students load error:", err);
+      showError('학생 목록을 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
       setRefreshing(false);

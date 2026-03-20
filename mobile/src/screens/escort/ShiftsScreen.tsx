@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { getMyShifts, checkIn, checkOut, EscortShift } from "../../api/escort";
+import { showError } from "../../utils/toast";
 import {
   Colors,
   Typography,
@@ -124,7 +125,7 @@ export default function ShiftsScreen() {
       const data = await getMyShifts();
       setShifts(data);
     } catch {
-      // ignore
+      showError('근무 목록을 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
       setRefreshing(false);

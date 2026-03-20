@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography, Spacing, Radius, Shadows, STATUS_COLORS, STATUS_BG_COLORS } from "../../constants/theme";
 import { listDailySchedules, DailySchedule } from "../../api/schedules";
+import { showError } from "../../utils/toast";
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: "예정",
@@ -54,7 +55,8 @@ export default function StudentScheduleScreen() {
       const data = await listDailySchedules(todayStr());
       setSchedules(data);
     } catch (err) {
-      console.error("Student schedule load error:", err);
+      if (__DEV__) console.error("Student schedule load error:", err);
+      showError('스케줄을 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
       setRefreshing(false);

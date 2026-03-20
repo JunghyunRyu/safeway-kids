@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
 import { STATUS_COLORS, STATUS_BG_COLORS } from "../../constants/theme";
+import { showError } from "../../utils/toast";
 import {
   Invoice,
   getInvoicesByAcademy,
@@ -125,7 +126,8 @@ export default function AdminBillingScreen() {
         setInvoices(data);
       }
     } catch (err) {
-      console.error("Admin billing load error:", err);
+      if (__DEV__) console.error("Admin billing load error:", err);
+      showError('청구 데이터를 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
       setRefreshing(false);

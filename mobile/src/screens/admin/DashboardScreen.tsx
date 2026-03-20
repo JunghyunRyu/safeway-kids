@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { memo, useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
 import { useAuth } from "../../hooks/useAuth";
 import apiClient from "../../api/client";
+import { showError } from "../../utils/toast";
 
 interface AcademySummary {
   id: string;
@@ -26,7 +27,7 @@ interface DashboardStats {
   pendingAmount: number;
 }
 
-function StatCard({
+const StatCard = memo(function StatCard({
   icon,
   label,
   value,
@@ -49,7 +50,7 @@ function StatCard({
       {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
     </View>
   );
-}
+});
 
 export default function AdminDashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -95,7 +96,8 @@ export default function AdminDashboardScreen() {
 
       setStats({ todaySchedules, boardedCount, completedCount, pendingInvoices, pendingAmount });
     } catch (err) {
-      console.error("Admin dashboard load error:", err);
+      if (__DEV__) console.error("Admin dashboard load error:", err);
+      showError('대시보드 데이터를 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
       setRefreshing(false);

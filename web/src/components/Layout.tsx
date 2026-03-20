@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import type { User } from '../types';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 const academyNavItems = [
   { to: '/', label: '대시보드', icon: '📊' },
@@ -23,32 +24,11 @@ const platformNavItems = [
   { to: '/map', label: '관제 센터', icon: '🗺️' },
 ];
 
-function useDarkMode() {
-  const [dark, setDark] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const stored = localStorage.getItem('theme');
-    if (stored === 'dark') return true;
-    if (stored === 'light') return false;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (dark) {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [dark]);
-
-  return [dark, setDark] as const;
-}
-
 export default function Layout({ user, onLogout }: { user: User; onLogout: () => void }) {
   const isPlatformAdmin = user.role === 'platform_admin';
-  const navItems = isPlatformAdmin ? platformNavItems : academyNavItems;
+  const navItems = isPlatformAdmin
+    ? (import.meta.env.PROD ? platformNavItems.filter((i) => i.to !== '/seed') : platformNavItems)
+    : academyNavItems;
   const [dark, setDark] = useDarkMode();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 

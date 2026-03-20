@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
-import ToastContainer from './components/Toast';
+import { ToastProvider } from './components/Toast';
+import LoadingSpinner from './components/LoadingSpinner';
 import LoginPage from './pages/LoginPage';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -41,28 +42,31 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Navigate to="/" replace />} />
-          <Route element={<Layout user={user} onLogout={logout} />}>
-            <Route path="/" element={<Suspense fallback={<div className="p-8 text-gray-400">로딩 중...</div>}>{isPlatformAdmin ? <PlatformDashboardPage /> : <DashboardPage />}</Suspense>} />
-            <Route path="/students" element={<StudentsPage />} />
-            <Route path="/schedules" element={<SchedulesPage />} />
-            <Route path="/vehicles" element={isPlatformAdmin ? <PlatformVehiclesPage /> : <VehiclesPage />} />
-            <Route path="/billing" element={isPlatformAdmin ? <PlatformBillingPage /> : <BillingPage />} />
-            {/* Platform admin routes */}
-            <Route path="/academies" element={<PlatformAcademiesPage />} />
-            <Route path="/users" element={<PlatformUsersPage />} />
-            <Route path="/upload" element={<PlatformUploadPage />} />
-            <Route path="/compliance" element={<PlatformCompliancePage />} />
-            <Route path="/seed" element={<PlatformSeedPage />} />
-            <Route path="/audit-logs" element={<PlatformAuditLogPage />} />
-            <Route path="/map" element={<Suspense fallback={<div className="p-8 text-gray-400">로딩 중...</div>}><PlatformMapPage /></Suspense>} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-      <ToastContainer />
+      <ToastProvider>
+        <BrowserRouter>
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              <Route path="/login" element={<Navigate to="/" replace />} />
+              <Route element={<Layout user={user} onLogout={logout} />}>
+                <Route path="/" element={isPlatformAdmin ? <PlatformDashboardPage /> : <DashboardPage />} />
+                <Route path="/students" element={<StudentsPage />} />
+                <Route path="/schedules" element={<SchedulesPage />} />
+                <Route path="/vehicles" element={isPlatformAdmin ? <PlatformVehiclesPage /> : <VehiclesPage />} />
+                <Route path="/billing" element={isPlatformAdmin ? <PlatformBillingPage /> : <BillingPage />} />
+                {/* Platform admin routes */}
+                <Route path="/academies" element={<PlatformAcademiesPage />} />
+                <Route path="/users" element={<PlatformUsersPage />} />
+                <Route path="/upload" element={<PlatformUploadPage />} />
+                <Route path="/compliance" element={<PlatformCompliancePage />} />
+                {!import.meta.env.PROD && <Route path="/seed" element={<PlatformSeedPage />} />}
+                <Route path="/audit-logs" element={<PlatformAuditLogPage />} />
+                <Route path="/map" element={<PlatformMapPage />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

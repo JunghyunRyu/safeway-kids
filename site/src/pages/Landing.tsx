@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
@@ -96,7 +97,12 @@ const SAFETY_FEATURES = [
   },
 ];
 
+type FormStatus = 'idle' | 'loading' | 'success' | 'error';
+
 export default function Landing() {
+  const [formStatus, setFormStatus] = useState<FormStatus>('idle');
+  const [formError, setFormError] = useState('');
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -277,10 +283,44 @@ export default function Landing() {
             SAFEWAY KIDS 서비스 도입에 관심이 있으시면 연락주세요
           </p>
 
+          {formStatus === 'success' && (
+            <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm">
+              문의가 접수되었습니다. 빠른 시일 내에 연락드리겠습니다.
+            </div>
+          )}
+          {formStatus === 'error' && (
+            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
+              {formError || '문의 접수에 실패했습니다. 잠시 후 다시 시도해주세요.'}
+            </div>
+          )}
+
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              alert("문의가 접수되었습니다. 빠른 시일 내에 연락드리겠습니다.");
+              setFormStatus('loading');
+              setFormError('');
+              const fd = new FormData(e.currentTarget);
+              try {
+                const res = await fetch('/api/v1/contact', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    name: fd.get('name'),
+                    phone: (fd.get('phone') as string).replace(/-/g, ''),
+                    inquiry_type: fd.get('type'),
+                    message: fd.get('message'),
+                  }),
+                });
+                if (!res.ok) {
+                  const data = await res.json().catch(() => ({}));
+                  throw new Error(data.detail || '문의 접수에 실패했습니다');
+                }
+                setFormStatus('success');
+                (e.target as HTMLFormElement).reset();
+              } catch (err) {
+                setFormStatus('error');
+                setFormError(err instanceof Error ? err.message : '문의 접수에 실패했습니다');
+              }
             }}
             className="text-left space-y-6"
           >
@@ -343,9 +383,10 @@ export default function Landing() {
             <div className="text-center pt-4">
               <button
                 type="submit"
-                className="px-10 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-2xl transition shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5"
+                disabled={formStatus === 'loading'}
+                className="px-10 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-2xl transition shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                문의 접수하기
+                {formStatus === 'loading' ? '접수 중...' : '문의 접수하기'}
               </button>
             </div>
           </form>

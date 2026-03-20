@@ -18,6 +18,7 @@ import {
   listDailySchedules,
 } from "../../api/schedules";
 import { listStudents, Student } from "../../api/students";
+import { showError } from "../../utils/toast";
 import {
   Colors,
   Typography,
@@ -135,7 +136,7 @@ const ScheduleItem = memo(function ScheduleItem({
 });
 
 // ── Date Navigation Header ───────────────────────────────────
-function DateNavHeader({
+const DateNavHeader = memo(function DateNavHeader({
   offset,
   onPrev,
   onNext,
@@ -177,7 +178,7 @@ function DateNavHeader({
       </Pressable>
     </View>
   );
-}
+});
 
 // ── Main Screen ──────────────────────────────────────────────
 export default function ScheduleScreen() {
@@ -198,7 +199,7 @@ export default function ScheduleScreen() {
         setSchedules(d);
         setStudents(s);
       } catch {
-        // silent
+        showError('스케줄을 불러오는데 실패했습니다');
       }
     },
     []

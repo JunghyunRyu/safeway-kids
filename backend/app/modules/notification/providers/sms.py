@@ -1,7 +1,11 @@
+import logging
+
 import httpx
 
 from app.config import settings
 from app.modules.notification.providers.base import SmsProvider
+
+logger = logging.getLogger(__name__)
 
 
 class NHNCloudSmsProvider(SmsProvider):
@@ -11,7 +15,7 @@ class NHNCloudSmsProvider(SmsProvider):
 
     async def send_sms(self, phone: str, message: str) -> bool:
         if settings.environment != "production":
-            print(f"[DEV SMS] {phone}: {message}")
+            logger.info("[DEV SMS] %s: %s", phone, message)
             return True
 
         url = f"{self.BASE_URL}/appKeys/{settings.nhn_sms_app_key}/sender/sms"
@@ -31,5 +35,5 @@ class NHNCloudSmsProvider(SmsProvider):
                 resp.raise_for_status()
                 return True
         except Exception as e:
-            print(f"[SMS ERROR] {e}")
+            logger.error("[SMS ERROR] %s", e)
             return False

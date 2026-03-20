@@ -176,9 +176,11 @@ def create_app() -> FastAPI:
 
     from app.modules.admin.router import router as admin_router
     from app.modules.billing.router import router as billing_router
+    from app.modules.contact.router import router as contact_router
     from app.modules.escort.router import router as escort_router
     application.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
     application.include_router(billing_router, prefix="/api/v1/billing", tags=["billing"])
+    application.include_router(contact_router, prefix="/api/v1/contact", tags=["contact"])
     application.include_router(escort_router, prefix="/api/v1/escorts", tags=["escorts"])
 
     @application.get("/health")

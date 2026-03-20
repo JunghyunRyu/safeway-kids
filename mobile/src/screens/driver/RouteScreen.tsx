@@ -20,6 +20,7 @@ import {
 } from "../../api/schedules";
 import { getMyRoute, RoutePlan } from "../../api/routes";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
+import { showError } from "../../utils/toast";
 
 function todayStr(): string {
   return new Date().toISOString().split("T")[0];
@@ -155,7 +156,7 @@ export default function DriverRouteScreen() {
         setSchedules(scheduleData);
       }
     } catch {
-      // silent
+      showError('경로 데이터를 불러오는데 실패했습니다');
     }
   }, []);
 

@@ -1,3 +1,4 @@
+import logging
 import random
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -10,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.common.exceptions import UnauthorizedError
 from app.config import settings
 from app.modules.auth.models import User, UserRole
+
+logger = logging.getLogger(__name__)
 
 # OTP store: in production, use Redis with TTL
 _otp_store: dict[str, str] = {}
@@ -89,7 +92,7 @@ async def send_otp(phone: str) -> None:
         pass
     else:
         # Development: log the OTP
-        print(f"[DEV OTP] {phone}: {code}")
+        logger.info("[DEV OTP] %s: %s", phone, code)
 
 
 async def verify_otp(phone: str, code: str) -> bool:

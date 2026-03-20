@@ -11,6 +11,7 @@ from app.modules.academy_management.models import Academy  # noqa: F401
 from app.modules.admin.models import AuditLog  # noqa: F401
 from app.modules.auth.models import User  # noqa: F401
 from app.modules.billing.models import BillingPlan, Invoice, Payment  # noqa: F401
+from app.modules.contact.models import ContactInquiry  # noqa: F401
 from app.modules.compliance.models import (  # noqa: F401
     ComplianceDocument,
     Contract,

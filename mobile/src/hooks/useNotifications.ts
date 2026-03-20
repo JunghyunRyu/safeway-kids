@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { registerFcmToken } from "../api/notifications";
+import { debugLog } from "../utils/debug";
 
 // Configure how notifications appear when app is in foreground
 Notifications.setNotificationHandler({
@@ -54,7 +55,7 @@ export function useNotifications(authenticated: boolean) {
 
 async function registerForPushNotifications(): Promise<string | null> {
   if (!Device.isDevice) {
-    console.log("[Notifications] Must use physical device for push");
+    debugLog("[Notifications] Must use physical device for push");
     return null;
   }
 
@@ -68,7 +69,7 @@ async function registerForPushNotifications(): Promise<string | null> {
   }
 
   if (finalStatus !== "granted") {
-    console.log("[Notifications] Permission not granted");
+    debugLog("[Notifications] Permission not granted");
     return null;
   }
 
