@@ -22,11 +22,22 @@ class OtpVerifyRequest(BaseModel):
     role: UserRole = Field(default=UserRole.PARENT, description="사용자 역할")
 
 
+class TokenUserInfo(BaseModel):
+    id: str
+    phone: str
+    name: str
+    role: str
+    is_active: bool
+
+    model_config = {"from_attributes": True}
+
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+    user: TokenUserInfo
 
 
 class RefreshTokenRequest(BaseModel):

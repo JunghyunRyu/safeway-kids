@@ -262,4 +262,11 @@ def create_token_response(user: User) -> dict:
         "refresh_token": refresh_token,
         "token_type": "bearer",
         "expires_in": settings.jwt_access_token_expire_minutes * 60,
+        "user": {
+            "id": str(user.id),
+            "phone": user.phone,
+            "name": user.name,
+            "role": user.role.value if hasattr(user.role, 'value') else user.role,
+            "is_active": user.is_active,
+        },
     }
