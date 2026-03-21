@@ -1,5 +1,4 @@
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent } from '@testing-library/react';
 import DetailModal from '../components/DetailModal';
 
 describe('DetailModal', () => {
@@ -39,25 +38,22 @@ describe('DetailModal', () => {
     expect(screen.queryByText('학생 상세')).not.toBeInTheDocument();
   });
 
-  it('calls onClose when close button clicked', async () => {
+  it('calls onClose when close button clicked', () => {
     const onClose = vi.fn();
     render(<DetailModal {...baseProps} onClose={onClose} />);
 
-    // The X button has aria-label="닫기", the text button also says "닫기"
     const closeButtons = screen.getAllByRole('button', { name: '닫기' });
-    await userEvent.click(closeButtons[0]);
+    fireEvent.click(closeButtons[0]);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onClose when footer 닫기 button clicked', async () => {
+  it('calls onClose when footer 닫기 button clicked', () => {
     const onClose = vi.fn();
     render(<DetailModal {...baseProps} onClose={onClose} />);
 
-    // There are two buttons matching "닫기" (X aria-label + footer text).
-    // Use getAllByRole and pick the last one (footer).
     const closeButtons = screen.getAllByRole('button', { name: '닫기' });
     const footerClose = closeButtons[closeButtons.length - 1];
-    await userEvent.click(footerClose);
+    fireEvent.click(footerClose);
     expect(onClose).toHaveBeenCalled();
   });
 
