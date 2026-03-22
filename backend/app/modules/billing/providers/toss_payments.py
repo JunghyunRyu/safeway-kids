@@ -64,7 +64,7 @@ class TossPaymentsProvider:
                     **_auth_header(),
                     "Content-Type": "application/json",
                 },
-                timeout=30.0,
+                timeout=settings.external_api_timeout_seconds,
             )
             response.raise_for_status()
             return response.json()
@@ -99,7 +99,7 @@ class TossPaymentsProvider:
                     **_auth_header(),
                     "Content-Type": "application/json",
                 },
-                timeout=30.0,
+                timeout=settings.external_api_timeout_seconds,
             )
             response.raise_for_status()
             return response.json()

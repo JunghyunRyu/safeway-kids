@@ -4,15 +4,32 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class ConsentScopeModel(BaseModel):
+    """구조화된 동의 범위 (필수/선택 구분)"""
+    # 필수 동의
+    service_terms: bool = Field(..., description="서비스 이용약관 동의")
+    privacy_policy: bool = Field(..., description="개인정보 처리방침 동의")
+    child_info_collection: bool = Field(..., description="아동 개인정보 수집 동의")
+    # 선택 동의
+    location_tracking: bool = Field(default=False, description="위치정보 수집 동의")
+    push_notification: bool = Field(default=True, description="푸시 알림 수신 동의")
+    marketing: bool = Field(default=False, description="마케팅 정보 수신 동의")
+    third_party_sharing: bool = Field(default=False, description="제3자 제공 동의")
+
+
 class ConsentCreateRequest(BaseModel):
     child_id: uuid.UUID
     consent_scope: dict = Field(
         default_factory=lambda: {
-            "location_tracking": True,
+            "service_terms": True,
+            "privacy_policy": True,
+            "child_info_collection": True,
+            "location_tracking": False,
             "push_notification": True,
-            "facial_recognition": False,
+            "marketing": False,
+            "third_party_sharing": False,
         },
-        description="동의 범위",
+        description="동의 범위 (필수: service_terms, privacy_policy, child_info_collection)",
     )
     consent_method: str = Field(default="phone_otp", description="동의 방법")
 

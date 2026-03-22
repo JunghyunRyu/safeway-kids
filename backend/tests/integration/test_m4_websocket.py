@@ -24,23 +24,58 @@ class TestWebSocketAuth:
     async def test_ws_rejects_missing_token(  # noqa: SIM117
         self, db_session, fake_redis,
     ):
-        """WebSocket without token should be closed with 4001."""
+        """WebSocket without token: accepts first, then closes on auth timeout or missing token."""
         vehicle_id = uuid.uuid4()
         with (
             patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis),
             patch("app.main.redis_client", fake_redis),
             TestClient(app) as tc,
-            pytest.raises(WebSocketDisconnect),
         ):
             with tc.websocket_connect(
                 f"/api/v1/telemetry/ws/vehicles/{vehicle_id}"
-            ):
-                pass
+            ) as ws:
+                # Send a message without token field
+                ws.send_json({"no_token": True})
+                # Server should close connection with 4001
+                with pytest.raises(WebSocketDisconnect) as exc_info:
+                    ws.receive_json()
+                assert exc_info.value.code == 4001
+
+    async def test_ws_first_message_auth_success(  # noqa: SIM117
+        self, db_session, parent_user, parent_token, fake_redis,
+    ):
+        """WebSocket first-message auth: send token in first message."""
+
+        async def override_get_db():
+            yield db_session
+
+        app.dependency_overrides[get_db] = override_get_db
+        vehicle_id = uuid.uuid4()
+        with (
+            patch(
+                "app.modules.vehicle_telemetry.router.redis_client",
+                fake_redis,
+            ),
+            patch(
+                "app.modules.vehicle_telemetry.router.async_session_factory",
+                TestSessionLocal,
+            ),
+            patch("app.main.redis_client", fake_redis),
+            TestClient(app) as tc,
+        ):
+            with tc.websocket_connect(
+                f"/api/v1/telemetry/ws/vehicles/{vehicle_id}"
+            ) as ws:
+                # Send token as first message
+                ws.send_json({"token": parent_token})
+                resp = ws.receive_json()
+                assert resp["type"] == "auth_ok"
+        app.dependency_overrides.clear()
 
     async def test_ws_rejects_invalid_token(  # noqa: SIM117
         self, db_session, fake_redis,
     ):
-        """WebSocket with invalid JWT should be closed with 4001."""
+        """WebSocket with invalid JWT in query param should be closed with 4001."""
         vehicle_id = uuid.uuid4()
         with (
             patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis),
@@ -53,10 +88,10 @@ class TestWebSocketAuth:
             ):
                 pass
 
-    async def test_ws_accepts_valid_token(  # noqa: SIM117
+    async def test_ws_accepts_valid_token_query_param(  # noqa: SIM117
         self, db_session, parent_user, parent_token, fake_redis,
     ):
-        """WebSocket with valid JWT should be accepted."""
+        """WebSocket with valid JWT in query param should be accepted (deprecated path)."""
 
         async def override_get_db():
             yield db_session

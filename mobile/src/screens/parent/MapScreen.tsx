@@ -10,7 +10,8 @@ if (Platform.OS !== "web") {
 }
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
-import { listDailySchedules, DailySchedule } from "../../api/schedules";
+import { listDailySchedules, listTemplates, DailySchedule, ScheduleTemplate } from "../../api/schedules";
+import { listStudents } from "../../api/students";
 import { useVehicleTracking } from "../../hooks/useVehicleTracking";
 import { MAP_HTML_CONTENT } from "../../constants/mapHtml";
 
@@ -33,13 +34,14 @@ export default function MapScreen() {
   const [schedules, setSchedules] = useState<DailySchedule[]>([]);
   const [vehicleIds, setVehicleIds] = useState<string[]>([]);
   const [mapReady, setMapReady] = useState(false);
+  const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER);
 
   const { locations, connected, connectionState } = useVehicleTracking({
     vehicleIds,
     enabled: vehicleIds.length > 0,
   });
 
-  // Load schedules to find vehicle IDs
+  // Load schedules to find vehicle IDs and dynamic map center
   useFocusEffect(
     useCallback(() => {
       (async () => {
@@ -54,6 +56,18 @@ export default function MapScreen() {
             ),
           ];
           setVehicleIds(ids);
+
+          // Load student templates to find pickup coordinates for map center
+          const students = await listStudents();
+          if (students.length > 0) {
+            const templates = await listTemplates(students[0].id);
+            const active = templates.find(
+              (t) => t.is_active && t.pickup_latitude && t.pickup_longitude
+            );
+            if (active) {
+              setMapCenter({ lat: active.pickup_latitude, lng: active.pickup_longitude });
+            }
+          }
         } catch {
           // silent
         }
@@ -120,9 +134,17 @@ export default function MapScreen() {
     sendToMap({
       type: "init",
       apiKey: KAKAO_MAP_API_KEY,
-      center: DEFAULT_CENTER,
+      center: mapCenter,
     });
   };
+
+  // Update map center when dynamic center is loaded after init
+  useEffect(() => {
+    if (!mapReady) return;
+    if (mapCenter.lat !== DEFAULT_CENTER.lat || mapCenter.lng !== DEFAULT_CENTER.lng) {
+      sendToMap({ type: "setCenter", lat: mapCenter.lat, lng: mapCenter.lng });
+    }
+  }, [mapCenter, mapReady]);
 
   return (
     <View style={styles.container}>

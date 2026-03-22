@@ -8,6 +8,8 @@ interface Props {
 
 type OtpStep = 'phone' | 'verify';
 
+const isValidPhone = (p: string) => /^01[0-9]{8,9}$/.test(p);
+
 export default function LoginPage({ onLogin }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,6 +45,10 @@ export default function LoginPage({ onLogin }: Props) {
 
   const handleDevLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidPhone(phone)) {
+      setError('올바른 전화번호 형식이 아닙니다 (예: 01012345678)');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -64,6 +70,10 @@ export default function LoginPage({ onLogin }: Props) {
   // ── Production OTP handlers ───────────────────────────────────
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidPhone(phone)) {
+      setError('올바른 전화번호 형식이 아닙니다 (예: 01012345678)');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -125,6 +135,7 @@ export default function LoginPage({ onLogin }: Props) {
             onChange={(e) => setPhone(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none"
             placeholder="01012345678"
+            pattern="01[0-9]{8,9}"
             required
           />
 
@@ -191,6 +202,7 @@ export default function LoginPage({ onLogin }: Props) {
               onChange={(e) => setPhone(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-6 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none"
               placeholder="01012345678"
+              pattern="01[0-9]{8,9}"
               required
             />
             <button

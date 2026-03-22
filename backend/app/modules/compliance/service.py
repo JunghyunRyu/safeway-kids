@@ -30,6 +30,16 @@ async def create_consent(
     ip_address: str | None = None,
 ) -> GuardianConsent:
     """Create a new guardian consent record."""
+    # 필수 동의 항목 검증 (A14)
+    required_items = ["service_terms", "privacy_policy", "child_info_collection"]
+    scope = request.consent_scope
+    for item in required_items:
+        if not scope.get(item):
+            from app.common.exceptions import ValidationError
+            raise ValidationError(
+                detail=f"필수 동의 항목 '{item}'에 동의해야 합니다"
+            )
+
     # Check for existing active consent
     stmt = select(GuardianConsent).where(
         GuardianConsent.guardian_id == guardian_id,
@@ -101,6 +111,48 @@ async def withdraw_consent(
         .values(is_active=False)
     )
     await db.execute(stmt)
+
+    # A14: 동의 철회 시 기수집 GPS 데이터 즉시 삭제 (개인정보보호법 제36조)
+    scope = consent.consent_scope or {}
+    if scope.get("location_tracking"):
+        import logging
+
+        from sqlalchemy import Date as SqlDate
+        from sqlalchemy import cast
+        from sqlalchemy import delete as sql_delete
+
+        from app.modules.scheduling.models import DailyScheduleInstance
+        from app.modules.vehicle_telemetry.models import GpsHistory
+
+        _logger = logging.getLogger(__name__)
+
+        # Find vehicles and dates for this child's rides
+        ride_stmt = (
+            select(
+                DailyScheduleInstance.vehicle_id,
+                DailyScheduleInstance.schedule_date,
+            )
+            .where(
+                DailyScheduleInstance.student_id == consent.child_id,
+                DailyScheduleInstance.vehicle_id.isnot(None),
+            )
+        )
+        ride_result = await db.execute(ride_stmt)
+        rides = ride_result.all()
+
+        if rides:
+            vehicle_ids = list({r[0] for r in rides})
+            ride_dates = list({r[1] for r in rides})
+            del_stmt = sql_delete(GpsHistory).where(
+                GpsHistory.vehicle_id.in_(vehicle_ids),
+                cast(GpsHistory.recorded_at, SqlDate).in_(ride_dates),
+            )
+            result = await db.execute(del_stmt)
+            _logger.info(
+                "[CONSENT] Deleted %d GPS records on consent withdrawal for child=%s",
+                result.rowcount,
+                consent.child_id,
+            )
 
     await db.flush()
     return consent
@@ -201,6 +253,22 @@ async def list_expiring_documents(
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def deactivate_expired_documents(db: AsyncSession) -> int:
+    """만료일이 지난 활성 문서를 비활성화. 처리 건수 반환."""
+    now = datetime.now(UTC)
+    stmt = (
+        update(ComplianceDocument)
+        .where(
+            ComplianceDocument.is_active.is_(True),
+            ComplianceDocument.expires_at.isnot(None),
+            ComplianceDocument.expires_at <= now,
+        )
+        .values(is_active=False)
+    )
+    result = await db.execute(stmt)
+    return result.rowcount
 
 
 async def delete_document(db: AsyncSession, document_id: uuid.UUID) -> ComplianceDocument:

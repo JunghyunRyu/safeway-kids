@@ -40,12 +40,25 @@ export interface Vehicle {
   license_plate: string;
   capacity: number;
   model_name?: string;
+  manufacture_year?: number;
+  school_bus_registration_no?: string;
+  is_yellow_painted?: boolean;
+  vehicle_type?: string;
+  has_cctv?: boolean;
+  has_stop_sign?: boolean;
+  last_inspection_date?: string;
+  insurance_expiry?: string;
+  insurance_type?: string;
+  insurance_coverage_amount?: number;
+  registration_expiry?: string;
+  safety_inspection_expiry?: string;
   is_active: boolean;
 }
 
 export interface DailySchedule {
   id: string;
   student_id: string;
+  student_name?: string;
   academy_id: string;
   schedule_date: string;
   pickup_time: string;

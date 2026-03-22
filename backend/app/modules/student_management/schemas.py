@@ -8,6 +8,7 @@ class StudentCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="학생 이름")
     date_of_birth: date = Field(..., description="생년월일")
     grade: str | None = Field(default=None, max_length=20, description="학년")
+    guardian_phone: str | None = Field(default=None, pattern=r"^01[0-9]{8,9}$", description="보호자 전화번호")
 
 
 class StudentUpdateRequest(BaseModel):

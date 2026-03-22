@@ -1,5 +1,5 @@
 import logging
-import random
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -11,11 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.common.exceptions import UnauthorizedError
 from app.config import settings
 from app.modules.auth.models import User, UserRole
+from app.redis import redis_client
 
 logger = logging.getLogger(__name__)
 
-# OTP store: in production, use Redis with TTL
-_otp_store: dict[str, str] = {}
+OTP_TTL_SECONDS = 180  # 3분
 
 
 async def get_kakao_user_info(code: str, redirect_uri: str | None = None) -> dict:
@@ -77,30 +77,78 @@ async def kakao_login(
     return user, True
 
 
+OTP_MAX_FAILURES = 5
+OTP_LOCK_SECONDS = 900  # 15분
+
+
 def generate_otp() -> str:
-    """Generate a 6-digit OTP code."""
-    return f"{random.randint(100000, 999999)}"
+    """Generate a 6-digit OTP code using cryptographic PRNG."""
+    return f"{secrets.randbelow(900000) + 100000}"
 
 
-async def send_otp(phone: str) -> None:
-    """Send OTP via SMS. In development, stores in memory."""
+async def _log_otp_event(phone: str, event: str, success: bool, ip: str | None = None) -> None:
+    """OTP 감사 로그 기록 (개인정보보호법 안전성 확보조치 기준 제8조 - 접속기록 1년 보관)."""
+    from app.database import async_session_factory
+    from app.modules.admin.service import log_audit
+
+    try:
+        async with async_session_factory() as db:
+            await log_audit(
+                db,
+                user_id="system",
+                user_name="OTP",
+                action=event,
+                entity_type="otp_auth",
+                entity_id="",
+                details={"phone": phone[:3] + "****" + phone[-4:], "success": success},
+                ip_address=ip,
+            )
+            await db.commit()
+    except Exception:
+        logger.warning("[OTP] Failed to write audit log for %s", event)
+
+
+async def send_otp(phone: str, ip_address: str | None = None) -> None:
+    """Send OTP via SMS. Stores OTP in Redis with TTL."""
+    # 잠금 확인
+    if await redis_client.exists(f"otp_lock:{phone}"):
+        await _log_otp_event(phone, "OTP_SEND_LOCKED", False, ip_address)
+        raise UnauthorizedError(detail="인증 시도 횟수 초과. 15분 후 다시 시도해주세요")
+
     code = generate_otp()
-    _otp_store[phone] = code
+    await redis_client.set(f"otp:{phone}", code, ex=OTP_TTL_SECONDS)
 
-    if settings.environment == "production":
-        # TODO: integrate NHN Cloud SMS API
-        pass
-    else:
-        # Development: log the OTP
-        logger.info("[DEV OTP] %s: %s", phone, code)
+    from app.modules.notification.providers.sms import NHNCloudSmsProvider
+
+    sms = NHNCloudSmsProvider()
+    sent = await sms.send_sms(phone, f"[세이프웨이키즈] 인증번호: {code}")
+    if not sent:
+        logger.error("[OTP] SMS 발송 실패: %s", phone)
+
+    await _log_otp_event(phone, "OTP_SEND", sent, ip_address)
 
 
-async def verify_otp(phone: str, code: str) -> bool:
-    """Verify OTP code."""
-    stored = _otp_store.get(phone)
+async def verify_otp(phone: str, code: str, ip_address: str | None = None) -> bool:
+    """Verify OTP code from Redis with fail counter and lockout."""
+    # 잠금 확인
+    if await redis_client.exists(f"otp_lock:{phone}"):
+        await _log_otp_event(phone, "OTP_VERIFY_LOCKED", False, ip_address)
+        raise UnauthorizedError(detail="인증 시도 횟수 초과. 15분 후 다시 시도해주세요")
+
+    stored = await redis_client.get(f"otp:{phone}")
     if stored and stored == code:
-        del _otp_store[phone]
+        await redis_client.delete(f"otp:{phone}")
+        await redis_client.delete(f"otp_fail:{phone}")
+        await _log_otp_event(phone, "OTP_VERIFY", True, ip_address)
         return True
+
+    # 실패 카운트 증가
+    fail_count = await redis_client.incr(f"otp_fail:{phone}")
+    await redis_client.expire(f"otp_fail:{phone}", OTP_TTL_SECONDS)
+    if fail_count >= OTP_MAX_FAILURES:
+        await redis_client.set(f"otp_lock:{phone}", "1", ex=OTP_LOCK_SECONDS)
+        logger.warning("[OTP] 계정 잠금: %s (실패 %d회)", phone, fail_count)
+    await _log_otp_event(phone, "OTP_VERIFY", False, ip_address)
     return False
 
 

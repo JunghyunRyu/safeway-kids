@@ -113,3 +113,29 @@ class RoutePlan(Base):
     __table_args__ = (
         UniqueConstraint("vehicle_id", "plan_date", "version", name="uq_route_plan"),
     )
+
+
+class VehicleClearance(Base):
+    __tablename__ = "vehicle_clearances"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4
+    )
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("vehicles.id"), nullable=False
+    )
+    driver_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False
+    )
+    schedule_date: Mapped[date] = mapped_column(Date, nullable=False)
+    checklist: Mapped[dict] = mapped_column(JSON, nullable=False)  # type: ignore[assignment]
+    completed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("vehicle_id", "schedule_date", name="uq_vehicle_clearance"),
+    )

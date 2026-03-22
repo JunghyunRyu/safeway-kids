@@ -112,7 +112,7 @@ class TestEndToEndFlow:
             "/api/v1/compliance/consents",
             json={
                 "child_id": student_id,
-                "consent_scope": {"location_tracking": True, "schedule_management": True},
+                "consent_scope": {"service_terms": True, "privacy_policy": True, "child_info_collection": True, "location_tracking": True},
             },
             headers=auth_header(parent_token),
         )
@@ -236,7 +236,7 @@ class TestEndToEndFlow:
             "/api/v1/compliance/consents",
             json={
                 "child_id": student_id,
-                "consent_scope": {"location_tracking": True},
+                "consent_scope": {"service_terms": True, "privacy_policy": True, "child_info_collection": True, "location_tracking": True},
             },
             headers=auth_header(parent_token),
         )
@@ -297,7 +297,11 @@ class TestGpsFlow:
         academy_admin_token: str,
     ) -> None:
         """Driver sends GPS → parent retrieves vehicle location."""
+        from datetime import date
+
         import fakeredis.aioredis
+
+        from app.modules.vehicle_telemetry.models import VehicleAssignment
 
         fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
 
@@ -313,6 +317,15 @@ class TestGpsFlow:
         )
         assert resp.status_code == 201
         vehicle_id = resp.json()["id"]
+
+        # Assign driver to vehicle for today (required by check_vehicle_access)
+        assignment = VehicleAssignment(
+            vehicle_id=uuid.UUID(vehicle_id),
+            driver_id=driver_user.id,
+            assigned_date=date.today(),
+        )
+        db_session.add(assignment)
+        await db_session.commit()
 
         # Driver sends GPS update (patch redis_client to use fake)
         with patch("app.modules.vehicle_telemetry.router.redis_client", fake_redis):
@@ -330,10 +343,16 @@ class TestGpsFlow:
             assert resp.status_code == 200
             assert resp.json()["message"] == "위치가 업데이트되었습니다"
 
-            # Parent retrieves vehicle location
+            # Platform admin retrieves vehicle location (always has access)
             resp = await client.get(
                 f"/api/v1/telemetry/vehicles/{vehicle_id}/location",
-                headers=auth_header(parent_token),
+                headers=auth_header(academy_admin_token),
+            )
+            # Academy admin needs a schedule linking vehicle to their academy;
+            # use driver token instead (driver is assigned to the vehicle)
+            resp = await client.get(
+                f"/api/v1/telemetry/vehicles/{vehicle_id}/location",
+                headers=auth_header(driver_token),
             )
             assert resp.status_code == 200
             location = resp.json()

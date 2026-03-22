@@ -5,6 +5,7 @@ import { createTabScreenOptions } from "./tabConfig";
 import { Colors } from "../constants/theme";
 import ShiftsScreen from "../screens/escort/ShiftsScreen";
 import AvailabilityScreen from "../screens/escort/AvailabilityScreen";
+import EscortRouteScreen from "../screens/escort/EscortRouteScreen";
 import DriverMapScreen from "../screens/driver/MapScreen";
 import DriverProfileScreen from "../screens/driver/ProfileScreen";
 import type { Ionicons } from "@expo/vector-icons";
@@ -12,6 +13,7 @@ import type { Ionicons } from "@expo/vector-icons";
 const Tab = createBottomTabNavigator();
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  EscortRoute: "list",
   EscortShifts: "briefcase",
   EscortAvailability: "time",
   EscortMap: "location",
@@ -23,6 +25,11 @@ export default function EscortTabNavigator() {
 
   return (
     <Tab.Navigator screenOptions={createTabScreenOptions(Colors.roleEscort, ICONS)}>
+      <Tab.Screen
+        name="EscortRoute"
+        component={EscortRouteScreen}
+        options={{ tabBarLabel: "운행" }}
+      />
       <Tab.Screen
         name="EscortShifts"
         component={ShiftsScreen}

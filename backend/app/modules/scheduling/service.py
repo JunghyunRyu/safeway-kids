@@ -1,17 +1,30 @@
+import logging
 import uuid
 from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.exceptions import ConflictError, NotFoundError
+from app.common.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.middleware.consent import require_consent
-from app.modules.scheduling.models import DailyScheduleInstance, ScheduleTemplate
+from app.modules.scheduling.models import DailyScheduleInstance, ScheduleTemplate, VehicleClearance
 from app.modules.scheduling.schemas import (
     DriverDailyScheduleResponse,
     ScheduleTemplateCreateRequest,
+    VehicleClearanceResponse,
 )
 from app.modules.student_management.service import get_student
+
+logger = logging.getLogger(__name__)
+
+
+def _mask_phone(phone: str | None) -> str | None:
+    """Mask phone number: 01012345678 -> 010-****-5678"""
+    if not phone or len(phone) < 10 or phone.startswith("kakao_"):
+        return None
+    if len(phone) == 11:
+        return f"{phone[:3]}-****-{phone[7:]}"
+    return f"{phone[:3]}-****-{phone[6:]}"
 
 
 async def create_schedule_template(
@@ -20,12 +33,29 @@ async def create_schedule_template(
     # Verify student ownership
     student = await get_student(db, request.student_id)
     if student.guardian_id != guardian_id:
-        from app.common.exceptions import ForbiddenError
         raise ForbiddenError(detail="본인의 자녀 스케줄만 등록할 수 있습니다")
 
     # Check consent
     await require_consent(db, guardian_id, request.student_id)
 
+    template = ScheduleTemplate(
+        student_id=request.student_id,
+        academy_id=request.academy_id,
+        day_of_week=request.day_of_week,
+        pickup_time=request.pickup_time,
+        pickup_latitude=request.pickup_latitude,
+        pickup_longitude=request.pickup_longitude,
+        pickup_address=request.pickup_address,
+    )
+    db.add(template)
+    await db.flush()
+    return template
+
+
+async def create_schedule_template_admin(
+    db: AsyncSession, admin_id: uuid.UUID, request: ScheduleTemplateCreateRequest
+) -> ScheduleTemplate:
+    """학원 관리자용 템플릿 생성 (소유권 검증 스킵, 학원 소속 확인)."""
     template = ScheduleTemplate(
         student_id=request.student_id,
         academy_id=request.academy_id,
@@ -55,6 +85,22 @@ async def list_templates_by_student(
     return list(result.scalars().all())
 
 
+async def list_templates_by_academy(
+    db: AsyncSession, academy_id: uuid.UUID
+) -> list[ScheduleTemplate]:
+    """학원별 전체 템플릿 조회."""
+    stmt = (
+        select(ScheduleTemplate)
+        .where(
+            ScheduleTemplate.academy_id == academy_id,
+            ScheduleTemplate.is_active.is_(True),
+        )
+        .order_by(ScheduleTemplate.day_of_week, ScheduleTemplate.pickup_time)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def materialize_daily_schedules(
     db: AsyncSession, target_date: date
 ) -> list[DailyScheduleInstance]:
@@ -71,8 +117,7 @@ async def materialize_daily_schedules(
     result = await db.execute(stmt)
     templates = result.scalars().all()
 
-    # Pre-load vehicle assignments for the date (keyed by academy_id is not direct,
-    # so we cache all assignments and match later via academy schedules)
+    # Pre-load vehicle assignments for the date
     assignment_stmt = select(VehicleAssignment).where(
         VehicleAssignment.assigned_date == target_date,
     )
@@ -90,8 +135,6 @@ async def materialize_daily_schedules(
         if existing.scalar_one_or_none():
             continue
 
-        # Try to find a vehicle assignment for this date
-        # For M2: pick the first available assignment (simple 1:1 mapping)
         vehicle_id = None
         if assignments_by_vehicle:
             first_assignment = next(iter(assignments_by_vehicle.values()), None)
@@ -143,15 +186,19 @@ async def list_daily_schedules(
     target_date: date,
     student_id: uuid.UUID | None = None,
     guardian_id: uuid.UUID | None = None,
-) -> list[DailyScheduleInstance]:
+) -> list[dict]:
+    """Return enriched daily schedule dicts with student/academy/vehicle/driver info."""
+    from app.modules.academy_management.models import Academy
+    from app.modules.auth.models import User
+    from app.modules.student_management.models import Student
+    from app.modules.vehicle_telemetry.models import Vehicle, VehicleAssignment
+
     stmt = select(DailyScheduleInstance).where(
         DailyScheduleInstance.schedule_date == target_date
     )
     if student_id:
         stmt = stmt.where(DailyScheduleInstance.student_id == student_id)
     if guardian_id:
-        # Filter to only this parent's students
-        from app.modules.student_management.models import Student
         student_ids_subq = (
             select(Student.id)
             .where(Student.guardian_id == guardian_id)
@@ -160,11 +207,117 @@ async def list_daily_schedules(
         stmt = stmt.where(DailyScheduleInstance.student_id.in_(student_ids_subq))
     stmt = stmt.order_by(DailyScheduleInstance.pickup_time)
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    instances = list(result.scalars().all())
+
+    if not instances:
+        return []
+
+    # Batch-load related data
+    student_ids = {i.student_id for i in instances}
+    academy_ids = {i.academy_id for i in instances}
+    vehicle_ids = {i.vehicle_id for i in instances if i.vehicle_id}
+
+    students_map: dict[uuid.UUID, Student] = {}
+    if student_ids:
+        s_result = await db.execute(select(Student).where(Student.id.in_(student_ids)))
+        students_map = {s.id: s for s in s_result.scalars().all()}
+
+    academies_map: dict[uuid.UUID, Academy] = {}
+    if academy_ids:
+        a_result = await db.execute(select(Academy).where(Academy.id.in_(academy_ids)))
+        academies_map = {a.id: a for a in a_result.scalars().all()}
+
+    vehicles_map: dict[uuid.UUID, Vehicle] = {}
+    if vehicle_ids:
+        v_result = await db.execute(select(Vehicle).where(Vehicle.id.in_(vehicle_ids)))
+        vehicles_map = {v.id: v for v in v_result.scalars().all()}
+
+    # Load driver/escort assignments for vehicles on this date
+    assignments_map: dict[uuid.UUID, VehicleAssignment] = {}
+    if vehicle_ids:
+        va_result = await db.execute(
+            select(VehicleAssignment).where(
+                VehicleAssignment.vehicle_id.in_(vehicle_ids),
+                VehicleAssignment.assigned_date == target_date,
+            )
+        )
+        assignments_map = {a.vehicle_id: a for a in va_result.scalars().all()}
+
+    # Load driver/escort user names
+    driver_ids = {a.driver_id for a in assignments_map.values() if a.driver_id}
+    escort_ids = {a.safety_escort_id for a in assignments_map.values() if a.safety_escort_id}
+    all_user_ids = driver_ids | escort_ids
+    users_map: dict[uuid.UUID, User] = {}
+    if all_user_ids:
+        u_result = await db.execute(select(User).where(User.id.in_(all_user_ids)))
+        users_map = {u.id: u for u in u_result.scalars().all()}
+
+    # Lookup pickup_address from templates
+    template_ids = {i.template_id for i in instances if i.template_id}
+    templates_map: dict[uuid.UUID, str | None] = {}
+    if template_ids:
+        t_result = await db.execute(
+            select(ScheduleTemplate.id, ScheduleTemplate.pickup_address).where(
+                ScheduleTemplate.id.in_(template_ids)
+            )
+        )
+        templates_map = {row.id: row.pickup_address for row in t_result.all()}
+
+    enriched = []
+    for inst in instances:
+        student = students_map.get(inst.student_id)
+        academy = academies_map.get(inst.academy_id)
+        vehicle = vehicles_map.get(inst.vehicle_id) if inst.vehicle_id else None
+        assignment = assignments_map.get(inst.vehicle_id) if inst.vehicle_id else None
+        driver = users_map.get(assignment.driver_id) if assignment and assignment.driver_id else None
+        escort = users_map.get(assignment.safety_escort_id) if assignment and assignment.safety_escort_id else None
+        pickup_address = templates_map.get(inst.template_id) if inst.template_id else None
+
+        enriched.append({
+            "id": inst.id,
+            "template_id": inst.template_id,
+            "student_id": inst.student_id,
+            "student_name": student.name if student else None,
+            "student_photo_url": student.profile_photo_url if student else None,
+            "academy_id": inst.academy_id,
+            "academy_name": academy.name if academy else None,
+            "vehicle_id": inst.vehicle_id,
+            "vehicle_license_plate": vehicle.license_plate if vehicle else None,
+            "driver_name": driver.name if driver else None,
+            "driver_phone_masked": _mask_phone(driver.phone) if driver else None,
+            "safety_escort_name": escort.name if escort else None,
+            "schedule_date": inst.schedule_date,
+            "pickup_time": inst.pickup_time,
+            "pickup_address": pickup_address,
+            "status": inst.status,
+            "boarded_at": inst.boarded_at,
+            "alighted_at": inst.alighted_at,
+            "created_at": inst.created_at,
+        })
+
+    return enriched
+
+
+async def _verify_driver_vehicle(
+    db: AsyncSession, driver_id: uuid.UUID, vehicle_id: uuid.UUID, schedule_date: date
+) -> None:
+    """Verify driver/escort is assigned to the vehicle on the given date."""
+    from app.modules.vehicle_telemetry.models import VehicleAssignment
+
+    stmt = select(VehicleAssignment).where(
+        VehicleAssignment.vehicle_id == vehicle_id,
+        VehicleAssignment.assigned_date == schedule_date,
+    )
+    result = await db.execute(stmt)
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise ForbiddenError(detail="해당 차량에 배정 정보가 없습니다")
+    if assignment.driver_id != driver_id and assignment.safety_escort_id != driver_id:
+        raise ForbiddenError(detail="해당 차량에 배정된 기사/안전도우미가 아닙니다")
 
 
 async def mark_boarded(
-    db: AsyncSession, instance_id: uuid.UUID
+    db: AsyncSession, instance_id: uuid.UUID, driver_id: uuid.UUID | None = None
 ) -> DailyScheduleInstance:
     stmt = select(DailyScheduleInstance).where(
         DailyScheduleInstance.id == instance_id
@@ -174,13 +327,126 @@ async def mark_boarded(
     if not instance:
         raise NotFoundError(detail="스케줄을 찾을 수 없습니다")
 
+    # Verify driver is assigned to this schedule's vehicle
+    if driver_id and instance.vehicle_id:
+        await _verify_driver_vehicle(db, driver_id, instance.vehicle_id, instance.schedule_date)
+
     instance.boarded_at = datetime.now(UTC)
     await db.flush()
 
-    # Fire-and-forget push notification to parent
     await _send_boarding_push(db, instance)
 
     return instance
+
+
+async def mark_no_show(
+    db: AsyncSession, instance_id: uuid.UUID, reason: str
+) -> DailyScheduleInstance:
+    """Mark a student as no-show and notify parent + academy admin."""
+    stmt = select(DailyScheduleInstance).where(
+        DailyScheduleInstance.id == instance_id
+    )
+    result = await db.execute(stmt)
+    instance = result.scalar_one_or_none()
+    if not instance:
+        raise NotFoundError(detail="스케줄을 찾을 수 없습니다")
+
+    if instance.status != "scheduled":
+        raise ConflictError(detail="미탑승 처리할 수 없는 상태입니다")
+
+    instance.status = "no_show"
+    await db.flush()
+
+    # Send no-show notification to parent
+    await _send_no_show_notification(db, instance, reason)
+
+    return instance
+
+
+async def undo_board(
+    db: AsyncSession, instance_id: uuid.UUID
+) -> DailyScheduleInstance:
+    """Undo boarding (within 5 minutes)."""
+    stmt = select(DailyScheduleInstance).where(
+        DailyScheduleInstance.id == instance_id
+    )
+    result = await db.execute(stmt)
+    instance = result.scalar_one_or_none()
+    if not instance:
+        raise NotFoundError(detail="스케줄을 찾을 수 없습니다")
+
+    if not instance.boarded_at:
+        raise ConflictError(detail="탑승 처리되지 않은 스케줄입니다")
+
+    elapsed = (datetime.now(UTC) - instance.boarded_at).total_seconds()
+    if elapsed > 300:
+        raise ForbiddenError(detail="탑승 처리 후 5분이 경과하여 취소할 수 없습니다")
+
+    instance.boarded_at = None
+    instance.status = "scheduled"
+    await db.flush()
+    return instance
+
+
+async def undo_alight(
+    db: AsyncSession, instance_id: uuid.UUID
+) -> DailyScheduleInstance:
+    """Undo alighting (within 5 minutes)."""
+    stmt = select(DailyScheduleInstance).where(
+        DailyScheduleInstance.id == instance_id
+    )
+    result = await db.execute(stmt)
+    instance = result.scalar_one_or_none()
+    if not instance:
+        raise NotFoundError(detail="스케줄을 찾을 수 없습니다")
+
+    if not instance.alighted_at:
+        raise ConflictError(detail="하차 처리되지 않은 스케줄입니다")
+
+    elapsed = (datetime.now(UTC) - instance.alighted_at).total_seconds()
+    if elapsed > 300:
+        raise ForbiddenError(detail="하차 처리 후 5분이 경과하여 취소할 수 없습니다")
+
+    instance.alighted_at = None
+    instance.status = "boarded"
+    instance.boarded_at = instance.boarded_at  # keep original boarded_at
+    await db.flush()
+    return instance
+
+
+async def complete_vehicle_clearance(
+    db: AsyncSession, driver_id: uuid.UUID, vehicle_id: uuid.UUID,
+    schedule_date: date, checklist: dict,
+) -> VehicleClearance:
+    """Record vehicle clearance (seats/trunk/lock check)."""
+    # Validate checklist
+    required_keys = {"seats_checked", "trunk_checked", "locked"}
+    if not required_keys.issubset(checklist.keys()):
+        from app.common.exceptions import ValidationError
+        raise ValidationError(detail=f"체크리스트 필수 항목: {', '.join(required_keys)}")
+
+    if not all(checklist.get(k) for k in required_keys):
+        from app.common.exceptions import ValidationError
+        raise ValidationError(detail="모든 체크리스트 항목을 완료해야 합니다")
+
+    # Check if already completed
+    existing_stmt = select(VehicleClearance).where(
+        VehicleClearance.vehicle_id == vehicle_id,
+        VehicleClearance.schedule_date == schedule_date,
+    )
+    existing = await db.execute(existing_stmt)
+    if existing.scalar_one_or_none():
+        raise ConflictError(detail="이미 차량 점검이 완료되었습니다")
+
+    clearance = VehicleClearance(
+        vehicle_id=vehicle_id,
+        driver_id=driver_id,
+        schedule_date=schedule_date,
+        checklist=checklist,
+    )
+    db.add(clearance)
+    await db.flush()
+    return clearance
 
 
 async def get_driver_daily_schedules(
@@ -206,6 +472,8 @@ async def get_driver_daily_schedules(
         select(
             DailyScheduleInstance,
             Student.name.label("student_name"),
+            Student.profile_photo_url.label("student_photo_url"),
+            Student.special_notes.label("special_notes"),
             Academy.name.label("academy_name"),
         )
         .join(Student, DailyScheduleInstance.student_id == Student.id)
@@ -219,27 +487,58 @@ async def get_driver_daily_schedules(
     result = await db.execute(stmt)
     rows = result.all()
 
-    return [
-        DriverDailyScheduleResponse(
-            id=row.DailyScheduleInstance.id,
-            student_id=row.DailyScheduleInstance.student_id,
-            student_name=row.student_name,
-            academy_id=row.DailyScheduleInstance.academy_id,
-            academy_name=row.academy_name,
-            schedule_date=row.DailyScheduleInstance.schedule_date,
-            pickup_time=row.DailyScheduleInstance.pickup_time,
-            pickup_latitude=row.DailyScheduleInstance.pickup_latitude,
-            pickup_longitude=row.DailyScheduleInstance.pickup_longitude,
-            status=row.DailyScheduleInstance.status,
-            boarded_at=row.DailyScheduleInstance.boarded_at,
-            alighted_at=row.DailyScheduleInstance.alighted_at,
+    # Get pickup_address from template and guardian phone
+    responses = []
+    for row in rows:
+        inst = row.DailyScheduleInstance
+
+        # Lookup pickup_address from template
+        pickup_address = None
+        if inst.template_id:
+            tmpl_stmt = select(ScheduleTemplate.pickup_address).where(
+                ScheduleTemplate.id == inst.template_id
+            )
+            tmpl_result = await db.execute(tmpl_stmt)
+            pickup_address = tmpl_result.scalar_one_or_none()
+
+        # Get guardian phone (masked)
+        guardian_phone_masked = None
+        guardian_stmt = select(Student.guardian_id).where(Student.id == inst.student_id)
+        guardian_id_result = await db.execute(guardian_stmt)
+        guardian_id = guardian_id_result.scalar_one_or_none()
+        if guardian_id:
+            from app.modules.auth.models import User
+            user_stmt = select(User.phone).where(User.id == guardian_id)
+            user_result = await db.execute(user_stmt)
+            phone = user_result.scalar_one_or_none()
+            guardian_phone_masked = _mask_phone(phone)
+
+        responses.append(
+            DriverDailyScheduleResponse(
+                id=inst.id,
+                student_id=inst.student_id,
+                student_name=row.student_name,
+                student_photo_url=row.student_photo_url,
+                academy_id=inst.academy_id,
+                academy_name=row.academy_name,
+                schedule_date=inst.schedule_date,
+                pickup_time=inst.pickup_time,
+                pickup_latitude=inst.pickup_latitude,
+                pickup_longitude=inst.pickup_longitude,
+                pickup_address=pickup_address,
+                special_notes=row.special_notes,
+                guardian_phone_masked=guardian_phone_masked,
+                status=inst.status,
+                boarded_at=inst.boarded_at,
+                alighted_at=inst.alighted_at,
+            )
         )
-        for row in rows
-    ]
+
+    return responses
 
 
 async def mark_alighted(
-    db: AsyncSession, instance_id: uuid.UUID
+    db: AsyncSession, instance_id: uuid.UUID, driver_id: uuid.UUID | None = None
 ) -> DailyScheduleInstance:
     stmt = select(DailyScheduleInstance).where(
         DailyScheduleInstance.id == instance_id
@@ -249,11 +548,14 @@ async def mark_alighted(
     if not instance:
         raise NotFoundError(detail="스케줄을 찾을 수 없습니다")
 
+    # Verify driver is assigned to this schedule's vehicle
+    if driver_id and instance.vehicle_id:
+        await _verify_driver_vehicle(db, driver_id, instance.vehicle_id, instance.schedule_date)
+
     instance.alighted_at = datetime.now(UTC)
     instance.status = "completed"
     await db.flush()
 
-    # Fire-and-forget push notification to parent
     await _send_alighting_push(db, instance)
 
     return instance
@@ -263,14 +565,11 @@ async def _send_boarding_push(
     db: AsyncSession, instance: DailyScheduleInstance
 ) -> None:
     """Send boarding push notification to parent (fire-and-forget)."""
-    import logging
-
     from app.modules.auth.models import User
     from app.modules.notification import service as notif_service
     from app.modules.student_management.models import Student
     from app.modules.vehicle_telemetry.models import Vehicle
 
-    logger = logging.getLogger(__name__)
     try:
         student_stmt = select(Student).where(Student.id == instance.student_id)
         student = (await db.execute(student_stmt)).scalar_one_or_none()
@@ -300,13 +599,10 @@ async def _send_alighting_push(
     db: AsyncSession, instance: DailyScheduleInstance
 ) -> None:
     """Send alighting push notification to parent (fire-and-forget)."""
-    import logging
-
     from app.modules.auth.models import User
     from app.modules.notification import service as notif_service
     from app.modules.student_management.models import Student
 
-    logger = logging.getLogger(__name__)
     try:
         student_stmt = select(Student).where(Student.id == instance.student_id)
         student = (await db.execute(student_stmt)).scalar_one_or_none()
@@ -321,3 +617,36 @@ async def _send_alighting_push(
         await notif_service.send_alighting_notification(parent.fcm_token, student.name)
     except Exception:
         logger.warning("Failed to send alighting push", exc_info=True)
+
+
+async def _send_no_show_notification(
+    db: AsyncSession, instance: DailyScheduleInstance, reason: str
+) -> None:
+    """Send no-show notification to parent + academy admin."""
+    from app.modules.auth.models import User
+    from app.modules.notification import service as notif_service
+    from app.modules.student_management.models import Student
+
+    try:
+        student_stmt = select(Student).where(Student.id == instance.student_id)
+        student = (await db.execute(student_stmt)).scalar_one_or_none()
+        if not student:
+            return
+
+        parent_stmt = select(User).where(User.id == student.guardian_id)
+        parent = (await db.execute(parent_stmt)).scalar_one_or_none()
+        if not parent:
+            return
+
+        msg = f"[세이프웨이키즈] {student.name} 학생 미탑승 처리됨. 사유: {reason}"
+        if parent.fcm_token:
+            await notif_service._push_provider.send_push(
+                device_token=parent.fcm_token,
+                title="미탑승 안내",
+                body=msg,
+                data={"type": "no_show", "student_name": student.name},
+            )
+        if parent.phone and not parent.phone.startswith("kakao_"):
+            await notif_service.send_critical_alert_sms(parent.phone, msg)
+    except Exception:
+        logger.warning("Failed to send no-show notification", exc_info=True)

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback, type ReactNode, type FormEvent } from 'react';
+import { type ReactNode, type FormEvent } from 'react';
+import { useModalOverlay } from '../hooks/useModalOverlay';
 
 interface FormModalProps {
   open: boolean;
@@ -19,57 +20,12 @@ export default function FormModal({
   submitText = '저장',
   children,
 }: FormModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !loading) {
-        onClose();
-        return;
-      }
-      // Focus trap
-      if (e.key === 'Tab' && modalRef.current) {
-        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
-          'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      }
-    },
-    [loading, onClose]
-  );
-
-  useEffect(() => {
-    if (open) {
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-      // Focus the first input inside the modal after mount
-      requestAnimationFrame(() => {
-        const firstInput = modalRef.current?.querySelector<HTMLElement>(
-          'input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
-        );
-        firstInput?.focus();
-      });
-    }
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [open, handleKeyDown]);
+  const modalRef = useModalOverlay({
+    open,
+    onClose,
+    disabled: loading,
+    initialFocusSelector: 'input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+  });
 
   if (!open) return null;
 

@@ -11,7 +11,7 @@ const FEATURES = [
   {
     icon: "🤖",
     title: "AI 최적 경로",
-    desc: "AI가 교통 상황과 정류장을 분석해 가장 빠르고 안전한 경로를 자동 생성합니다. 운행 시간 최대 30% 단축.",
+    desc: "AI가 교통 상황과 정류장을 분석해 가장 빠르고 안전한 경로를 자동 생성합니다. 운행 시간을 단축합니다.",
   },
   {
     icon: "🔔",
@@ -54,7 +54,7 @@ const TARGETS = [
     color: "bg-green-50 border-green-200",
     accent: "text-accent",
     points: [
-      "셔틀버스 운영비 최대 30% 절감",
+      "셔틀버스 운영비 절감 효과",
       "차량·기사 관리 부담 제거",
       "학원 경쟁력 향상 (셔틀 서비스 유지)",
       "관리자 대시보드로 운영 현황 파악",
@@ -78,22 +78,26 @@ const SAFETY_FEATURES = [
   {
     icon: "🎥",
     title: "차내 이상행동 감지",
-    desc: "AI 영상분석으로 차량 내 위험 상황을 실시간 감지하고 즉시 알립니다.",
+    desc: "AI 영상분석으로 차량 내 위험 상황을 실시간 감지하여 알릴 예정입니다.",
+    comingSoon: true,
   },
   {
     icon: "👤",
     title: "안면인식 탑승 확인",
-    desc: "등록된 아이만 탑승할 수 있도록 안면인식으로 본인 확인합니다.",
+    desc: "등록된 아이만 탑승할 수 있도록 안면인식으로 본인 확인할 예정입니다.",
+    comingSoon: true,
   },
   {
     icon: "🚨",
     title: "사각지대 안전 감시",
-    desc: "차량 주변 사각지대를 AI가 감시하여 아이 안전사고를 예방합니다.",
+    desc: "차량 주변 사각지대를 AI가 감시하여 아이 안전사고를 예방할 예정입니다.",
+    comingSoon: true,
   },
   {
     icon: "🔍",
     title: "하차 후 잔류 아동 감지",
-    desc: "모든 아이가 하차했는지 AI가 확인. 차량 내 잔류 아동 사고를 원천 차단합니다.",
+    desc: "모든 아이가 하차했는지 AI가 확인하여 차량 내 잔류 아동 사고를 예방할 예정입니다.",
+    comingSoon: true,
   },
 ];
 
@@ -149,7 +153,7 @@ export default function Landing() {
           {/* Stats */}
           <div className="mt-16 grid grid-cols-3 gap-6 max-w-lg mx-auto">
             {[
-              { value: "30%", label: "운영비 절감" },
+              { value: "효율적", label: "운영비 절감" },
               { value: "실시간", label: "위치 추적" },
               { value: "24/7", label: "안전 모니터링" },
             ].map((s) => (
@@ -159,6 +163,9 @@ export default function Landing() {
               </div>
             ))}
           </div>
+          <p className="text-center text-xs text-gray-400 mt-4">
+            현재 베타 서비스 운영 중입니다
+          </p>
         </div>
       </section>
 
@@ -251,10 +258,10 @@ export default function Landing() {
               Edge AI Technology
             </div>
             <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
-              AI가 지키는 아이들의 안전
+              Safety AI 로드맵
             </h2>
             <p className="text-gray-400 text-lg max-w-xl mx-auto">
-              차량 내 엣지 컴퓨팅 기반 AI가 실시간으로 안전을 감시합니다
+              하드웨어 파트너십 확정 후 순차 적용 예정입니다
             </p>
           </div>
 
@@ -265,7 +272,14 @@ export default function Landing() {
                 className="p-8 rounded-2xl bg-white/5 backdrop-blur border border-white/10 hover:bg-white/10 transition-colors"
               >
                 <div className="text-4xl mb-4">{f.icon}</div>
-                <h3 className="text-lg font-bold mb-2">{f.title}</h3>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-lg font-bold">{f.title}</h3>
+                  {f.comingSoon && (
+                    <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full font-medium">
+                      Coming Soon
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}

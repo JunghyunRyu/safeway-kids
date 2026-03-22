@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     # Toss Payments
     toss_payments_secret_key: str = ""
     toss_payments_client_key: str = ""
+    toss_payments_webhook_secret: str = ""
 
     # Encryption
     aes_encryption_key: str = "change-me-32-byte-key-for-prod!!"
@@ -51,11 +52,31 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = False
 
+    # Dev login
+    dev_login_secret: str = "change-me-dev"
+
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
     # Rate limiting
     rate_limit_auth: str = "100/minute"
+
+    # Database pool
+    db_pool_size: int = 20
+    db_max_overflow: int = 10
+
+    # WebSocket
+    ws_ping_interval_seconds: int = 30
+
+    # Routing
+    schedule_time_window_minutes: int = 15
+    distance_cache_ttl_seconds: int = 86400
+
+    # GPS
+    gps_data_ttl_seconds: int = 300
+
+    # External API
+    external_api_timeout_seconds: float = 30.0
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
@@ -71,6 +92,21 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "aes_encryption_key must be changed from its placeholder "
                     "value in production"
+                )
+            missing = []
+            if not self.nhn_sms_app_key:
+                missing.append("nhn_sms_app_key")
+            if not self.nhn_sms_secret_key:
+                missing.append("nhn_sms_secret_key")
+            if not self.nhn_sms_sender_number:
+                missing.append("nhn_sms_sender_number")
+            if not self.toss_payments_secret_key:
+                missing.append("toss_payments_secret_key")
+            if not self.toss_payments_client_key:
+                missing.append("toss_payments_client_key")
+            if missing:
+                raise ValueError(
+                    f"Production environment requires these keys: {', '.join(missing)}"
                 )
         return self
 

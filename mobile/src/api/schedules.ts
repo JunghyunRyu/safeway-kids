@@ -17,10 +17,18 @@ export interface DailySchedule {
   id: string;
   template_id: string | null;
   student_id: string;
+  student_name: string | null;
+  student_photo_url: string | null;
   academy_id: string;
+  academy_name: string | null;
   vehicle_id: string | null;
+  vehicle_license_plate: string | null;
+  driver_name: string | null;
+  driver_phone_masked: string | null;
+  safety_escort_name: string | null;
   schedule_date: string;
   pickup_time: string;
+  pickup_address: string | null;
   status: string;
   boarded_at: string | null;
   alighted_at: string | null;
@@ -31,12 +39,16 @@ export interface DriverDailySchedule {
   id: string;
   student_id: string;
   student_name: string;
+  student_photo_url: string | null;
   academy_id: string;
   academy_name: string;
   schedule_date: string;
   pickup_time: string;
   pickup_latitude: number;
   pickup_longitude: number;
+  pickup_address: string | null;
+  special_notes: string | null;
+  guardian_phone_masked: string | null;
   status: string;
   boarded_at: string | null;
   alighted_at: string | null;
@@ -74,5 +86,33 @@ export async function markBoarded(instanceId: string): Promise<DailySchedule> {
 
 export async function markAlighted(instanceId: string): Promise<DailySchedule> {
   const resp = await apiClient.post(`/schedules/daily/${instanceId}/alight`);
+  return resp.data;
+}
+
+export async function markNoShow(instanceId: string, reason: string): Promise<DailySchedule> {
+  const resp = await apiClient.post(`/schedules/daily/${instanceId}/no-show`, { reason });
+  return resp.data;
+}
+
+export async function undoBoard(instanceId: string): Promise<DailySchedule> {
+  const resp = await apiClient.post(`/schedules/daily/${instanceId}/undo-board`);
+  return resp.data;
+}
+
+export async function undoAlight(instanceId: string): Promise<DailySchedule> {
+  const resp = await apiClient.post(`/schedules/daily/${instanceId}/undo-alight`);
+  return resp.data;
+}
+
+export async function submitVehicleClearance(
+  vehicleId: string,
+  scheduleDate: string,
+  checklist: { seats_checked: boolean; trunk_checked: boolean; locked: boolean }
+): Promise<unknown> {
+  const resp = await apiClient.post("/schedules/daily/vehicle-clear", {
+    vehicle_id: vehicleId,
+    schedule_date: scheduleDate,
+    checklist,
+  });
   return resp.data;
 }

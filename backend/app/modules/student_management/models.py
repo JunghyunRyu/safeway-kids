@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, UniqueConstraint, Uuid, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, Text, UniqueConstraint, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -20,6 +20,10 @@ class Student(Base):
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
     grade: Mapped[str | None] = mapped_column(String(20))
     profile_photo_url: Mapped[str | None] = mapped_column(String(500))
+    special_notes: Mapped[str | None] = mapped_column(Text)
+    allergies: Mapped[str | None] = mapped_column(Text)
+    medical_notes: Mapped[str | None] = mapped_column(Text)
+    emergency_contact: Mapped[str | None] = mapped_column(String(20))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

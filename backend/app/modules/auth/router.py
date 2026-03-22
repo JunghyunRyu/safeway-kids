@@ -10,6 +10,8 @@ from app.middleware.rbac import require_platform_admin
 from app.modules.auth import service
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.schemas import (
+    DriverQualificationRequest,
+    DriverQualificationResponse,
     KakaoLoginRequest,
     OtpSendRequest,
     OtpVerifyRequest,
@@ -42,7 +44,7 @@ async def kakao_login(
 @limiter.limit(settings.rate_limit_auth)
 async def send_otp(request: Request, body: OtpSendRequest) -> dict[str, str]:
     """인증번호 발송"""
-    await service.send_otp(body.phone)
+    await service.send_otp(body.phone, ip_address=request.client.host if request.client else None)
     return {"message": "인증번호가 발송되었습니다"}
 
 
@@ -54,7 +56,7 @@ async def verify_otp(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """인증번호 확인 및 로그인/회원가입"""
-    is_valid = await service.verify_otp(body.phone, body.code)
+    is_valid = await service.verify_otp(body.phone, body.code, ip_address=request.client.host if request.client else None)
     if not is_valid:
         from app.common.exceptions import UnauthorizedError
         raise UnauthorizedError(detail="인증번호가 올바르지 않습니다")
@@ -106,11 +108,21 @@ async def dev_login(
     body: OtpVerifyRequest,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """개발용 바로 로그인 (OTP 검증 생략) — production에서는 비활성화"""
+    """개발용 바로 로그인 (OTP 검증 생략) — development 환경에서만 동작"""
+    from app.common.exceptions import ForbiddenError, UnauthorizedError
     from app.config import settings as _settings
-    if _settings.environment == "production":
-        from app.common.exceptions import UnauthorizedError
-        raise UnauthorizedError(detail="Not available in production")
+
+    if _settings.environment != "development":
+        raise UnauthorizedError(detail="Not available outside development")
+
+    # dev-secret 헤더 검증
+    dev_secret = request.headers.get("X-Dev-Secret")
+    if dev_secret != _settings.dev_login_secret:
+        raise UnauthorizedError(detail="Invalid dev secret")
+
+    # platform_admin 생성 차단
+    if body.role == UserRole.PLATFORM_ADMIN:
+        raise ForbiddenError(detail="platform_admin은 dev-login으로 생성할 수 없습니다")
 
     user, _is_new = await service.otp_login_or_register(
         db, body.phone, body.name, body.role
@@ -211,3 +223,112 @@ async def deactivate_user(
         ip_address=request.client.host if request.client else None,
     )
     return user
+
+
+# --- Driver Qualification CRUD ---
+
+
+@router.get("/users/{user_id}/qualification", response_model=DriverQualificationResponse)
+async def get_qualification(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_admin),
+) -> DriverQualificationResponse:
+    """운전자 자격 정보 조회"""
+    from sqlalchemy import select as _select
+
+    from app.modules.auth.models import DriverQualification
+
+    stmt = _select(DriverQualification).where(DriverQualification.user_id == user_id)
+    result = await db.execute(stmt)
+    qual = result.scalar_one_or_none()
+    if not qual:
+        from app.common.exceptions import NotFoundError
+        raise NotFoundError(detail="자격 정보를 찾을 수 없습니다")
+    return DriverQualificationResponse.model_validate(qual)
+
+
+@router.post("/users/{user_id}/qualification", response_model=DriverQualificationResponse, status_code=201)
+async def create_qualification(
+    user_id: uuid.UUID,
+    body: DriverQualificationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_admin),
+) -> DriverQualificationResponse:
+    """운전자 자격 정보 등록"""
+    from datetime import date as _date
+
+    from sqlalchemy import select as _select
+
+    from app.modules.auth.models import DriverQualification
+
+    # Check if already exists
+    existing_stmt = _select(DriverQualification).where(DriverQualification.user_id == user_id)
+    existing = await db.execute(existing_stmt)
+    if existing.scalar_one_or_none():
+        from app.common.exceptions import ConflictError
+        raise ConflictError(detail="이미 자격 정보가 등록되어 있습니다")
+
+    # Determine is_qualified
+    is_qualified = (
+        body.license_expiry > _date.today()
+        and body.criminal_check_clear
+        and (body.safety_training_expiry is None or body.safety_training_expiry > _date.today())
+    )
+
+    from app.common.security import encrypt_value
+
+    qual = DriverQualification(
+        user_id=user_id,
+        license_number=encrypt_value(body.license_number),
+        license_type=body.license_type,
+        license_expiry=body.license_expiry,
+        criminal_check_date=body.criminal_check_date,
+        criminal_check_clear=body.criminal_check_clear,
+        safety_training_date=body.safety_training_date,
+        safety_training_expiry=body.safety_training_expiry,
+        is_qualified=is_qualified,
+    )
+    db.add(qual)
+    await db.flush()
+    return DriverQualificationResponse.model_validate(qual)
+
+
+@router.patch("/users/{user_id}/qualification", response_model=DriverQualificationResponse)
+async def update_qualification(
+    user_id: uuid.UUID,
+    body: DriverQualificationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_admin),
+) -> DriverQualificationResponse:
+    """운전자 자격 정보 수정"""
+    from datetime import date as _date
+
+    from sqlalchemy import select as _select
+
+    from app.modules.auth.models import DriverQualification
+
+    stmt = _select(DriverQualification).where(DriverQualification.user_id == user_id)
+    result = await db.execute(stmt)
+    qual = result.scalar_one_or_none()
+    if not qual:
+        from app.common.exceptions import NotFoundError
+        raise NotFoundError(detail="자격 정보를 찾을 수 없습니다")
+
+    from app.common.security import encrypt_value
+
+    qual.license_number = encrypt_value(body.license_number)
+    qual.license_type = body.license_type
+    qual.license_expiry = body.license_expiry
+    qual.criminal_check_date = body.criminal_check_date
+    qual.criminal_check_clear = body.criminal_check_clear
+    qual.safety_training_date = body.safety_training_date
+    qual.safety_training_expiry = body.safety_training_expiry
+    qual.is_qualified = (
+        body.license_expiry > _date.today()
+        and body.criminal_check_clear
+        and (body.safety_training_expiry is None or body.safety_training_expiry > _date.today())
+    )
+
+    await db.flush()
+    return DriverQualificationResponse.model_validate(qual)

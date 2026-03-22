@@ -73,7 +73,7 @@ async def setup_full_scenario(
         id=uuid.uuid4(),
         guardian_id=parent_user.id,
         child_id=student.id,
-        consent_scope={"location_tracking": True},
+        consent_scope={"service_terms": True, "privacy_policy": True, "child_info_collection": True, "location_tracking": True},
         consent_method="app",
     )
     db_session.add(consent)

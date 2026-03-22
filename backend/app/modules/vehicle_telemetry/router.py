@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query, Request, WebSocket, WebSocketDisc
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import async_session_factory, get_db
 from app.middleware.auth import get_current_user
 from app.middleware.rbac import require_roles
@@ -138,9 +139,15 @@ async def get_my_vehicle_assignment(
 @router.post("/gps")
 async def update_gps(
     body: GpsUpdateRequest,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.DRIVER)),
 ) -> dict[str, str]:
-    """GPS 위치 업데이트 (기사 앱에서 호출)"""
+    """GPS 위치 업데이트 (기사 앱에서 호출) — 배정된 차량만 허용"""
+    from app.common.exceptions import ForbiddenError
+
+    has_access = await service.check_vehicle_access(db, current_user, body.vehicle_id)
+    if not has_access:
+        raise ForbiddenError(detail="배정되지 않은 차량의 GPS를 업데이트할 수 없습니다")
     await service.update_gps(redis_client, body)
     return {"message": "위치가 업데이트되었습니다"}
 
@@ -148,33 +155,29 @@ async def update_gps(
 @router.get("/vehicles/{vehicle_id}/location", response_model=GpsLocationResponse | None)
 async def get_vehicle_location(
     vehicle_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict | None:
-    """차량 실시간 위치 조회"""
+    """차량 실시간 위치 조회 — 접근 권한 확인"""
+    from app.common.exceptions import ForbiddenError
+
+    has_access = await service.check_vehicle_access(db, current_user, vehicle_id)
+    if not has_access:
+        raise ForbiddenError(detail="해당 차량의 위치 정보에 접근할 수 없습니다")
     return await service.get_latest_gps(redis_client, vehicle_id)
 
 
-@router.websocket("/ws/vehicles/{vehicle_id}")
-async def vehicle_location_ws(websocket: WebSocket, vehicle_id: uuid.UUID) -> None:
-    """차량 위치 실시간 WebSocket 스트림 (학부모 앱용) — JWT 인증 필수"""
-    # Authenticate via query parameter ?token=<JWT>
-    token = websocket.query_params.get("token")
-    if not token:
-        await websocket.close(code=4001, reason="Missing token")
-        return
-
+async def _authenticate_token(token: str) -> User | None:
+    """Validate JWT and return the authenticated User, or None."""
     try:
         payload = decode_token(token)
         if payload.get("type") != "access":
-            await websocket.close(code=4001, reason="Invalid token type")
-            return
+            return None
 
         user_id_str = payload.get("sub")
         if not user_id_str:
-            await websocket.close(code=4001, reason="Invalid token")
-            return
+            return None
 
-        # Verify user exists and is active
         async with async_session_factory() as db:
             stmt = select(User).where(
                 User.id == uuid.UUID(user_id_str),
@@ -182,16 +185,68 @@ async def vehicle_location_ws(websocket: WebSocket, vehicle_id: uuid.UUID) -> No
                 User.is_active.is_(True),
             )
             result = await db.execute(stmt)
-            user = result.scalar_one_or_none()
-
-        if not user:
-            await websocket.close(code=4001, reason="User not found")
-            return
+            return result.scalar_one_or_none()
     except Exception:
-        await websocket.close(code=4001, reason="Unauthorized")
+        return None
+
+
+@router.websocket("/ws/vehicles/{vehicle_id}")
+async def vehicle_location_ws(websocket: WebSocket, vehicle_id: uuid.UUID) -> None:
+    """차량 위치 실시간 WebSocket 스트림 — JWT 인증 + 인가 필수"""
+    # 1) query param 방식 (deprecated, 호환 유지)
+    token = websocket.query_params.get("token")
+
+    if token:
+        logger.warning("Deprecated: JWT via query param. Use first-message auth.")
+        user = await _authenticate_token(token)
+        if not user:
+            await websocket.close(code=4001, reason="Unauthorized")
+            return
+        await websocket.accept()
+    else:
+        # 2) first-message auth
+        await websocket.accept()
+        try:
+            data = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
+            token = data.get("token")
+            if not token:
+                await websocket.close(code=4001, reason="Missing token")
+                return
+            user = await _authenticate_token(token)
+            if not user:
+                await websocket.close(code=4001, reason="Unauthorized")
+                return
+            await websocket.send_json({"type": "auth_ok"})
+        except asyncio.TimeoutError:
+            await websocket.close(code=4001, reason="Auth timeout")
+            return
+        except Exception:
+            await websocket.close(code=4001, reason="Auth error")
+            return
+
+    # 인가: 사용자가 해당 차량에 접근 권한이 있는지 확인
+    async with async_session_factory() as auth_db:
+        has_access = await service.check_vehicle_access(auth_db, user, vehicle_id)
+    if not has_access:
+        logger.warning("WebSocket authorization denied: vehicle=%s user=%s role=%s", vehicle_id, user.id, user.role)
+        await websocket.close(code=4003, reason="Forbidden")
         return
 
-    await websocket.accept()
+    # 위치정보법 제16조: 위치정보 수집/이용/제공 기록 저장
+    try:
+        async with async_session_factory() as log_db:
+            await service.log_location_access(
+                log_db,
+                subject_type="vehicle",
+                subject_id=vehicle_id,
+                vehicle_id=vehicle_id,
+                accessor_user_id=user.id,
+                access_purpose="realtime_tracking",
+            )
+            await log_db.commit()
+    except Exception:
+        logger.warning("Failed to log location access for vehicle=%s user=%s", vehicle_id, user.id)
+
     logger.info("WebSocket connected: vehicle=%s user=%s", vehicle_id, user.id)
 
     pubsub = redis_client.pubsub()
@@ -199,13 +254,17 @@ async def vehicle_location_ws(websocket: WebSocket, vehicle_id: uuid.UUID) -> No
     await pubsub.subscribe(channel)
 
     async def ping_loop() -> None:
-        """Send WebSocket ping every 30s to keep connection alive."""
+        """Send WebSocket ping every N seconds to keep connection alive."""
         try:
             while True:
-                await asyncio.sleep(30)
+                await asyncio.sleep(settings.ws_ping_interval_seconds)
                 await websocket.send_json({"type": "ping"})
-        except Exception:
-            pass
+        except WebSocketDisconnect:
+            logger.debug("WebSocket ping loop: client disconnected, vehicle=%s", vehicle_id)
+        except asyncio.CancelledError:
+            pass  # Task cancelled normally
+        except Exception as e:
+            logger.warning("WebSocket ping loop error: vehicle=%s error=%s", vehicle_id, e)
 
     ping_task = asyncio.create_task(ping_loop())
 

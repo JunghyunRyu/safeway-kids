@@ -31,7 +31,12 @@ function ScheduleCard({ item }: { item: DailySchedule }) {
         <Text style={[styles.timeText, { color: Colors.roleStudent }]}>{time}</Text>
       </View>
       <View style={styles.cardContent}>
-        <Text style={styles.studentName}>오늘의 등원</Text>
+        <Text style={styles.studentName}>
+          {item.academy_name ? `${item.academy_name} 등원` : "오늘의 등원"}
+        </Text>
+        {item.vehicle_license_plate ? (
+          <Text style={styles.metaInfo}>{item.vehicle_license_plate}</Text>
+        ) : null}
         <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
           <Text style={[styles.statusText, { color: statusColor }]}>
             {STATUS_LABELS[item.status] ?? item.status}
@@ -141,6 +146,10 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.bold,
   },
   cardContent: { flex: 1, gap: Spacing.xs },
+  metaInfo: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+  },
   studentName: {
     fontSize: Typography.sizes.md,
     fontWeight: Typography.weights.semibold,

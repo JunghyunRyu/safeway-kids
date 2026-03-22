@@ -1,7 +1,9 @@
-import React, { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
+  Image,
+  Linking,
   RefreshControl,
   StyleSheet,
   Text,
@@ -17,10 +19,16 @@ import {
   getDriverDailySchedules,
   markAlighted,
   markBoarded,
+  markNoShow,
+  undoBoard,
+  undoAlight,
+  submitVehicleClearance,
 } from "../../api/schedules";
 import { getMyRoute, RoutePlan } from "../../api/routes";
+import { getMyAssignment } from "../../api/vehicles";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
 import { showError } from "../../utils/toast";
+import { openNavigation } from "../../utils/navigation";
 
 function todayStr(): string {
   return new Date().toISOString().split("T")[0];
@@ -34,37 +42,100 @@ interface StopCardProps {
   id: string;
   index: number;
   studentName: string;
+  studentPhotoUrl: string | null;
   academyName: string;
   pickupTime: string;
+  pickupAddress: string | null;
+  pickupLatitude: number;
+  pickupLongitude: number;
+  specialNotes: string | null;
+  guardianPhoneMasked: string | null;
   status: string;
   isBoarded: boolean;
   isCompleted: boolean;
   isCancelled: boolean;
+  isNoShow: boolean;
+  boardedAt: string | null;
+  alightedAt: string | null;
   onBoard: (id: string) => void;
   onAlight: (id: string) => void;
+  onNoShow: (id: string) => void;
+  onUndoBoard: (id: string) => void;
+  onUndoAlight: (id: string) => void;
+}
+
+const UNDO_TIMEOUT_MS = 5 * 60 * 1000;
+
+function canUndo(timestampStr: string | null): boolean {
+  if (!timestampStr) return false;
+  const diff = Date.now() - new Date(timestampStr).getTime();
+  return diff < UNDO_TIMEOUT_MS;
 }
 
 const StopCard = memo(function StopCard({
   id,
   index,
   studentName,
+  studentPhotoUrl,
   academyName,
   pickupTime,
+  pickupAddress,
+  pickupLatitude,
+  pickupLongitude,
+  specialNotes,
+  guardianPhoneMasked,
   status,
   isBoarded,
   isCompleted,
   isCancelled,
+  isNoShow,
+  boardedAt,
+  alightedAt,
   onBoard,
   onAlight,
+  onNoShow,
+  onUndoBoard,
+  onUndoAlight,
 }: StopCardProps) {
   const { t } = useTranslation();
 
-  const handleBoard = useCallback(() => onBoard(id), [id, onBoard]);
-  const handleAlight = useCallback(() => onAlight(id), [id, onAlight]);
+  const handleBoard = useCallback(() => {
+    Alert.alert("탑승 확인", `${studentName} 학생 탑승 처리하시겠습니까?`, [
+      { text: "취소", style: "cancel" },
+      { text: "확인", onPress: () => onBoard(id) },
+    ]);
+  }, [id, studentName, onBoard]);
+
+  const handleAlight = useCallback(() => {
+    Alert.alert("하차 확인", `${studentName} 학생 하차 처리하시겠습니까?`, [
+      { text: "취소", style: "cancel" },
+      { text: "확인", onPress: () => onAlight(id) },
+    ]);
+  }, [id, studentName, onAlight]);
+
+  const handleNoShow = useCallback(() => {
+    Alert.alert("미탑승 처리", `${studentName} 학생 미탑승 처리하시겠습니까?`, [
+      { text: "취소", style: "cancel" },
+      { text: "학생 미출현", onPress: () => onNoShow(id) },
+    ]);
+  }, [id, studentName, onNoShow]);
+
+  const handleUndoBoard = useCallback(() => onUndoBoard(id), [id, onUndoBoard]);
+  const handleUndoAlight = useCallback(() => onUndoAlight(id), [id, onUndoAlight]);
+
+  const handleNavigate = useCallback(() => {
+    openNavigation(pickupLatitude, pickupLongitude, pickupAddress || studentName);
+  }, [pickupLatitude, pickupLongitude, pickupAddress, studentName]);
+
+  const handleCallGuardian = useCallback(() => {
+    if (guardianPhoneMasked) {
+      Alert.alert("전화 연결 불가", "보호자 전화번호가 마스킹 처리되어 있습니다. 관리자에게 문의해 주세요.");
+    }
+  }, [guardianPhoneMasked]);
 
   const indexBgColor = isCompleted
     ? Colors.statusCompleted
-    : isCancelled
+    : isCancelled || isNoShow
     ? Colors.neutral
     : Colors.roleDriver;
 
@@ -73,51 +144,101 @@ const StopCard = memo(function StopCard({
       style={[
         styles.card,
         Shadows.sm,
-        isCancelled && styles.cardCancelled,
+        (isCancelled || isNoShow) && styles.cardCancelled,
       ]}
     >
-      <View style={[styles.indexCircle, { backgroundColor: indexBgColor }]}>
-        {isCompleted ? (
-          <Ionicons name="checkmark" size={16} color={Colors.textInverse} />
-        ) : (
-          <Text style={styles.indexText}>{index + 1}</Text>
-        )}
-      </View>
+      {/* Student Photo or Index */}
+      {studentPhotoUrl ? (
+        <Image source={{ uri: studentPhotoUrl }} style={styles.studentPhoto} />
+      ) : (
+        <View style={[styles.indexCircle, { backgroundColor: indexBgColor }]}>
+          {isCompleted ? (
+            <Ionicons name="checkmark" size={16} color={Colors.textInverse} />
+          ) : (
+            <Text style={styles.indexText}>{index + 1}</Text>
+          )}
+        </View>
+      )}
       <View style={styles.cardBody}>
         <Text style={styles.studentName}>{studentName}</Text>
         <Text style={styles.detail}>{academyName}</Text>
+        {pickupAddress ? (
+          <Text style={styles.detail}>{pickupAddress}</Text>
+        ) : null}
         <Text style={styles.detail}>
           {t("schedule.pickupTime")}: {fmtTime(pickupTime)}
         </Text>
+        {specialNotes ? (
+          <View style={styles.notesRow}>
+            <Ionicons name="alert-circle" size={14} color={Colors.danger} />
+            <Text style={styles.notesText}>{specialNotes}</Text>
+          </View>
+        ) : null}
+        {guardianPhoneMasked ? (
+          <Pressable style={styles.phoneRow} onPress={handleCallGuardian}>
+            <Ionicons name="call-outline" size={14} color={Colors.info} />
+            <Text style={styles.phoneText}>{guardianPhoneMasked}</Text>
+          </Pressable>
+        ) : null}
 
-        {isCancelled ? (
+        {isNoShow ? (
+          <Text style={[styles.statusText, { color: Colors.neutral }]}>미탑승</Text>
+        ) : isCancelled ? (
           <Text style={[styles.statusText, { color: Colors.neutral }]}>
             {t("schedule.cancelled")}
           </Text>
         ) : isCompleted ? (
-          <Text style={[styles.statusText, { color: Colors.success }]}>
-            {t("schedule.completed")}
-          </Text>
+          <View>
+            <Text style={[styles.statusText, { color: Colors.success }]}>
+              {t("schedule.completed")}
+            </Text>
+            {canUndo(alightedAt) && (
+              <Pressable style={styles.undoBtn} onPress={handleUndoAlight}>
+                <Text style={styles.undoText}>하차 되돌리기</Text>
+              </Pressable>
+            )}
+          </View>
         ) : (
           <View style={styles.actions}>
             {!isBoarded ? (
-              <Pressable
-                style={[styles.actionBtn, { backgroundColor: Colors.info }]}
-                onPress={handleBoard}
-               
-              >
-                <Ionicons name="enter-outline" size={14} color={Colors.textInverse} />
-                <Text style={styles.btnText}>{t("driver.markBoarded")}</Text>
-              </Pressable>
+              <View style={styles.actionRow}>
+                <Pressable
+                  style={[styles.actionBtn, { backgroundColor: Colors.info }]}
+                  onPress={handleBoard}
+                >
+                  <Ionicons name="enter-outline" size={16} color={Colors.textInverse} />
+                  <Text style={styles.btnText}>{t("driver.markBoarded")}</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.actionBtn, { backgroundColor: Colors.neutral }]}
+                  onPress={handleNoShow}
+                >
+                  <Ionicons name="close-circle-outline" size={16} color={Colors.textInverse} />
+                  <Text style={styles.btnText}>미탑승</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.navBtn]}
+                  onPress={handleNavigate}
+                >
+                  <Ionicons name="navigate-outline" size={16} color={Colors.info} />
+                  <Text style={styles.navBtnText}>길안내</Text>
+                </Pressable>
+              </View>
             ) : (
-              <Pressable
-                style={[styles.actionBtn, { backgroundColor: Colors.warning }]}
-                onPress={handleAlight}
-               
-              >
-                <Ionicons name="exit-outline" size={14} color={Colors.textInverse} />
-                <Text style={styles.btnText}>{t("driver.markAlighted")}</Text>
-              </Pressable>
+              <View>
+                <Pressable
+                  style={[styles.actionBtn, { backgroundColor: Colors.warning }]}
+                  onPress={handleAlight}
+                >
+                  <Ionicons name="exit-outline" size={16} color={Colors.textInverse} />
+                  <Text style={styles.btnText}>{t("driver.markAlighted")}</Text>
+                </Pressable>
+                {canUndo(boardedAt) && (
+                  <Pressable style={styles.undoBtn} onPress={handleUndoBoard}>
+                    <Text style={styles.undoText}>탑승 되돌리기</Text>
+                  </Pressable>
+                )}
+              </View>
             )}
           </View>
         )}
@@ -131,14 +252,17 @@ export default function DriverRouteScreen() {
   const insets = useSafeAreaInsets();
   const [schedules, setSchedules] = useState<DriverDailySchedule[]>([]);
   const [routePlan, setRoutePlan] = useState<RoutePlan | null>(null);
+  const [vehicleId, setVehicleId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [scheduleData, routeData] = await Promise.all([
+      const [scheduleData, routeData, assignmentData] = await Promise.all([
         getDriverDailySchedules(todayStr()),
         getMyRoute(todayStr()).catch(() => null),
+        getMyAssignment(todayStr()).catch(() => null),
       ]);
+      setVehicleId(assignmentData?.vehicle_id ?? null);
 
       if (routeData && routeData.stops.length > 0) {
         setRoutePlan(routeData);
@@ -196,23 +320,136 @@ export default function DriverRouteScreen() {
     [load, t]
   );
 
+  const handleNoShow = useCallback(
+    (itemId: string) => {
+      Alert.alert("미탑승 사유 선택", "미탑승 사유를 선택해 주세요.", [
+        { text: "취소", style: "cancel" },
+        {
+          text: "학생 미출현",
+          onPress: async () => {
+            try { await markNoShow(itemId, "student_absent"); await load(); }
+            catch { Alert.alert(t("common.error")); }
+          },
+        },
+        {
+          text: "보호자 취소",
+          onPress: async () => {
+            try { await markNoShow(itemId, "parent_cancelled"); await load(); }
+            catch { Alert.alert(t("common.error")); }
+          },
+        },
+        {
+          text: "기타",
+          onPress: async () => {
+            try { await markNoShow(itemId, "other"); await load(); }
+            catch { Alert.alert(t("common.error")); }
+          },
+        },
+      ]);
+    },
+    [load, t]
+  );
+
+  const handleUndoBoard = useCallback(
+    async (itemId: string) => {
+      try {
+        await undoBoard(itemId);
+        await load();
+      } catch {
+        Alert.alert("되돌리기 실패", "5분이 경과하여 되돌릴 수 없습니다.");
+      }
+    },
+    [load]
+  );
+
+  const handleUndoAlight = useCallback(
+    async (itemId: string) => {
+      try {
+        await undoAlight(itemId);
+        await load();
+      } catch {
+        Alert.alert("되돌리기 실패", "5분이 경과하여 되돌릴 수 없습니다.");
+      }
+    },
+    [load]
+  );
+
+  const [clearanceChecks, setClearanceChecks] = useState<Record<string, boolean>>({});
+  const [showClearance, setShowClearance] = useState(false);
+
+  const clearanceItems = React.useMemo(() => {
+    const studentItems = schedules
+      .filter((s) => s.status !== "cancelled")
+      .map((s) => ({ key: `seat_${s.id}`, label: `좌석: ${s.student_name} 하차 확인` }));
+    return [
+      ...studentItems,
+      { key: "trunk", label: "트렁크 잔류물/학생 없음 확인" },
+      { key: "locked", label: "차량 잠금 확인" },
+    ];
+  }, [schedules]);
+
+  const allClearanceChecked = clearanceItems.length > 0 && clearanceItems.every((item) => clearanceChecks[item.key]);
+
+  const handleVehicleClearance = useCallback(async () => {
+    if (!vehicleId) {
+      Alert.alert("오류", "배정된 차량 정보를 찾을 수 없습니다.");
+      return;
+    }
+    if (!allClearanceChecked) {
+      Alert.alert("미완료 항목", "모든 체크리스트 항목을 확인해 주세요.");
+      return;
+    }
+    Alert.alert("차량 점검 제출", "모든 항목을 확인하고 점검을 완료하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "제출",
+        onPress: async () => {
+          try {
+            await submitVehicleClearance(vehicleId, todayStr(), {
+              seats_checked: true,
+              trunk_checked: true,
+              locked: true,
+            });
+            Alert.alert("완료", "차량 점검이 완료되었습니다.");
+            setShowClearance(false);
+            setClearanceChecks({});
+          } catch {
+            Alert.alert("오류", "차량 점검 기록 저장에 실패했습니다.");
+          }
+        },
+      },
+    ]);
+  }, [vehicleId, allClearanceChecked]);
+
   const renderItem = useCallback(
     ({ item, index }: { item: DriverDailySchedule; index: number }) => (
       <StopCard
         id={item.id}
         index={index}
         studentName={item.student_name}
+        studentPhotoUrl={item.student_photo_url}
         academyName={item.academy_name}
         pickupTime={item.pickup_time}
+        pickupAddress={item.pickup_address}
+        pickupLatitude={item.pickup_latitude}
+        pickupLongitude={item.pickup_longitude}
+        specialNotes={item.special_notes}
+        guardianPhoneMasked={item.guardian_phone_masked}
         status={item.status}
         isBoarded={!!item.boarded_at}
         isCompleted={item.status === "completed"}
         isCancelled={item.status === "cancelled"}
+        isNoShow={item.status === "no_show"}
+        boardedAt={item.boarded_at}
+        alightedAt={item.alighted_at}
         onBoard={handleBoard}
         onAlight={handleAlight}
+        onNoShow={handleNoShow}
+        onUndoBoard={handleUndoBoard}
+        onUndoAlight={handleUndoAlight}
       />
     ),
-    [handleBoard, handleAlight]
+    [handleBoard, handleAlight, handleNoShow, handleUndoBoard, handleUndoAlight]
   );
 
   const keyExtractor = useCallback(
@@ -257,19 +494,65 @@ export default function DriverRouteScreen() {
           <Text style={styles.emptyText}>{t("driver.noAssignment")}</Text>
         </View>
       ) : (
-        <FlatList
-          data={schedules}
-          keyExtractor={keyExtractor}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={Colors.roleDriver}
-            />
-          }
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
-        />
+        <>
+          <FlatList
+            data={schedules}
+            keyExtractor={keyExtractor}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={Colors.roleDriver}
+              />
+            }
+            renderItem={renderItem}
+            contentContainerStyle={styles.list}
+          />
+          {/* Vehicle Clearance - shown when all active schedules are done */}
+          {totalActive > 0 && completedCount + schedules.filter(s => s.status === "no_show").length >= totalActive && (
+            <View style={styles.clearanceContainer}>
+              {!showClearance ? (
+                <Pressable style={styles.clearanceBtn} onPress={() => { setClearanceChecks({}); setShowClearance(true); }}>
+                  <Ionicons name="shield-checkmark-outline" size={20} color={Colors.textInverse} />
+                  <Text style={styles.clearanceBtnText}>잔류 확인 시작</Text>
+                </Pressable>
+              ) : (
+                <View>
+                  <Text style={styles.clearanceTitle}>잔류 확인 체크리스트</Text>
+                  {clearanceItems.map((item) => (
+                    <Pressable
+                      key={item.key}
+                      style={styles.checklistRow}
+                      onPress={() => setClearanceChecks((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                    >
+                      <Ionicons
+                        name={clearanceChecks[item.key] ? "checkbox" : "square-outline"}
+                        size={24}
+                        color={clearanceChecks[item.key] ? Colors.success : Colors.textDisabled}
+                      />
+                      <Text style={[styles.checklistLabel, clearanceChecks[item.key] && styles.checklistChecked]}>
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                  <View style={styles.clearanceBtnRow}>
+                    <Pressable style={styles.clearanceCancelBtn} onPress={() => setShowClearance(false)}>
+                      <Text style={styles.clearanceCancelText}>취소</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.clearanceBtn, { flex: 1 }, !allClearanceChecked && styles.disabled]}
+                      onPress={handleVehicleClearance}
+                      disabled={!allClearanceChecked}
+                    >
+                      <Ionicons name="shield-checkmark-outline" size={20} color={Colors.textInverse} />
+                      <Text style={styles.clearanceBtnText}>점검 완료 제출</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+        </>
       )}
     </View>
   );
@@ -337,16 +620,44 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.base,
   },
   cardBody: { flex: 1 },
+  studentPhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: Spacing.md,
+    marginTop: 2,
+  },
   studentName: {
-    fontSize: Typography.sizes.md,
+    fontSize: 18,
     fontWeight: Typography.weights.semibold,
     color: Colors.textPrimary,
     marginBottom: 2,
   },
   detail: {
-    fontSize: Typography.sizes.sm,
+    fontSize: 16,
     color: Colors.textSecondary,
     marginBottom: 2,
+  },
+  notesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  notesText: {
+    fontSize: 14,
+    color: Colors.danger,
+    flex: 1,
+  },
+  phoneRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  phoneText: {
+    fontSize: 14,
+    color: Colors.info,
   },
   statusText: {
     fontSize: Typography.sizes.sm,
@@ -354,23 +665,117 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   actions: {
-    flexDirection: "row",
     marginTop: Spacing.sm,
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    flexWrap: "wrap",
   },
   actionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    gap: 6,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
     borderRadius: Radius.md,
-    minHeight: 40,
+    minHeight: 60,
   },
   btnText: {
     color: Colors.textInverse,
     fontWeight: Typography.weights.semibold,
-    fontSize: Typography.sizes.sm,
+    fontSize: 18,
   },
+  navBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.info,
+    minHeight: 60,
+  },
+  navBtnText: {
+    color: Colors.info,
+    fontWeight: Typography.weights.semibold,
+    fontSize: 16,
+  },
+  undoBtn: {
+    marginTop: Spacing.xs,
+    paddingVertical: Spacing.xs,
+  },
+  undoText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    textDecorationLine: "underline",
+  },
+  clearanceContainer: {
+    padding: Spacing.base,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    backgroundColor: Colors.surface,
+  },
+  clearanceTitle: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  checklistRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  checklistLabel: {
+    fontSize: Typography.sizes.base,
+    color: Colors.textPrimary,
+    flex: 1,
+  },
+  checklistChecked: {
+    color: Colors.textSecondary,
+    textDecorationLine: "line-through",
+  },
+  clearanceBtnRow: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  clearanceCancelBtn: {
+    paddingVertical: Spacing.base,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: 60,
+  },
+  clearanceCancelText: {
+    color: Colors.textSecondary,
+    fontWeight: Typography.weights.semibold,
+    fontSize: 16,
+  },
+  clearanceBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    backgroundColor: Colors.success,
+    paddingVertical: Spacing.base,
+    borderRadius: Radius.lg,
+    minHeight: 60,
+  },
+  clearanceBtnText: {
+    color: Colors.textInverse,
+    fontWeight: Typography.weights.bold,
+    fontSize: 18,
+  },
+  disabled: { opacity: 0.5 },
   emptyState: {
     flex: 1,
     justifyContent: "center",

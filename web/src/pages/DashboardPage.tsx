@@ -33,7 +33,7 @@ export default function DashboardPage() {
         const [acadRes, vehiclesRes, schedulesRes, studentsRes, invoicesRes] =
           await Promise.allSettled([
             api.get<Academy | null>('/academies/mine'),
-            api.get('/vehicles/vehicles'),
+            api.get('/telemetry/vehicles'),
             api.get<DailySchedule[]>(`/schedules/daily?target_date=${today}`),
             api.get('/students'),
             api.get('/billing/invoices'),

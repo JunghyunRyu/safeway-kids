@@ -65,6 +65,9 @@ interface ScheduleItemProps {
   status: string;
   boardedAt: string | null;
   alightedAt: string | null;
+  academyName: string | null;
+  vehiclePlate: string | null;
+  driverName: string | null;
   onCancel: (id: string) => void;
 }
 
@@ -75,6 +78,9 @@ const ScheduleItem = memo(function ScheduleItem({
   status,
   boardedAt,
   alightedAt,
+  academyName,
+  vehiclePlate,
+  driverName,
   onCancel,
 }: ScheduleItemProps) {
   const { t } = useTranslation();
@@ -101,6 +107,16 @@ const ScheduleItem = memo(function ScheduleItem({
 
       {/* Student Name */}
       <Text style={styles.studentName}>{studentName}</Text>
+
+      {/* Academy / Vehicle / Driver info */}
+      {academyName ? (
+        <Text style={styles.metaInfo}>{academyName}</Text>
+      ) : null}
+      {vehiclePlate || driverName ? (
+        <Text style={styles.metaInfo}>
+          {[vehiclePlate, driverName].filter(Boolean).join(" · ")}
+        </Text>
+      ) : null}
 
       {/* Timestamps */}
       {boardedAt ? (
@@ -265,11 +281,14 @@ export default function ScheduleScreen() {
       return (
         <ScheduleItem
           id={item.id}
-          studentName={student?.name ?? "학생"}
+          studentName={student?.name ?? item.student_name ?? "학생"}
           pickupTime={item.pickup_time}
           status={item.status}
           boardedAt={item.boarded_at}
           alightedAt={item.alighted_at}
+          academyName={item.academy_name}
+          vehiclePlate={item.vehicle_license_plate}
+          driverName={item.driver_name}
           onCancel={handleCancel}
         />
       );
@@ -399,6 +418,11 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.semibold,
     color: Colors.textPrimary,
     marginBottom: Spacing.xs,
+  },
+  metaInfo: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+    marginBottom: 2,
   },
   metaRow: {
     flexDirection: "row",

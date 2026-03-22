@@ -1,11 +1,15 @@
 """Route generation service — bridges DB models and VRP-TW solver."""
 
+import logging
 import uuid
 from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = logging.getLogger(__name__)
+
+from app.config import settings
 from app.modules.academy_management.models import Academy
 from app.modules.routing_engine.schemas import (
     GenerateRouteResponse,
@@ -72,12 +76,13 @@ async def generate_route_plan(
     for schedule, student in rows:
         stop_id = str(schedule.id)
         pickup_minutes = schedule.pickup_time.hour * 60 + schedule.pickup_time.minute
+        tw = settings.schedule_time_window_minutes
         stops.append(Stop(
             id=stop_id,
             latitude=schedule.pickup_latitude,
             longitude=schedule.pickup_longitude,
-            time_window_start=max(0, pickup_minutes - 15),  # 15 min early window
-            time_window_end=pickup_minutes + 15,  # 15 min late window
+            time_window_start=max(0, pickup_minutes - tw),
+            time_window_end=pickup_minutes + tw,
         ))
         student_names[stop_id] = student.name
         stop_coords[stop_id] = (schedule.pickup_latitude, schedule.pickup_longitude)
@@ -134,8 +139,10 @@ async def generate_route_plan(
         precomputed_dist, precomputed_time = await build_road_distance_matrix(
             depot, stops, map_provider, redis_client
         )
-    except Exception:
-        pass  # Fall back to Euclidean inside solver
+    except Exception as e:
+        logger.warning(
+            "[ROUTING] Road distance matrix failed, falling back to Euclidean: %s", e
+        )
 
     # 5. Solve
     solver_result: SolverResult = solve_vrp_tw(

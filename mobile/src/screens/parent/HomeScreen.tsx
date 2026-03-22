@@ -43,12 +43,18 @@ interface ScheduleCardProps {
   studentName: string;
   status: string;
   pickupTime: string;
+  academyName: string | null;
+  vehiclePlate: string | null;
+  driverName: string | null;
 }
 
 const ScheduleCard = memo(function ScheduleCard({
   studentName,
   status,
   pickupTime,
+  academyName,
+  vehiclePlate,
+  driverName,
 }: ScheduleCardProps) {
   const { t } = useTranslation();
   const statusColor = STATUS_COLORS[status] ?? Colors.neutral;
@@ -67,6 +73,14 @@ const ScheduleCard = memo(function ScheduleCard({
       <Text style={styles.cardTime}>
         {t("schedule.pickupTime")}: {fmtTime(pickupTime)}
       </Text>
+      {academyName ? (
+        <Text style={styles.cardMeta}>{academyName}</Text>
+      ) : null}
+      {vehiclePlate || driverName ? (
+        <Text style={styles.cardMeta}>
+          {[vehiclePlate, driverName].filter(Boolean).join(" · ")}
+        </Text>
+      ) : null}
     </View>
   );
 });
@@ -109,9 +123,12 @@ export default function ParentHomeScreen() {
       const student = students.find((s) => s.id === item.student_id);
       return (
         <ScheduleCard
-          studentName={student?.name ?? "학생"}
+          studentName={student?.name ?? item.student_name ?? "학생"}
           status={item.status}
           pickupTime={item.pickup_time}
+          academyName={item.academy_name}
+          vehiclePlate={item.vehicle_license_plate}
+          driverName={item.driver_name}
         />
       );
     },
@@ -255,6 +272,11 @@ const styles = StyleSheet.create({
   cardTime: {
     fontSize: Typography.sizes.sm,
     color: Colors.textSecondary,
+  },
+  cardMeta: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
   empty: {
     flex: 1,

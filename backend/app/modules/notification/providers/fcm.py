@@ -26,8 +26,17 @@ class FCMProvider(NotificationProvider):
             )
             messaging.send(message)
             return True
+        except ImportError:
+            logger.error("[FCM IMPORT] firebase_admin not available")
+            return False
         except Exception as e:
-            logger.error("[FCM ERROR] %s", e)
+            err_type = type(e).__name__
+            if "Unregistered" in err_type or "NotFound" in err_type:
+                logger.warning("[FCM UNREGISTERED] token=%s...", device_token[:20])
+            elif "SenderIdMismatch" in err_type:
+                logger.error("[FCM SENDER_MISMATCH] token=%s...", device_token[:20])
+            else:
+                logger.error("[FCM ERROR] token=%s... error=%s (%s)", device_token[:20], e, err_type)
             return False
 
     async def send_topic(
@@ -47,6 +56,15 @@ class FCMProvider(NotificationProvider):
             )
             messaging.send(message)
             return True
+        except ImportError:
+            logger.error("[FCM IMPORT] firebase_admin not available")
+            return False
         except Exception as e:
-            logger.error("[FCM TOPIC ERROR] %s", e)
+            err_type = type(e).__name__
+            if "Unregistered" in err_type or "NotFound" in err_type:
+                logger.warning("[FCM TOPIC UNREGISTERED] topic=%s", topic)
+            elif "SenderIdMismatch" in err_type:
+                logger.error("[FCM TOPIC SENDER_MISMATCH] topic=%s", topic)
+            else:
+                logger.error("[FCM TOPIC ERROR] topic=%s error=%s (%s)", topic, e, err_type)
             return False

@@ -72,12 +72,29 @@ def _start_daily_cron() -> None:
 
     async def daily_pipeline_job() -> None:
         """Run daily pipeline for tomorrow's schedules."""
+        from app.modules.compliance.service import deactivate_expired_documents
         from app.modules.scheduling.scheduler import run_daily_pipeline
+        from app.modules.vehicle_telemetry.service import purge_old_gps_data, purge_old_location_access_logs
 
         tomorrow = date.today() + timedelta(days=1)
         logger.info("Cron: running daily pipeline for %s", tomorrow)
         try:
             async with async_session_factory() as db:
+                # Deactivate expired compliance documents
+                expired_count = await deactivate_expired_documents(db)
+                if expired_count:
+                    logger.info("Cron: deactivated %d expired compliance documents", expired_count)
+
+                # Purge GPS data older than 180 days (위치정보법 제16조)
+                purged = await purge_old_gps_data(db)
+                if purged:
+                    logger.info("Cron: purged %d old GPS records", purged)
+
+                # Purge location access logs past retention (6개월, 위치정보법 제24조)
+                purged_logs = await purge_old_location_access_logs(db)
+                if purged_logs:
+                    logger.info("Cron: purged %d expired location access logs", purged_logs)
+
                 result = await run_daily_pipeline(db, tomorrow)
                 await db.commit()
             logger.info("Cron: pipeline complete — %s", result)
@@ -107,6 +124,30 @@ def _start_daily_cron() -> None:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Startup: verify connections
     await redis_client.ping()
+
+    # Deactivate expired compliance documents on startup
+    try:
+        from app.modules.compliance.service import deactivate_expired_documents
+
+        async with async_session_factory() as db:
+            count = await deactivate_expired_documents(db)
+            await db.commit()
+            if count:
+                logger.info("[COMPLIANCE] Deactivated %d expired documents on startup", count)
+    except Exception:
+        logger.exception("[COMPLIANCE] Failed to deactivate expired documents on startup")
+
+    # Purge GPS data older than 180 days (위치정보법 제16조) on startup
+    try:
+        from app.modules.vehicle_telemetry.service import purge_old_gps_data
+
+        async with async_session_factory() as db:
+            purged = await purge_old_gps_data(db)
+            await db.commit()
+            if purged:
+                logger.info("[GPS] Purged %d old GPS records on startup", purged)
+    except Exception:
+        logger.exception("[GPS] Failed to purge old GPS data on startup")
 
     # Start GPS flush background task
     flush_task = asyncio.create_task(gps_flush_loop())

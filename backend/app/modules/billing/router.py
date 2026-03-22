@@ -254,10 +254,36 @@ async def confirm_payment(
 
 @router.post("/webhook")
 async def toss_webhook(
-    payload: TossWebhookPayload,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Toss Payments 웹훅 수신 (결제 상태 업데이트)"""
+    """Toss Payments 웹훅 수신 (결제 상태 업데이트) — 서명 검증"""
+    import hashlib
+    import hmac
+
+    from app.config import settings
+
+    body_bytes = await request.body()
+
+    # Verify webhook signature if secret is configured
+    webhook_secret = settings.toss_payments_webhook_secret
+    if webhook_secret:
+        sig_header = request.headers.get("Toss-Signature") or request.headers.get("toss-signature")
+        if not sig_header:
+            logger.warning("Toss webhook missing signature header")
+            from app.common.exceptions import ForbiddenError
+            raise ForbiddenError(detail="Missing webhook signature")
+        expected = hmac.new(
+            webhook_secret.encode(), body_bytes, hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(sig_header, expected):
+            logger.warning("Toss webhook signature mismatch")
+            from app.common.exceptions import ForbiddenError
+            raise ForbiddenError(detail="Invalid webhook signature")
+
+    import json
+    payload_data = json.loads(body_bytes)
+    payload = TossWebhookPayload(**payload_data)
     result = await service.handle_toss_webhook(
         db, payload.event_type, payload.data,
     )

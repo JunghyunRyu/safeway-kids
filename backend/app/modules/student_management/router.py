@@ -112,10 +112,16 @@ async def list_students(
 async def get_student(
     student_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.PARENT)),
+    current_user: User = Depends(require_roles(
+        UserRole.PARENT, UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN
+    )),
 ) -> StudentResponse:
-    """자녀 상세 조회"""
+    """자녀 상세 조회 (소유권 확인)"""
+    from app.common.exceptions import ForbiddenError
+
     student = await service.get_student(db, student_id)
+    if current_user.role == UserRole.PARENT and student.guardian_id != current_user.id:
+        raise ForbiddenError(detail="본인의 자녀 정보만 조회할 수 있습니다")
     return StudentResponse.model_validate(student)
 
 

@@ -151,7 +151,7 @@ export function useVehicleTracking({
       }
 
       const wsBase = API_BASE_URL.replace(/^http/, "ws");
-      const url = `${wsBase}/telemetry/ws/vehicles/${vehicleId}?token=${token}`;
+      const url = `${wsBase}/telemetry/ws/vehicles/${vehicleId}`;
       debugLog(`[WS] Connecting: vehicle=${vehicleId.slice(0, 8)}...`);
       if (mountedRef.current) setConnectionState("connecting");
 
@@ -164,21 +164,36 @@ export function useVehicleTracking({
         return;
       }
 
+      let authenticated = false;
+
       ws.onopen = () => {
-        debugLog(`[WS] Connected: vehicle=${vehicleId.slice(0, 8)}`);
-        if (mountedRef.current) {
-          setConnectionState("connected");
-          wsFailCount.current = 0;
-          authRetried.current = false;
-          retryDelays.current.set(vehicleId, INITIAL_RETRY_MS);
-          // Stop polling if it was active
-          cleanupPolling();
-        }
+        debugLog(`[WS] Connected, sending auth: vehicle=${vehicleId.slice(0, 8)}`);
+        // Send token as first message for first-message auth
+        ws.send(JSON.stringify({ token }));
       };
 
       ws.onmessage = (event) => {
         try {
-          const loc: GpsLocation = JSON.parse(event.data);
+          const data = JSON.parse(event.data);
+
+          // Handle auth_ok response
+          if (!authenticated && data.type === "auth_ok") {
+            authenticated = true;
+            debugLog(`[WS] Authenticated: vehicle=${vehicleId.slice(0, 8)}`);
+            if (mountedRef.current) {
+              setConnectionState("connected");
+              wsFailCount.current = 0;
+              authRetried.current = false;
+              retryDelays.current.set(vehicleId, INITIAL_RETRY_MS);
+              cleanupPolling();
+            }
+            return;
+          }
+
+          // Skip location updates until authenticated
+          if (!authenticated) return;
+
+          const loc: GpsLocation = data;
           if (mountedRef.current) {
             setLocations((prev) => {
               const next = new Map(prev);

@@ -22,7 +22,7 @@ from app.modules.routing_engine.solver import (
 
 logger = logging.getLogger(__name__)
 
-CACHE_TTL_SECONDS = 86400  # 24 hours
+CACHE_TTL_SECONDS = settings.distance_cache_ttl_seconds
 
 
 def _cache_key(nodes: list[tuple[float, float]]) -> str:

@@ -60,9 +60,21 @@ export default function PlatformUsersPage() {
   // Detail modal
   const [detailTarget, setDetailTarget] = useState<UserRow | null>(null);
 
+  // Qualification
+  const [qualification, setQualification] = useState<Record<string, unknown> | null>(null);
+
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const fetchQualification = useCallback(async (userId: number) => {
+    try {
+      const { data } = await api.get(`/auth/users/${userId}/qualification`);
+      setQualification(data as Record<string, unknown>);
+    } catch {
+      setQualification(null);
+    }
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -180,7 +192,7 @@ export default function PlatformUsersPage() {
       render: (row) => (
         <button
           type="button"
-          onClick={() => setDetailTarget(row)}
+          onClick={() => { setDetailTarget(row); if (row.role === 'driver') fetchQualification(row.id); else setQualification(null); }}
           className="font-medium text-gray-800 cursor-pointer hover:underline"
         >
           {row.name}
@@ -292,6 +304,14 @@ export default function PlatformUsersPage() {
           { label: '역할', value: ROLE_LABELS[detailTarget.role] || detailTarget.role },
           { label: '활성 상태', value: <StatusBadge status={detailTarget.is_active ? 'active' : 'inactive'} /> },
           { label: '가입일', value: detailTarget.created_at ? new Date(detailTarget.created_at).toLocaleDateString('ko-KR') : '-' },
+          ...(detailTarget.role === 'driver' && qualification ? [
+            { label: '면허번호', value: String(qualification.license_number || '-') },
+            { label: '면허유형', value: String(qualification.license_type || '-') },
+            { label: '면허만료', value: String(qualification.license_expiry || '-') },
+            { label: '범죄경력조회', value: qualification.criminal_check_clear ? '적격' : '미확인' },
+            { label: '안전교육', value: String(qualification.safety_training_expiry || '-') },
+            { label: '자격 충족', value: <StatusBadge status={qualification.is_qualified ? 'active' : 'inactive'} /> },
+          ] : []),
         ] : []}
         actions={detailTarget ? (
           <>

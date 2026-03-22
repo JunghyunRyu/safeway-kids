@@ -70,7 +70,7 @@ async def _create_full_scenario(db: AsyncSession, target_date: date) -> dict:
         db.add(Enrollment(student_id=s.id, academy_id=academy.id))
         db.add(GuardianConsent(
             guardian_id=parent.id, child_id=s.id,
-            consent_scope={"location_tracking": True}, consent_method="app",
+            consent_scope={"service_terms": True, "privacy_policy": True, "child_info_collection": True, "location_tracking": True}, consent_method="app",
         ))
 
     # Schedule Templates (for target_date's day_of_week)

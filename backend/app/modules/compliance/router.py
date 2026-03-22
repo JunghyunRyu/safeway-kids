@@ -8,6 +8,7 @@ from app.middleware.auth import get_current_user
 from app.middleware.rbac import require_roles
 from app.modules.auth.models import User, UserRole
 from app.modules.compliance import service
+from app.modules.compliance.models import DocumentType
 from app.modules.compliance.schemas import (
     ConsentCreateRequest,
     ConsentResponse,
@@ -17,6 +18,16 @@ from app.modules.compliance.schemas import (
     DocumentResponse,
     DocumentUploadRequest,
 )
+
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "application/haansofthwp",
+    "application/x-hwp",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
 
 router = APIRouter()
 
@@ -50,8 +61,12 @@ async def get_consent(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ConsentResponse:
-    """동의 상세 조회"""
+    """동의 상세 조회 (소유권 확인)"""
+    from app.common.exceptions import ForbiddenError
+
     consent = await service.get_consent(db, consent_id)
+    if current_user.role == UserRole.PARENT and consent.guardian_id != current_user.id:
+        raise ForbiddenError(detail="본인의 동의 정보만 조회할 수 있습니다")
     return ConsentResponse.model_validate(consent)
 
 
@@ -91,6 +106,31 @@ async def upload_document(
     current_user: User = Depends(require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
 ) -> DocumentResponse:
     """법적 준수 문서 업로드"""
+    from app.common.exceptions import ValidationError
+
+    # document_type 검증
+    try:
+        DocumentType(document_type)
+    except ValueError:
+        raise ValidationError(
+            detail=f"유효하지 않은 문서 유형: {document_type}. "
+                   f"허용: {[e.value for e in DocumentType]}"
+        )
+
+    # MIME 타입 검증
+    if file.content_type and file.content_type not in ALLOWED_MIME_TYPES:
+        raise ValidationError(
+            detail=f"허용되지 않는 파일 형식: {file.content_type}"
+        )
+
+    # 파일 크기 검증
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE_BYTES:
+        raise ValidationError(
+            detail=f"파일 크기가 {MAX_FILE_SIZE_BYTES // (1024 * 1024)}MB를 초과합니다"
+        )
+    await file.seek(0)
+
     from datetime import datetime as dt
 
     parsed_expires = dt.fromisoformat(expires_at) if expires_at else None
@@ -111,6 +151,17 @@ async def list_documents(
     current_user: User = Depends(require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
 ) -> list[DocumentResponse]:
     """학원별 법적 준수 문서 목록 조회"""
+    # IDOR: 학원 관리자는 자기 학원 문서만 조회 가능
+    if current_user.role == UserRole.ACADEMY_ADMIN:
+        from sqlalchemy import select as _select
+
+        from app.modules.academy_management.models import Academy
+
+        _stmt = _select(Academy).where(Academy.id == academy_id, Academy.admin_id == current_user.id)
+        _result = await db.execute(_stmt)
+        if not _result.scalar_one_or_none():
+            from app.common.exceptions import ForbiddenError
+            raise ForbiddenError(detail="본인 학원의 문서만 조회할 수 있습니다")
     documents = await service.list_documents(db, academy_id, document_type)
     return [DocumentResponse.model_validate(d) for d in documents]
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useState, useCallback, useRef, type FormEvent } from 'react';
 import api from '../api/client';
 import { showToast } from '../components/Toast';
 import DataTable, { type Column } from '../components/DataTable';
@@ -48,6 +48,10 @@ export default function StudentsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Excel upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
   const fetchStudents = useCallback(async () => {
     try {
       const { data } = await api.get<{ items: Student[]; total: number } | Student[]>('/students');
@@ -62,6 +66,26 @@ export default function StudentsPage() {
       setLoading(false);
     }
   }, []);
+
+  const handleExcelUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await api.post('/students/bulk-upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      showToast('엑셀 업로드가 완료되었습니다.', 'success');
+      await fetchStudents();
+    } catch {
+      showToast('엑셀 업로드에 실패했습니다.', 'error');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, [fetchStudents]);
 
   useEffect(() => {
     fetchStudents();
@@ -126,6 +150,7 @@ export default function StudentsPage() {
         name: form.name.trim(),
         date_of_birth: form.date_of_birth,
         grade: form.grade.trim() || null,
+        guardian_phone: form.guardian_phone.trim() || null,
       };
 
       if (editingStudent) {
@@ -230,6 +255,20 @@ export default function StudentsPage() {
             columns={exportColumns}
             filename="학생목록"
           />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleExcelUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
+          >
+            {uploading ? '업로드 중...' : '엑셀 업로드'}
+          </button>
           <button
             onClick={openCreate}
             className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium"

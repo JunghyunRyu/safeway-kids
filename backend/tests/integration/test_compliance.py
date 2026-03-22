@@ -33,9 +33,11 @@ class TestGuardianConsent:
             json={
                 "child_id": str(student.id),
                 "consent_scope": {
+                    "service_terms": True,
+                    "privacy_policy": True,
+                    "child_info_collection": True,
                     "location_tracking": True,
                     "push_notification": True,
-                    "facial_recognition": False,
                 },
                 "consent_method": "phone_otp",
             },
@@ -56,7 +58,7 @@ class TestGuardianConsent:
             "/api/v1/compliance/consents",
             json={
                 "child_id": str(student.id),
-                "consent_scope": {"location_tracking": True},
+                "consent_scope": {"service_terms": True, "privacy_policy": True, "child_info_collection": True, "location_tracking": True},
                 "consent_method": "phone_otp",
             },
             headers=auth_header(parent_token),
@@ -79,7 +81,7 @@ class TestGuardianConsent:
             "/api/v1/compliance/consents",
             json={
                 "child_id": str(student.id),
-                "consent_scope": {"location_tracking": True},
+                "consent_scope": {"service_terms": True, "privacy_policy": True, "child_info_collection": True, "location_tracking": True},
                 "consent_method": "phone_otp",
             },
             headers=auth_header(parent_token),
@@ -101,7 +103,7 @@ class TestGuardianConsent:
     ) -> None:
         consent_data = {
             "child_id": str(student.id),
-            "consent_scope": {"location_tracking": True},
+            "consent_scope": {"service_terms": True, "privacy_policy": True, "child_info_collection": True, "location_tracking": True},
             "consent_method": "phone_otp",
         }
 
@@ -129,7 +131,7 @@ class TestGuardianConsent:
             "/api/v1/compliance/consents",
             json={
                 "child_id": str(student.id),
-                "consent_scope": {"location_tracking": True},
+                "consent_scope": {"service_terms": True, "privacy_policy": True, "child_info_collection": True, "location_tracking": True},
                 "consent_method": "phone_otp",
             },
             headers=auth_header(driver_token),

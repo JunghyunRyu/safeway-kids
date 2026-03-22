@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -88,3 +88,41 @@ class UserUpdateRequest(BaseModel):
 class PaginatedUserListResponse(BaseModel):
     items: list[UserListItem]
     total: int
+
+
+class DriverQualificationRequest(BaseModel):
+    license_number: str = Field(..., max_length=20, description="면허번호")
+    license_type: str = Field(..., max_length=50, description="면허 종류 (1종대형, 1종보통 등)")
+    license_expiry: date = Field(..., description="면허 만료일")
+    criminal_check_date: date | None = Field(default=None, description="범죄경력 조회일")
+    criminal_check_clear: bool = Field(default=False, description="범죄경력 결과 (적격)")
+    safety_training_date: date | None = Field(default=None, description="안전교육 이수일")
+    safety_training_expiry: date | None = Field(default=None, description="안전교육 만료일")
+
+
+class DriverQualificationResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    license_number: str
+    license_type: str
+    license_expiry: date
+    criminal_check_date: date | None
+    criminal_check_clear: bool
+    safety_training_date: date | None
+    safety_training_expiry: date | None
+    is_qualified: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+    @classmethod
+    def model_validate(cls, obj: object, **kwargs: object) -> "DriverQualificationResponse":
+        """Decrypt license_number (AES-256 stored as 고유식별정보)."""
+        instance = super().model_validate(obj, **kwargs)
+        try:
+            from app.common.security import decrypt_value
+            instance.license_number = decrypt_value(instance.license_number)
+        except Exception:
+            pass  # already plaintext or decryption error
+        return instance

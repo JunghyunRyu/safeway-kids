@@ -16,7 +16,16 @@ class Vehicle(Base):
     license_plate: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     capacity: Mapped[int] = mapped_column(Integer, nullable=False)
     operator_name: Mapped[str | None] = mapped_column(String(200))
+    manufacture_year: Mapped[int | None] = mapped_column(Integer)
+    school_bus_registration_no: Mapped[str | None] = mapped_column(String(30))
+    is_yellow_painted: Mapped[bool] = mapped_column(Boolean, default=False)
+    vehicle_type: Mapped[str | None] = mapped_column(String(30))
+    has_cctv: Mapped[bool] = mapped_column(Boolean, default=False)
+    has_stop_sign: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_inspection_date: Mapped[date | None] = mapped_column(Date)
     insurance_expiry: Mapped[date | None] = mapped_column(Date)
+    insurance_type: Mapped[str | None] = mapped_column(String(50))  # 대인, 대물, 종합
+    insurance_coverage_amount: Mapped[int | None] = mapped_column(Integer)  # 보장 금액 (만원)
     registration_expiry: Mapped[date | None] = mapped_column(Date)
     safety_inspection_expiry: Mapped[date | None] = mapped_column(Date)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -53,6 +62,20 @@ class VehicleAssignment(Base):
 
     # Relationships
     vehicle: Mapped["Vehicle"] = relationship(back_populates="assignments")
+
+
+class LocationAccessLog(Base):
+    """위치정보법 제16조: 위치정보 수집/이용/제공 기록 (6개월 보관)"""
+    __tablename__ = "location_access_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    subject_type: Mapped[str] = mapped_column(String(20), nullable=False)  # driver, student
+    subject_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("vehicles.id"), nullable=False)
+    accessor_user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
+    access_purpose: Mapped[str] = mapped_column(String(100), nullable=False, default="safety_monitoring")
+    accessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    retention_until: Mapped[date] = mapped_column(Date, nullable=False)
 
 
 class GpsHistory(Base):

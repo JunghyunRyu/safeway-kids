@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import api from '../api/client';
 import { showToast } from '../components/Toast';
 import DataTable, { type Column } from '../components/DataTable';
@@ -6,6 +6,18 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import StatusBadge from '../components/StatusBadge';
 import ExportButton from '../components/ExportButton';
 import type { DailySchedule } from '../types';
+
+interface ScheduleTemplate {
+  id: string;
+  student_id: string;
+  student_name?: string;
+  academy_id: string;
+  day_of_week: number;
+  pickup_time: string;
+  pickup_address: string | null;
+  is_active: boolean;
+  created_at: string;
+}
 
 const scheduleStatusColorMap: Record<string, { bg: string; text: string }> = {
   scheduled: { bg: 'bg-blue-100', text: 'text-blue-700' },
@@ -29,16 +41,80 @@ interface PipelineResult {
   [key: string]: unknown;
 }
 
+const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+
 export default function SchedulesPage() {
+  const [activeTab, setActiveTab] = useState<'daily' | 'templates'>('daily');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [schedules, setSchedules] = useState<DailySchedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
 
+  // Templates
+  const [templates, setTemplates] = useState<ScheduleTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+
   // Pipeline
   const [pipelineConfirmOpen, setPipelineConfirmOpen] = useState(false);
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null);
+
+  const fetchTemplates = useCallback(async () => {
+    setTemplatesLoading(true);
+    try {
+      const { data } = await api.get('/schedules/templates/academy');
+      setTemplates(Array.isArray(data) ? data : []);
+    } catch {
+      setTemplates([]);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'templates') {
+      fetchTemplates();
+    }
+  }, [activeTab, fetchTemplates]);
+
+  const toggleTemplate = useCallback(async (template: ScheduleTemplate) => {
+    try {
+      await api.patch(`/schedules/templates/${template.id}`, { is_active: !template.is_active });
+      showToast(template.is_active ? '템플릿이 비활성화되었습니다.' : '템플릿이 활성화되었습니다.', 'success');
+      await fetchTemplates();
+    } catch {
+      showToast('템플릿 상태 변경에 실패했습니다.', 'error');
+    }
+  }, [fetchTemplates]);
+
+  const templateColumns: Column<ScheduleTemplate>[] = [
+    {
+      key: 'student_id',
+      label: '학생',
+      render: (row) => <span>{(row as ScheduleTemplate & { student_name?: string }).student_name || row.student_id.slice(0, 8)}</span>,
+    },
+    {
+      key: 'day_of_week',
+      label: '요일',
+      sortable: true,
+      render: (row) => DAY_LABELS[row.day_of_week] || String(row.day_of_week),
+    },
+    {
+      key: 'pickup_time',
+      label: '픽업 시간',
+      sortable: true,
+    },
+    {
+      key: 'pickup_address',
+      label: '주소',
+      render: (row) => row.pickup_address || '-',
+    },
+    {
+      key: 'is_active',
+      label: '상태',
+      render: (row) => <StatusBadge status={row.is_active ? 'active' : 'inactive'} />,
+    },
+  ];
 
   const fetchSchedules = useCallback(async () => {
     setLoading(true);
@@ -79,9 +155,9 @@ export default function SchedulesPage() {
   const columns: Column<DailySchedule>[] = [
     {
       key: 'student_id',
-      label: '학생 ID',
+      label: '학생',
       render: (row) => (
-        <span className="font-mono text-gray-600">{row.student_id.slice(0, 8)}...</span>
+        <span>{row.student_name || row.student_id.slice(0, 8)}</span>
       ),
     },
     {
@@ -201,6 +277,40 @@ export default function SchedulesPage() {
     <div>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">스케줄 관리</h2>
 
+      {/* Tab Navigation */}
+      <div className="flex border-b border-gray-200 mb-6">
+        <button
+          onClick={() => setActiveTab('daily')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${activeTab === 'daily' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+        >
+          일일 스케줄
+        </button>
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${activeTab === 'templates' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+        >
+          스케줄 템플릿
+        </button>
+      </div>
+
+      {activeTab === 'templates' ? (
+        <DataTable<ScheduleTemplate>
+          columns={templateColumns}
+          data={templates}
+          loading={templatesLoading}
+          emptyMessage="등록된 스케줄 템플릿이 없습니다."
+          actions={(row) => (
+            <button
+              onClick={() => toggleTemplate(row)}
+              className={`text-sm px-3 py-1.5 rounded-lg font-medium ${row.is_active ? 'text-red-700 bg-red-50 hover:bg-red-100' : 'text-teal-700 bg-teal-50 hover:bg-teal-100'}`}
+            >
+              {row.is_active ? '비활성화' : '활성화'}
+            </button>
+          )}
+        />
+      ) : (
+      <>
+
       {/* Controls */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
         <div className="flex flex-wrap gap-3 items-end">
@@ -284,6 +394,8 @@ export default function SchedulesPage() {
         onConfirm={runPipeline}
         onCancel={() => setPipelineConfirmOpen(false)}
       />
+      </>
+      )}
     </div>
   );
 }

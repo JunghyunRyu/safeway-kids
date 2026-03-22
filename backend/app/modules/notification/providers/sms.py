@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class NHNCloudSmsProvider(SmsProvider):
     """NHN Cloud SMS provider for Korean phone numbers."""
 
-    BASE_URL = "https://api-sms.cloud.toast.com/sms/v3.0"
+    BASE_URL = "https://sms.api.nhncloudservice.com/sms/v3.0"
 
     async def send_sms(self, phone: str, message: str) -> bool:
         if settings.environment != "production":
@@ -30,10 +30,19 @@ class NHNCloudSmsProvider(SmsProvider):
         }
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=settings.external_api_timeout_seconds) as client:
                 resp = await client.post(url, json=payload, headers=headers)
                 resp.raise_for_status()
                 return True
+        except httpx.TimeoutException:
+            logger.error("[SMS TIMEOUT] phone=%s", phone)
+            return False
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "[SMS HTTP %d] phone=%s detail=%s",
+                e.response.status_code, phone, e.response.text[:200],
+            )
+            return False
         except Exception as e:
-            logger.error("[SMS ERROR] %s", e)
+            logger.error("[SMS UNEXPECTED] phone=%s error=%s", phone, e)
             return False

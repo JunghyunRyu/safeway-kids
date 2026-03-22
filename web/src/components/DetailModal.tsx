@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
+import { useModalOverlay } from '../hooks/useModalOverlay';
 
 interface DetailField {
   label: string;
@@ -20,50 +21,11 @@ export default function DetailModal({
   fields,
   actions,
 }: DetailModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
-      // Focus trap
-      if (e.key === 'Tab' && modalRef.current) {
-        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      }
-    },
-    [onClose]
-  );
-
-  useEffect(() => {
-    if (open) {
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [open, handleKeyDown]);
+  const modalRef = useModalOverlay({
+    open,
+    onClose,
+    focusSelector: 'button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  });
 
   if (!open) return null;
 

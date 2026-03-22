@@ -40,7 +40,19 @@ export default function Footer() {
 
         <div className="border-t border-gray-700 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
           <p>&copy; 2026 SAFEWAY KIDS. All rights reserved.</p>
-          <p>사업자등록번호: 준비중 | 대표: 준비중</p>
+          <div className="text-right space-y-1">
+            <p>본 서비스는 규제 샌드박스 실증특례 신청 중인 베타 서비스입니다</p>
+            <p>
+              {import.meta.env.VITE_CEO_NAME ? `대표: ${import.meta.env.VITE_CEO_NAME} | ` : ''}
+              {import.meta.env.VITE_BUSINESS_REG_NO ? `사업자등록번호: ${import.meta.env.VITE_BUSINESS_REG_NO} | ` : '사업자 등록 진행 중 | '}
+              {import.meta.env.VITE_COMMERCE_REG_NO ? `통신판매업: ${import.meta.env.VITE_COMMERCE_REG_NO}` : ''}
+            </p>
+            <p>
+              {import.meta.env.VITE_BUSINESS_ADDRESS ? `주소: ${import.meta.env.VITE_BUSINESS_ADDRESS} | ` : ''}
+              전화: {import.meta.env.VITE_BUSINESS_PHONE || '준비중'} | 이메일: support@safeway-kids.kr
+            </p>
+            <p>운영시간: 평일 09:00-18:00</p>
+          </div>
         </div>
       </div>
     </footer>

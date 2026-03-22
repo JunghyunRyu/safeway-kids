@@ -83,6 +83,21 @@ export default function DriverMapScreen() {
     }
   };
 
+  // Set map center to first active stop location
+  useEffect(() => {
+    if (!mapReady || schedules.length === 0) return;
+    const firstActive = schedules.find(
+      (s) => s.status !== "completed" && s.pickup_latitude && s.pickup_longitude
+    );
+    if (firstActive) {
+      sendToMap({
+        type: "setCenter",
+        lat: firstActive.pickup_latitude,
+        lng: firstActive.pickup_longitude,
+      });
+    }
+  }, [schedules, mapReady]);
+
   // Send stop markers to map — use optimized route order when available
   useEffect(() => {
     if (!mapReady || schedules.length === 0) return;

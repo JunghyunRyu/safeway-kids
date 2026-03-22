@@ -14,6 +14,11 @@ interface VehicleForm {
   capacity: string;
   model_name: string;
   is_active: string;
+  school_bus_registration_no: string;
+  manufacture_year: string;
+  is_yellow_painted: string;
+  has_cctv: string;
+  has_stop_sign: string;
 }
 
 const INITIAL_FORM: VehicleForm = {
@@ -21,6 +26,11 @@ const INITIAL_FORM: VehicleForm = {
   capacity: '15',
   model_name: '',
   is_active: 'true',
+  school_bus_registration_no: '',
+  manufacture_year: '',
+  is_yellow_painted: 'false',
+  has_cctv: 'false',
+  has_stop_sign: 'false',
 };
 
 interface FieldErrors {
@@ -45,7 +55,7 @@ export default function VehiclesPage() {
 
   const fetchVehicles = useCallback(async () => {
     try {
-      const { data } = await api.get('/vehicles/vehicles');
+      const { data } = await api.get('/telemetry/vehicles');
       setVehicles(Array.isArray(data) ? data : []);
     } catch {
       setVehicles([]);
@@ -81,11 +91,23 @@ export default function VehiclesPage() {
 
   const openEdit = (vehicle: Vehicle) => {
     setEditingVehicle(vehicle);
+    const v = vehicle as Vehicle & {
+      school_bus_registration_no?: string;
+      manufacture_year?: number;
+      is_yellow_painted?: boolean;
+      has_cctv?: boolean;
+      has_stop_sign?: boolean;
+    };
     setForm({
       license_plate: vehicle.license_plate,
       capacity: String(vehicle.capacity),
       model_name: vehicle.model_name ?? '',
       is_active: vehicle.is_active ? 'true' : 'false',
+      school_bus_registration_no: v.school_bus_registration_no ?? '',
+      manufacture_year: v.manufacture_year ? String(v.manufacture_year) : '',
+      is_yellow_painted: v.is_yellow_painted ? 'true' : 'false',
+      has_cctv: v.has_cctv ? 'true' : 'false',
+      has_stop_sign: v.has_stop_sign ? 'true' : 'false',
     });
     setFieldErrors({});
     setModalOpen(true);
@@ -109,13 +131,18 @@ export default function VehiclesPage() {
         capacity: parseInt(form.capacity),
         model_name: form.model_name.trim() || null,
         is_active: form.is_active === 'true',
+        school_bus_registration_no: form.school_bus_registration_no.trim() || null,
+        manufacture_year: form.manufacture_year ? parseInt(form.manufacture_year) : null,
+        is_yellow_painted: form.is_yellow_painted === 'true',
+        has_cctv: form.has_cctv === 'true',
+        has_stop_sign: form.has_stop_sign === 'true',
       };
 
       if (editingVehicle) {
         await api.patch(`/telemetry/vehicles/${editingVehicle.id}`, payload);
         showToast('차량 정보가 수정되었습니다.', 'success');
       } else {
-        await api.post('/vehicles/vehicles', payload);
+        await api.post('/telemetry/vehicles', payload);
         showToast('차량이 등록되었습니다.', 'success');
       }
       closeModal();
@@ -266,6 +293,54 @@ export default function VehiclesPage() {
           value={form.model_name}
           onChange={(v) => setForm({ ...form, model_name: v })}
           placeholder="현대 카운티"
+        />
+        <FormField
+          label="통학버스 신고번호"
+          name="school_bus_registration_no"
+          value={form.school_bus_registration_no}
+          onChange={(v) => setForm({ ...form, school_bus_registration_no: v })}
+          placeholder="신고번호"
+        />
+        <FormField
+          label="제조연도"
+          name="manufacture_year"
+          type="number"
+          value={form.manufacture_year}
+          onChange={(v) => setForm({ ...form, manufacture_year: v })}
+          placeholder="2024"
+        />
+        <FormField
+          label="황색 도색"
+          name="is_yellow_painted"
+          type="select"
+          value={form.is_yellow_painted}
+          onChange={(v) => setForm({ ...form, is_yellow_painted: v })}
+          options={[
+            { value: 'true', label: '예' },
+            { value: 'false', label: '아니오' },
+          ]}
+        />
+        <FormField
+          label="CCTV 장착"
+          name="has_cctv"
+          type="select"
+          value={form.has_cctv}
+          onChange={(v) => setForm({ ...form, has_cctv: v })}
+          options={[
+            { value: 'true', label: '예' },
+            { value: 'false', label: '아니오' },
+          ]}
+        />
+        <FormField
+          label="정지 표지판"
+          name="has_stop_sign"
+          type="select"
+          value={form.has_stop_sign}
+          onChange={(v) => setForm({ ...form, has_stop_sign: v })}
+          options={[
+            { value: 'true', label: '예' },
+            { value: 'false', label: '아니오' },
+          ]}
         />
         {editingVehicle && (
           <FormField

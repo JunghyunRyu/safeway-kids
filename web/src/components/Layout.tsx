@@ -9,6 +9,8 @@ const academyNavItems = [
   { to: '/schedules', label: '스케줄', icon: '📅' },
   { to: '/vehicles', label: '차량 관리', icon: '🚐' },
   { to: '/billing', label: '청구 관리', icon: '💰' },
+  { to: '/upload', label: '엑셀 업로드', icon: '📤' },
+  { to: '/map', label: '관제 센터', icon: '🗺️' },
 ];
 
 const platformNavItems = [

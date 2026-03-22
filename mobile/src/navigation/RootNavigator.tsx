@@ -10,6 +10,7 @@ import EscortTabNavigator from "./EscortTabNavigator";
 import AdminTabNavigator from "./AdminTabNavigator";
 import StudentTabNavigator from "./StudentTabNavigator";
 import LoginScreen from "../screens/LoginScreen";
+import SOSButton from "../components/SOSButton";
 
 export default function RootNavigator() {
   const { authenticated, loading, user } = useAuth();
@@ -36,17 +37,20 @@ export default function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {role === "safety_escort" ? (
-        <EscortTabNavigator />
-      ) : role === "driver" ? (
-        <DriverTabNavigator />
-      ) : role === "academy_admin" || role === "platform_admin" ? (
-        <AdminTabNavigator />
-      ) : role === "student" ? (
-        <StudentTabNavigator />
-      ) : (
-        <ParentTabNavigator />
-      )}
+      <View style={styles.appContainer}>
+        {role === "safety_escort" ? (
+          <EscortTabNavigator />
+        ) : role === "driver" ? (
+          <DriverTabNavigator />
+        ) : role === "academy_admin" || role === "platform_admin" ? (
+          <AdminTabNavigator />
+        ) : role === "student" ? (
+          <StudentTabNavigator />
+        ) : (
+          <ParentTabNavigator />
+        )}
+        <SOSButton />
+      </View>
     </NavigationContainer>
   );
 }
@@ -57,5 +61,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: Colors.background,
+  },
+  appContainer: {
+    flex: 1,
   },
 });
