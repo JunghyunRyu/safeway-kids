@@ -132,6 +132,17 @@ export async function createDriverMemo(instanceId: string, memo: string): Promis
   return resp.data;
 }
 
+export async function reorderRoute(
+  scheduleDate: string,
+  instanceIds: string[]
+): Promise<unknown> {
+  const resp = await apiClient.patch("/schedules/daily/reorder", {
+    schedule_date: scheduleDate,
+    instance_ids: instanceIds,
+  });
+  return resp.data;
+}
+
 export async function submitVehicleClearance(
   vehicleId: string,
   scheduleDate: string,

@@ -17,6 +17,7 @@ from app.modules.scheduling.schemas import (
     DriverMemoRequest,
     DriverMemoResponse,
     NoShowRequest,
+    RouteReorderRequest,
     RouteSessionRequest,
     RouteSessionResponse,
     ScheduleCancelRequest,
@@ -107,18 +108,25 @@ async def get_driver_daily_schedules(
     return await service.get_driver_daily_schedules(db, current_user.id, target_date)
 
 
-@router.get("/daily", response_model=list[DailyScheduleResponse])
+@router.get("/daily")
 async def list_daily_schedules(
     target_date: date = Query(..., description="조회 날짜"),
     student_id: uuid.UUID | None = Query(default=None),
+    page: int = Query(default=None, ge=1, description="P3-69: 페이지 번호 (생략 시 전체 반환)"),
+    page_size: int = Query(default=50, ge=1, le=100, description="P3-69: 페이지 크기"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[DailyScheduleResponse]:
-    """일일 스케줄 조회 — 학부모는 본인 자녀만 조회"""
+):
+    """일일 스케줄 조회 — 학부모는 본인 자녀만 조회, P3-69: 페이지네이션 지원"""
     results = await service.list_daily_schedules(
         db, target_date, student_id,
         guardian_id=current_user.id if current_user.role == UserRole.PARENT else None,
     )
+    if page is not None:
+        total = len(results)
+        skip = (page - 1) * page_size
+        items = results[skip : skip + page_size]
+        return {"items": [DailyScheduleResponse(**r) for r in items], "total": total}
     return [DailyScheduleResponse(**r) for r in results]
 
 
@@ -311,6 +319,19 @@ async def undo_alight(
         ip_address=request.client.host if request.client else None,
     )
     return DailyScheduleResponse.model_validate(instance)
+
+
+# --- P3-66: Manual route reorder ---
+
+
+@router.patch("/daily/reorder")
+async def reorder_route(
+    body: RouteReorderRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER)),
+) -> dict:
+    """P3-66: 수동 노선 순서 변경"""
+    return await service.reorder_route(db, current_user.id, body)
 
 
 @router.post("/daily/vehicle-clear", response_model=VehicleClearanceResponse, status_code=201)

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Text, Uuid, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -23,6 +23,21 @@ class SupportTicket(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class InternalNote(Base):
+    """P3-76: Internal CS notes on entities (user, academy, ticket, vehicle)."""
+    __tablename__ = "internal_notes"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    entity_type: Mapped[str] = mapped_column(String(30), nullable=False)  # user / academy / ticket / vehicle
+    entity_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    author_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
+    author_name: Mapped[str | None] = mapped_column(String(100))
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )
 
 

@@ -19,6 +19,7 @@
     "expo-location": "~19.0.8",
     "expo-notifications": "~0.32.16",
     "expo-secure-store": "~15.0.8",
+    "expo-speech": "~13.1.7",
     "expo-status-bar": "~3.0.9",
     "http-proxy": "^1.18.1",
     "i18next": "^25.8.18",

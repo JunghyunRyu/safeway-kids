@@ -18,7 +18,7 @@ interface AcademyRow extends Record<string, unknown> {
   is_active?: boolean;
 }
 
-const emptyForm = { name: '', address: '', phone: '' };
+const emptyForm = { name: '', address: '', phone: '', logo_url: '', primary_color: '' };
 
 export default function PlatformAcademiesPage() {
   const [academies, setAcademies] = useState<AcademyRow[]>([]);
@@ -90,7 +90,13 @@ export default function PlatformAcademiesPage() {
 
   const openEdit = (row: AcademyRow) => {
     setEditTarget(row);
-    setForm({ name: row.name, address: row.address, phone: row.phone });
+    setForm({
+      name: row.name,
+      address: row.address,
+      phone: row.phone,
+      logo_url: (row as Record<string, unknown>).logo_url as string || '',
+      primary_color: (row as Record<string, unknown>).primary_color as string || '',
+    });
     setErrors({});
     setShowModal(true);
   };
@@ -244,6 +250,35 @@ export default function PlatformAcademiesPage() {
           onChange={(v) => setForm({ ...form, phone: v })}
           placeholder="02-1234-5678"
         />
+        {editTarget && (
+          <>
+            <FormField
+              label="로고 URL"
+              name="logo_url"
+              value={form.logo_url}
+              onChange={(v) => setForm({ ...form, logo_url: v })}
+              placeholder="https://example.com/logo.png"
+            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">브랜드 컬러</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={form.primary_color || '#3B82F6'}
+                  onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                  className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={form.primary_color}
+                  onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                  placeholder="#3B82F6"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+          </>
+        )}
       </FormModal>
 
       {/* Deactivate Confirm */}

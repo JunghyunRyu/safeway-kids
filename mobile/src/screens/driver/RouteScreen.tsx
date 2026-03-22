@@ -30,7 +30,9 @@ import {
   endRoute,
   batchBoard,
   createDriverMemo,
+  reorderRoute,
 } from "../../api/schedules";
+import { useTTS } from "../../hooks/useTTS";
 import { getMyRoute, RoutePlan } from "../../api/routes";
 import { getMyAssignment } from "../../api/vehicles";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
@@ -75,6 +77,10 @@ interface StopCardProps {
   onUndoAlight: (id: string) => void;
   onArrivalConfirm: (id: string) => void;
   onMemo: (id: string) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 const UNDO_TIMEOUT_MS = 5 * 60 * 1000;
@@ -115,6 +121,10 @@ const StopCard = memo(function StopCard({
   onUndoAlight,
   onArrivalConfirm,
   onMemo,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: StopCardProps) {
   const { t } = useTranslation();
 
@@ -217,10 +227,33 @@ const StopCard = memo(function StopCard({
         ) : null}
 
         {/* P2-49: Memo button */}
-        <Pressable style={styles.memoBtn} onPress={() => onMemo(id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="create-outline" size={14} color={Colors.info} />
-          <Text style={styles.memoBtnText}>메모</Text>
-        </Pressable>
+        <View style={styles.cardToolRow}>
+          <Pressable style={styles.memoBtn} onPress={() => onMemo(id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="create-outline" size={14} color={Colors.info} />
+            <Text style={styles.memoBtnText}>메모</Text>
+          </Pressable>
+          {/* P3-66: Reorder buttons */}
+          {(canMoveUp || canMoveDown) && !isDone && (
+            <View style={styles.reorderRow}>
+              <Pressable
+                style={[styles.reorderBtn, !canMoveUp && styles.disabled]}
+                onPress={onMoveUp}
+                disabled={!canMoveUp}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              >
+                <Ionicons name="chevron-up" size={16} color={canMoveUp ? Colors.info : Colors.textDisabled} />
+              </Pressable>
+              <Pressable
+                style={[styles.reorderBtn, !canMoveDown && styles.disabled]}
+                onPress={onMoveDown}
+                disabled={!canMoveDown}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              >
+                <Ionicons name="chevron-down" size={16} color={canMoveDown ? Colors.info : Colors.textDisabled} />
+              </Pressable>
+            </View>
+          )}
+        </View>
 
         {isNoShow ? (
           <Text style={[styles.statusText, { color: Colors.neutral }]}>미탑승</Text>
@@ -326,6 +359,7 @@ export default function DriverRouteScreen() {
   const [routePlan, setRoutePlan] = useState<RoutePlan | null>(null);
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const tts = useTTS();
 
   const load = useCallback(async () => {
     try {
@@ -373,11 +407,15 @@ export default function DriverRouteScreen() {
       try {
         await markBoarded(itemId);
         await load();
+        // P3-65: TTS announce next student
+        const updated = schedules.filter(s => s.id !== itemId);
+        const next = updated.find(s => s.status === "scheduled");
+        tts.announceAfterAction(next?.student_name ?? null);
       } catch {
         Alert.alert(t("common.error"));
       }
     },
-    [load, t]
+    [load, t, schedules, tts]
   );
 
   // P2-50: Handoff type selection on alight
@@ -500,6 +538,38 @@ export default function DriverRouteScreen() {
     }
   }, [vehicleId, routeActive, schedules]);
 
+  // P3-66: Reorder stops
+  const handleMoveUp = useCallback(
+    async (index: number) => {
+      if (index <= 0) return;
+      const newSchedules = [...schedules];
+      [newSchedules[index - 1], newSchedules[index]] = [newSchedules[index], newSchedules[index - 1]];
+      setSchedules(newSchedules);
+      try {
+        await reorderRoute(todayStr(), newSchedules.map((s) => s.id));
+      } catch {
+        // revert on failure
+        await load();
+      }
+    },
+    [schedules, load]
+  );
+
+  const handleMoveDown = useCallback(
+    async (index: number) => {
+      if (index >= schedules.length - 1) return;
+      const newSchedules = [...schedules];
+      [newSchedules[index], newSchedules[index + 1]] = [newSchedules[index + 1], newSchedules[index]];
+      setSchedules(newSchedules);
+      try {
+        await reorderRoute(todayStr(), newSchedules.map((s) => s.id));
+      } catch {
+        await load();
+      }
+    },
+    [schedules, load]
+  );
+
   // P2-49: Driver memo modal
   const [memoModalId, setMemoModalId] = useState<string | null>(null);
   const [memoText, setMemoText] = useState("");
@@ -614,6 +684,15 @@ export default function DriverRouteScreen() {
 
   const firstScheduledIdx = schedules.findIndex(s => s.status === "scheduled");
 
+  // P3-65: TTS next stop announcement when next stop changes
+  useEffect(() => {
+    if (schedules.length > 0 && firstScheduledIdx >= 0) {
+      const nextStop = schedules[firstScheduledIdx];
+      tts.announceNextStop(nextStop.student_name, nextStop.pickup_address);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstScheduledIdx]);
+
   const handleArrivalConfirm = useCallback(
     async (itemId: string) => {
       try {
@@ -658,9 +737,13 @@ export default function DriverRouteScreen() {
         onUndoAlight={handleUndoAlight}
         onArrivalConfirm={handleArrivalConfirm}
         onMemo={handleMemo}
+        onMoveUp={() => handleMoveUp(index)}
+        onMoveDown={() => handleMoveDown(index)}
+        canMoveUp={index > 0}
+        canMoveDown={index < schedules.length - 1}
       />
     ),
-    [handleBoard, handleAlight, handleNoShow, handleUndoBoard, handleUndoAlight, handleArrivalConfirm, handleMemo, firstScheduledIdx]
+    [handleBoard, handleAlight, handleNoShow, handleUndoBoard, handleUndoAlight, handleArrivalConfirm, handleMemo, firstScheduledIdx, handleMoveUp, handleMoveDown, schedules.length]
   );
 
   const keyExtractor = useCallback(
@@ -694,6 +777,14 @@ export default function DriverRouteScreen() {
               {completedCount}/{totalActive} 완료
             </Text>
           </View>
+          {/* P3-65: TTS toggle */}
+          <Pressable
+            style={[styles.routeToggleBtn, { backgroundColor: tts.enabled ? Colors.info : Colors.neutral }]}
+            onPress={tts.toggle}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name={tts.enabled ? "volume-high" : "volume-mute"} size={16} color={Colors.textInverse} />
+          </Pressable>
           {schedules.length > 0 && (
             <Pressable
               style={[styles.routeToggleBtn, { backgroundColor: routeActive ? Colors.danger : Colors.success }]}
@@ -1198,12 +1289,30 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // P3-66: Reorder buttons
+  cardToolRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: Spacing.xs,
+  },
+  reorderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  reorderBtn: {
+    padding: 4,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+
   // P2-49: Memo button & modal
   memoBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: Spacing.xs,
   },
   memoBtnText: {
     fontSize: 13,

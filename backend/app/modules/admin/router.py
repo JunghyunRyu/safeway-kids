@@ -13,10 +13,14 @@ from app.modules.admin.schemas import (
     AcademyStatsResponse,
     BoardingStatusResponse,
     DriverInfoResponse,
+    InternalNoteCreateRequest,
+    InternalNoteResponse,
+    MonthlyReportResponse,
     PaginatedAuditLogResponse,
     PaginatedNotificationLogResponse,
     PaginatedTicketResponse,
     StudentSearchResult,
+    SupportStatsResponse,
     SupportTicketCreateRequest,
     SupportTicketResponse,
     SupportTicketUpdateRequest,
@@ -192,3 +196,62 @@ async def get_boarding_status(
     from datetime import date as date_type
     d = date_type.fromisoformat(date)
     return await service.get_boarding_status(db, d, current_user)
+
+
+# --- P3-75: CS support stats ---
+
+
+@router.get("/support/stats", response_model=SupportStatsResponse)
+async def get_support_stats(
+    period: str = Query("daily", description="daily / weekly"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_admin),
+) -> SupportStatsResponse:
+    """P3-75: CS 일일/주간 리포트"""
+    return await service.get_support_stats(db, period)
+
+
+# --- P3-76: Internal notes ---
+
+
+@router.post("/notes", response_model=InternalNoteResponse, status_code=201)
+async def create_note(
+    body: InternalNoteCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_admin),
+) -> InternalNoteResponse:
+    """P3-76: 내부 메모 추가"""
+    return await service.create_internal_note(db, current_user, body)
+
+
+@router.get("/notes", response_model=list[InternalNoteResponse])
+async def list_notes(
+    entity_type: str = Query(..., description="user / academy / ticket / vehicle"),
+    entity_id: str = Query(..., description="엔티티 ID"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_admin),
+) -> list[InternalNoteResponse]:
+    """P3-76: 내부 메모 조회"""
+    return await service.list_internal_notes(db, entity_type, entity_id)
+
+
+# --- P3-71: Monthly report ---
+
+
+@router.get("/academy/{academy_id}/monthly-report", response_model=MonthlyReportResponse)
+async def get_monthly_report(
+    academy_id: uuid.UUID,
+    month: str = Query(..., description="YYYY-MM"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
+) -> MonthlyReportResponse:
+    """P3-71: 월간 경영 보고서 데이터"""
+    if current_user.role == UserRole.ACADEMY_ADMIN:
+        from sqlalchemy import select as _select
+        from app.modules.academy_management.models import Academy
+        _result = await db.execute(
+            _select(Academy).where(Academy.id == academy_id, Academy.admin_id == current_user.id)
+        )
+        if not _result.scalar_one_or_none():
+            raise ForbiddenError(detail="본인 학원의 보고서만 조회할 수 있습니다")
+    return await service.get_monthly_report(db, academy_id, month)

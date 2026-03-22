@@ -18,6 +18,8 @@ class AcademyUpdateRequest(BaseModel):
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     phone: str | None = None
+    logo_url: str | None = Field(default=None, max_length=500, description="P3-70: 학원 로고 URL")
+    primary_color: str | None = Field(default=None, max_length=10, description="P3-70: 대표 색상 hex")
 
 
 class AcademyResponse(BaseModel):
@@ -28,6 +30,8 @@ class AcademyResponse(BaseModel):
     longitude: float
     phone: str | None
     admin_id: uuid.UUID | None
+    logo_url: str | None = None
+    primary_color: str | None = None
     is_active: bool
     created_at: datetime
 

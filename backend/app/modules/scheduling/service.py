@@ -847,6 +847,55 @@ async def _send_arrival_notification(
         logger.warning("Failed to send arrival notification", exc_info=True)
 
 
+async def reorder_route(db: AsyncSession, driver_id: uuid.UUID, body) -> dict:
+    """P3-66: Save manual route order as a new RoutePlan version."""
+    from app.modules.scheduling.models import RoutePlan
+    from app.modules.vehicle_telemetry.models import VehicleAssignment
+
+    # Find driver's vehicle assignment
+    assignment_stmt = select(VehicleAssignment).where(
+        VehicleAssignment.driver_id == driver_id,
+        VehicleAssignment.assigned_date == body.schedule_date,
+    )
+    result = await db.execute(assignment_stmt)
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise NotFoundError(detail="해당 날짜의 차량 배정을 찾을 수 없습니다")
+
+    # Build stops from instance_ids order
+    stops = []
+    for order, inst_id in enumerate(body.instance_ids):
+        inst_stmt = select(DailyScheduleInstance).where(DailyScheduleInstance.id == inst_id)
+        inst = (await db.execute(inst_stmt)).scalar_one_or_none()
+        if not inst:
+            continue
+        stops.append({
+            "stop_id": str(inst.id),
+            "student_name": None,
+            "latitude": inst.pickup_latitude,
+            "longitude": inst.pickup_longitude,
+            "order": order,
+        })
+
+    # Get latest version
+    ver_stmt = select(RoutePlan.version).where(
+        RoutePlan.vehicle_id == assignment.vehicle_id,
+        RoutePlan.plan_date == body.schedule_date,
+    ).order_by(RoutePlan.version.desc()).limit(1)
+    latest_ver = (await db.execute(ver_stmt)).scalar_one_or_none() or 0
+
+    plan = RoutePlan(
+        vehicle_id=assignment.vehicle_id,
+        plan_date=body.schedule_date,
+        version=latest_ver + 1,
+        stops=stops,
+        generated_by="manual_reorder",
+    )
+    db.add(plan)
+    await db.flush()
+    return {"status": "ok", "version": plan.version, "stops_count": len(stops)}
+
+
 async def start_route_session(
     db: AsyncSession, driver_id: uuid.UUID, vehicle_id: uuid.UUID, schedule_date: date
 ) -> "RouteSession":

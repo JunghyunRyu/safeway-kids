@@ -118,6 +118,42 @@ class BoardingStatusResponse(BaseModel):
     items: list[BoardingStatusItem]
 
 
+class InternalNoteCreateRequest(BaseModel):
+    entity_type: str  # user / academy / ticket / vehicle
+    entity_id: str
+    content: str
+
+
+class InternalNoteResponse(BaseModel):
+    id: uuid.UUID
+    entity_type: str
+    entity_id: str
+    author_id: uuid.UUID
+    author_name: str | None = None
+    content: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class SupportStatsResponse(BaseModel):
+    total: int
+    by_status: dict[str, int]
+    by_category: dict[str, int]
+    avg_resolution_hours: float | None = None
+
+
+class MonthlyReportResponse(BaseModel):
+    month: str
+    total_schedules: int
+    completed: int
+    cancelled: int
+    no_show: int
+    on_time_rate: float
+    avg_delay_minutes: float
+    daily_breakdown: list[dict]
+
+
 class DriverInfoResponse(BaseModel):
     id: uuid.UUID
     name: str

@@ -20,10 +20,29 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "취소됨",
 };
 
-function ScheduleCard({ item }: { item: DailySchedule }) {
+function maskName(name: string): string {
+  if (name.length <= 1) return name;
+  return name[0] + "O" + name.slice(2, 3);
+}
+
+function ScheduleCard({
+  item,
+  friends,
+  totalStops,
+  completedStops,
+}: {
+  item: DailySchedule;
+  friends: DailySchedule[];
+  totalStops: number;
+  completedStops: number;
+}) {
   const statusColor = STATUS_COLORS[item.status] ?? Colors.neutral;
   const statusBg = STATUS_BG_COLORS[item.status] ?? Colors.neutralLight;
   const time = item.pickup_time?.slice(0, 5) ?? "--:--";
+  const isBoarded = item.status === "boarded" || !!item.boarded_at;
+  const remainingStops = Math.max(0, totalStops - completedStops);
+  const etaMinutes = remainingStops * 3;
+  const progress = totalStops > 0 ? completedStops / totalStops : 0;
 
   return (
     <View style={[styles.card, Shadows.sm]}>
@@ -44,6 +63,28 @@ function ScheduleCard({ item }: { item: DailySchedule }) {
             {STATUS_LABELS[item.status] ?? item.status}
           </Text>
         </View>
+
+        {/* P3-64: Progress bar when boarded */}
+        {isBoarded && totalStops > 0 && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
+            </View>
+            <Text style={styles.etaText}>
+              목적지까지 약 {etaMinutes}분
+            </Text>
+          </View>
+        )}
+
+        {/* P3-62: Friends riding together */}
+        {friends.length > 0 && (
+          <View style={styles.friendsSection}>
+            <Ionicons name="people-outline" size={14} color={Colors.textSecondary} />
+            <Text style={styles.friendsText}>
+              함께 타는 친구: {friends.map((f) => maskName(f.student_name ?? "")).join(", ")}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -92,7 +133,31 @@ export default function StudentScheduleScreen() {
         <FlatList
           data={schedules}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ScheduleCard item={item} />}
+          renderItem={({ item }) => {
+            // P3-62: Find friends in same vehicle (exclude self)
+            const friends = schedules.filter(
+              (s) =>
+                s.vehicle_id &&
+                s.vehicle_id === item.vehicle_id &&
+                s.id !== item.id
+            );
+            // P3-64: Count stops for progress bar
+            const sameVehicle = schedules.filter(
+              (s) => s.vehicle_id && s.vehicle_id === item.vehicle_id
+            );
+            const totalStops = sameVehicle.length;
+            const completedStops = sameVehicle.filter(
+              (s) => s.status === "completed"
+            ).length;
+            return (
+              <ScheduleCard
+                item={item}
+                friends={friends}
+                totalStops={totalStops}
+                completedStops={completedStops}
+              />
+            );
+          }}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl
@@ -172,5 +237,38 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: Typography.weights.bold,
     color: Colors.textSecondary,
+  },
+  // P3-64: Progress bar
+  progressSection: {
+    marginTop: Spacing.sm,
+    gap: 4,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: Colors.roleStudent,
+    borderRadius: 4,
+  },
+  etaText: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.roleStudent,
+    fontWeight: Typography.weights.semibold,
+  },
+  // P3-62: Friends section
+  friendsSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: Spacing.sm,
+  },
+  friendsText: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+    flex: 1,
   },
 });

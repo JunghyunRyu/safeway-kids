@@ -659,3 +659,169 @@ async def list_audit_logs(
     total = await db.scalar(select(func.count()).select_from(query.subquery()))
     items = (await db.execute(query.offset(skip).limit(limit))).scalars().all()
     return {"items": list(items), "total": total or 0}
+
+
+# ---------------------------------------------------------------------------
+# P3-75: CS support stats
+# ---------------------------------------------------------------------------
+
+
+async def get_support_stats(db: AsyncSession, period: str = "daily") -> dict:
+    """P3-75: CS 일일/주간 리포트."""
+    from datetime import datetime, timedelta, timezone
+    from app.modules.admin.models import SupportTicket
+
+    now = datetime.now(timezone.utc)
+    if period == "weekly":
+        start = now - timedelta(days=7)
+    else:
+        start = now - timedelta(days=1)
+
+    query = select(SupportTicket).where(SupportTicket.created_at >= start)
+    result = await db.execute(query)
+    tickets = list(result.scalars().all())
+
+    total = len(tickets)
+    by_status: dict[str, int] = {}
+    by_category: dict[str, int] = {}
+    resolved_times: list[float] = []
+
+    for t in tickets:
+        by_status[t.status] = by_status.get(t.status, 0) + 1
+        by_category[t.category] = by_category.get(t.category, 0) + 1
+        if t.status in ("resolved", "closed") and t.updated_at and t.created_at:
+            diff = (t.updated_at - t.created_at).total_seconds() / 3600
+            resolved_times.append(diff)
+
+    avg_resolution = round(sum(resolved_times) / len(resolved_times), 1) if resolved_times else None
+
+    return {
+        "total": total,
+        "by_status": by_status,
+        "by_category": by_category,
+        "avg_resolution_hours": avg_resolution,
+    }
+
+
+# ---------------------------------------------------------------------------
+# P3-76: Internal notes CRUD
+# ---------------------------------------------------------------------------
+
+
+async def create_internal_note(db: AsyncSession, user, body) -> dict:
+    """P3-76: Create an internal note."""
+    from app.modules.admin.models import InternalNote
+
+    note = InternalNote(
+        entity_type=body.entity_type,
+        entity_id=body.entity_id,
+        author_id=user.id,
+        author_name=user.name,
+        content=body.content,
+    )
+    db.add(note)
+    await db.flush()
+    return {
+        "id": note.id,
+        "entity_type": note.entity_type,
+        "entity_id": note.entity_id,
+        "author_id": note.author_id,
+        "author_name": note.author_name,
+        "content": note.content,
+        "created_at": note.created_at,
+    }
+
+
+async def list_internal_notes(db: AsyncSession, entity_type: str, entity_id: str) -> list[dict]:
+    """P3-76: List internal notes for an entity."""
+    from app.modules.admin.models import InternalNote
+
+    stmt = (
+        select(InternalNote)
+        .where(InternalNote.entity_type == entity_type, InternalNote.entity_id == entity_id)
+        .order_by(InternalNote.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    notes = result.scalars().all()
+    return [
+        {
+            "id": n.id,
+            "entity_type": n.entity_type,
+            "entity_id": n.entity_id,
+            "author_id": n.author_id,
+            "author_name": n.author_name,
+            "content": n.content,
+            "created_at": n.created_at,
+        }
+        for n in notes
+    ]
+
+
+# ---------------------------------------------------------------------------
+# P3-71: Monthly report
+# ---------------------------------------------------------------------------
+
+
+async def get_monthly_report(db: AsyncSession, academy_id, month_str: str) -> dict:
+    """P3-71: Generate monthly report data."""
+    from datetime import date as date_type, timedelta
+    from app.modules.scheduling.models import DailyScheduleInstance
+
+    # Parse month
+    year, mon = month_str.split("-")
+    start_date = date_type(int(year), int(mon), 1)
+    if int(mon) == 12:
+        end_date = date_type(int(year) + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date_type(int(year), int(mon) + 1, 1) - timedelta(days=1)
+
+    stmt = select(DailyScheduleInstance).where(
+        DailyScheduleInstance.academy_id == academy_id,
+        DailyScheduleInstance.schedule_date >= start_date,
+        DailyScheduleInstance.schedule_date <= end_date,
+    )
+    result = await db.execute(stmt)
+    instances = list(result.scalars().all())
+
+    total = len(instances)
+    completed = sum(1 for i in instances if i.status == "completed")
+    cancelled = sum(1 for i in instances if i.status == "cancelled")
+    no_show = sum(1 for i in instances if i.status == "no_show")
+    on_time = sum(1 for i in instances if i.status == "completed" and not i.delay_notified_at)
+    on_time_rate = (on_time / completed * 100) if completed > 0 else 100.0
+
+    from datetime import datetime
+    delayed = [i for i in instances if i.delay_notified_at and i.boarded_at]
+    avg_delay = 0.0
+    if delayed:
+        delays = []
+        for i in delayed:
+            scheduled_dt = datetime.combine(i.schedule_date, i.pickup_time)
+            actual_dt = i.boarded_at.replace(tzinfo=None) if i.boarded_at else scheduled_dt
+            diff = (actual_dt - scheduled_dt).total_seconds() / 60
+            delays.append(max(0, diff))
+        avg_delay = sum(delays) / len(delays) if delays else 0.0
+
+    daily: dict[str, dict] = {}
+    for i in instances:
+        key = str(i.schedule_date)
+        if key not in daily:
+            daily[key] = {"date": key, "total": 0, "completed": 0, "cancelled": 0, "no_show": 0}
+        daily[key]["total"] += 1
+        if i.status == "completed":
+            daily[key]["completed"] += 1
+        elif i.status == "cancelled":
+            daily[key]["cancelled"] += 1
+        elif i.status == "no_show":
+            daily[key]["no_show"] += 1
+
+    return {
+        "month": month_str,
+        "total_schedules": total,
+        "completed": completed,
+        "cancelled": cancelled,
+        "no_show": no_show,
+        "on_time_rate": round(on_time_rate, 1),
+        "avg_delay_minutes": round(avg_delay, 1),
+        "daily_breakdown": sorted(daily.values(), key=lambda d: d["date"]),
+    }

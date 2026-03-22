@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
-import { listStudents, Student } from "../../api/students";
+import { listStudents, Student, getAcademyBranding, AcademyBranding } from "../../api/students";
 import { listDailySchedules, DailySchedule } from "../../api/schedules";
 import {
   Colors,
@@ -103,15 +103,19 @@ export default function ParentHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
+  // P3-70: Academy branding
+  const [branding, setBranding] = useState<AcademyBranding | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [s, d] = await Promise.all([
+      const [s, d, b] = await Promise.all([
         listStudents(),
         listDailySchedules(todayStr()),
+        getAcademyBranding(),
       ]);
       setStudents(s);
       setSchedules(d);
+      setBranding(b);
     } catch {
       showError('데이터를 불러오는데 실패했습니다');
     }
@@ -171,8 +175,13 @@ export default function ParentHomeScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* 인사 헤더 */}
-      <View style={styles.header}>
+      <View style={[styles.header, branding?.primary_color ? { borderBottomColor: branding.primary_color, borderBottomWidth: 2 } : undefined]}>
         <View>
+          {branding?.name && (
+            <Text style={[styles.academyLabel, branding.primary_color ? { color: branding.primary_color } : undefined]}>
+              {branding.name}
+            </Text>
+          )}
           <Text style={styles.greeting}>
             {t("home.greeting")}, {user?.name}
           </Text>
@@ -284,6 +293,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
+  },
+  academyLabel: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.primary,
+    marginBottom: 2,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
   },
   greeting: {
     fontSize: Typography.sizes.xl,

@@ -62,6 +62,7 @@ class UserListItem(BaseModel):
     phone: str
     name: str
     role: UserRole
+    academy_sub_role: str | None = None
     is_active: bool
     created_at: datetime
 
@@ -77,12 +78,14 @@ class UserCreateRequest(BaseModel):
     phone: str = Field(..., pattern=r"^01[0-9]{8,9}$", description="휴대폰 번호")
     name: str = Field(..., min_length=1, max_length=100, description="사용자 이름")
     role: UserRole = Field(..., description="사용자 역할")
+    academy_sub_role: str | None = Field(default=None, description="P3-67: 학원 내부 역할 (owner/manager/staff)")
 
 
 class UserUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100, description="사용자 이름")
     role: UserRole | None = Field(default=None, description="사용자 역할")
     is_active: bool | None = Field(default=None, description="활성 상태")
+    academy_sub_role: str | None = Field(default=None, description="P3-67: 학원 내부 역할 (owner/manager/staff)")
 
 
 class PaginatedUserListResponse(BaseModel):

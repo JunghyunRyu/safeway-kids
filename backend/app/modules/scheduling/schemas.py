@@ -124,6 +124,12 @@ class RouteSessionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RouteReorderRequest(BaseModel):
+    """P3-66: Manual route reorder."""
+    schedule_date: date
+    instance_ids: list[uuid.UUID] = Field(..., min_length=1, description="새 순서대로 정렬된 인스턴스 ID 목록")
+
+
 class VehicleClearanceRequest(BaseModel):
     vehicle_id: uuid.UUID
     date: date

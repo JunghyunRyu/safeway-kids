@@ -172,6 +172,27 @@ def _start_daily_cron() -> None:
         replace_existing=True,
     )
 
+    # P3-77: Daily dispatch notification at 07:00 KST
+    async def dispatch_notifier_job() -> None:
+        from app.modules.scheduling.daily_dispatch_notifier import send_daily_dispatch_notifications
+
+        today = date.today()
+        logger.info("Cron: sending daily dispatch notifications for %s", today)
+        try:
+            async with async_session_factory() as db:
+                sent = await send_daily_dispatch_notifications(db, today)
+                await db.commit()
+                logger.info("Cron: sent %d dispatch notifications", sent)
+        except Exception:
+            logger.exception("Dispatch notifier job failed")
+
+    scheduler.add_job(
+        dispatch_notifier_job,
+        CronTrigger(hour=7, minute=0),
+        id="dispatch_notifier",
+        replace_existing=True,
+    )
+
     scheduler.start()
     logger.info(
         "Daily pipeline cron started: %02d:%02d KST",
@@ -295,11 +316,13 @@ def create_app() -> FastAPI:
     from app.modules.billing.router import router as billing_router
     from app.modules.contact.router import router as contact_router
     from app.modules.escort.router import router as escort_router
+    from app.modules.integration.router import router as integration_router
     from app.modules.messaging.router import router as messaging_router
     application.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
     application.include_router(billing_router, prefix="/api/v1/billing", tags=["billing"])
     application.include_router(contact_router, prefix="/api/v1/contact", tags=["contact"])
     application.include_router(escort_router, prefix="/api/v1/escorts", tags=["escorts"])
+    application.include_router(integration_router, prefix="/api/v1/integration", tags=["integration"])
     application.include_router(messaging_router, prefix="/api/v1/messages", tags=["messages"])
 
     @application.get("/health")

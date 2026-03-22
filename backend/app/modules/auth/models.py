@@ -33,6 +33,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    academy_sub_role: Mapped[str | None] = mapped_column(String(20))  # P3-67: owner / manager / staff
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

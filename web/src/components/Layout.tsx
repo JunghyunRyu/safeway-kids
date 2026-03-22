@@ -13,6 +13,7 @@ const academyNavItems = [
   { to: '/upload', label: '엑셀 업로드', icon: '📤' },
   { to: '/compliance', label: '컴플라이언스', icon: '📋' },
   { to: '/stats', label: '운행 통계', icon: '📈' },
+  { to: '/monthly-report', label: '월간 보고서', icon: '📝' },
   { to: '/map', label: '관제 센터', icon: '🗺️' },
 ];
 

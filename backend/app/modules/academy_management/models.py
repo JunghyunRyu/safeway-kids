@@ -21,6 +21,8 @@ class Academy(Base):
     admin_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id")
     )
+    logo_url: Mapped[str | None] = mapped_column(String(500))  # P3-70: academy branding
+    primary_color: Mapped[str | None] = mapped_column(String(10))  # P3-70: hex color e.g. #3B82F6
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

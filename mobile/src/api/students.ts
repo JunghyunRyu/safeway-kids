@@ -37,6 +37,33 @@ export async function listEnrollments(studentId: string): Promise<Enrollment[]> 
   return resp.data;
 }
 
+// P3-70: Academy branding
+export interface AcademyBranding {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  primary_color: string | null;
+}
+
+export async function getAcademyBranding(): Promise<AcademyBranding | null> {
+  try {
+    const resp = await apiClient.get("/academies");
+    const academies = resp.data;
+    if (Array.isArray(academies) && academies.length > 0) {
+      const a = academies[0];
+      return {
+        id: a.id,
+        name: a.name,
+        logo_url: a.logo_url ?? null,
+        primary_color: a.primary_color ?? null,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function updateStudentProfile(
   studentId: string,
   data: {

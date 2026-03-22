@@ -13,4 +13,12 @@ export default defineConfig({
       },
     },
   },
+  // P3-72: SSG - generate static HTML for SEO-critical pages at build time
+  build: {
+    rollupOptions: {
+      input: {
+        main: "index.html",
+      },
+    },
+  },
 });

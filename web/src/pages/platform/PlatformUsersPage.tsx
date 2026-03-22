@@ -42,7 +42,20 @@ const ROLE_LABELS: Record<string, string> = {
   platform_admin: '플랫폼 관리자',
 };
 
-const emptyForm = { name: '', phone: '', role: 'parent', is_active: 'true' };
+const SUB_ROLE_OPTIONS = [
+  { value: '', label: '없음' },
+  { value: 'owner', label: '원장' },
+  { value: 'manager', label: '매니저' },
+  { value: 'staff', label: '직원' },
+];
+
+const SUB_ROLE_LABELS: Record<string, string> = {
+  owner: '원장',
+  manager: '매니저',
+  staff: '직원',
+};
+
+const emptyForm = { name: '', phone: '', role: 'parent', is_active: 'true', academy_sub_role: '' };
 
 export default function PlatformUsersPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -133,6 +146,7 @@ export default function PlatformUsersPage() {
       phone: row.phone,
       role: row.role,
       is_active: String(row.is_active),
+      academy_sub_role: (row as Record<string, unknown>).academy_sub_role as string || '',
     });
     setErrors({});
     setShowModal(true);
@@ -144,11 +158,15 @@ export default function PlatformUsersPage() {
     setSaving(true);
     try {
       if (editTarget) {
-        await api.patch(`/auth/users/${editTarget.id}`, {
+        const payload: Record<string, unknown> = {
           name: form.name,
           role: form.role,
           is_active: form.is_active === 'true',
-        });
+        };
+        if (form.role === 'academy_admin' && form.academy_sub_role) {
+          payload.academy_sub_role = form.academy_sub_role;
+        }
+        await api.patch(`/auth/users/${editTarget.id}`, payload);
         showToast('사용자 정보가 수정되었습니다', 'success');
       } else {
         await api.post('/auth/users', {
@@ -302,6 +320,9 @@ export default function PlatformUsersPage() {
           { label: '이름', value: detailTarget.name },
           { label: '전화번호', value: detailTarget.phone },
           { label: '역할', value: ROLE_LABELS[detailTarget.role] || detailTarget.role },
+          ...(detailTarget.role === 'academy_admin' && (detailTarget as Record<string, unknown>).academy_sub_role ? [
+            { label: '학원 내 역할', value: SUB_ROLE_LABELS[(detailTarget as Record<string, unknown>).academy_sub_role as string] || String((detailTarget as Record<string, unknown>).academy_sub_role) },
+          ] : []),
           { label: '활성 상태', value: <StatusBadge status={detailTarget.is_active ? 'active' : 'inactive'} /> },
           { label: '가입일', value: detailTarget.created_at ? new Date(detailTarget.created_at).toLocaleDateString('ko-KR') : '-' },
           ...(detailTarget.role === 'driver' && qualification ? [
@@ -371,6 +392,16 @@ export default function PlatformUsersPage() {
           required
           error={errors.role}
         />
+        {form.role === 'academy_admin' && (
+          <FormField
+            label="학원 내 역할"
+            name="academy_sub_role"
+            type="select"
+            value={form.academy_sub_role}
+            onChange={(v) => setForm({ ...form, academy_sub_role: v })}
+            options={SUB_ROLE_OPTIONS}
+          />
+        )}
         {editTarget && (
           <FormField
             label="상태"

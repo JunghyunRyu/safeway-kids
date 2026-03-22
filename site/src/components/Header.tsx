@@ -17,6 +17,7 @@ export default function Header() {
           <a href="#features" className="hover:text-primary transition-colors">주요 기능</a>
           <a href="#for-whom" className="hover:text-primary transition-colors">이용 대상</a>
           <a href="#safety" className="hover:text-primary transition-colors">안전 기술</a>
+          <Link to="/cost-simulator" className="hover:text-primary transition-colors">비용 시뮬레이터</Link>
           <a href="#contact" className="hover:text-primary transition-colors">문의하기</a>
         </nav>
 
@@ -50,6 +51,7 @@ export default function Header() {
           <a href="#features" onClick={() => setMenuOpen(false)} className="hover:text-primary">주요 기능</a>
           <a href="#for-whom" onClick={() => setMenuOpen(false)} className="hover:text-primary">이용 대상</a>
           <a href="#safety" onClick={() => setMenuOpen(false)} className="hover:text-primary">안전 기술</a>
+          <Link to="/cost-simulator" onClick={() => setMenuOpen(false)} className="hover:text-primary">비용 시뮬레이터</Link>
           <a href="#contact" onClick={() => setMenuOpen(false)} className="hover:text-primary">문의하기</a>
         </nav>
       )}
