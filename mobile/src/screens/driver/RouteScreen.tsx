@@ -23,6 +23,9 @@ import {
   undoBoard,
   undoAlight,
   submitVehicleClearance,
+  confirmArrival,
+  startRoute,
+  endRoute,
 } from "../../api/schedules";
 import { getMyRoute, RoutePlan } from "../../api/routes";
 import { getMyAssignment } from "../../api/vehicles";
@@ -49,19 +52,24 @@ interface StopCardProps {
   pickupLatitude: number;
   pickupLongitude: number;
   specialNotes: string | null;
+  allergies: string | null;
   guardianPhoneMasked: string | null;
   status: string;
   isBoarded: boolean;
   isCompleted: boolean;
   isCancelled: boolean;
   isNoShow: boolean;
+  isNextStop: boolean;
   boardedAt: string | null;
   alightedAt: string | null;
+  arrivalConfirmedAt: string | null;
+  notificationSent: boolean | null;
   onBoard: (id: string) => void;
   onAlight: (id: string) => void;
   onNoShow: (id: string) => void;
   onUndoBoard: (id: string) => void;
   onUndoAlight: (id: string) => void;
+  onArrivalConfirm: (id: string) => void;
 }
 
 const UNDO_TIMEOUT_MS = 5 * 60 * 1000;
@@ -83,19 +91,24 @@ const StopCard = memo(function StopCard({
   pickupLatitude,
   pickupLongitude,
   specialNotes,
+  allergies,
   guardianPhoneMasked,
   status,
   isBoarded,
   isCompleted,
   isCancelled,
   isNoShow,
+  isNextStop,
   boardedAt,
   alightedAt,
+  arrivalConfirmedAt,
+  notificationSent,
   onBoard,
   onAlight,
   onNoShow,
   onUndoBoard,
   onUndoAlight,
+  onArrivalConfirm,
 }: StopCardProps) {
   const { t } = useTranslation();
 
@@ -123,6 +136,13 @@ const StopCard = memo(function StopCard({
   const handleUndoBoard = useCallback(() => onUndoBoard(id), [id, onUndoBoard]);
   const handleUndoAlight = useCallback(() => onUndoAlight(id), [id, onUndoAlight]);
 
+  const handleArrivalConfirm = useCallback(() => {
+    Alert.alert("도착 확인", `${studentName} 학생이 학원에 안전하게 도착했습니까?`, [
+      { text: "취소", style: "cancel" },
+      { text: "확인", onPress: () => onArrivalConfirm(id) },
+    ]);
+  }, [id, studentName, onArrivalConfirm]);
+
   const handleNavigate = useCallback(() => {
     openNavigation(pickupLatitude, pickupLongitude, pickupAddress || studentName);
   }, [pickupLatitude, pickupLongitude, pickupAddress, studentName]);
@@ -139,12 +159,15 @@ const StopCard = memo(function StopCard({
     ? Colors.neutral
     : Colors.roleDriver;
 
+  const isDone = isCompleted || isCancelled || isNoShow;
+
   return (
     <View
       style={[
         styles.card,
         Shadows.sm,
-        (isCancelled || isNoShow) && styles.cardCancelled,
+        isDone && styles.cardDone,
+        isNextStop && styles.cardNextStop,
       ]}
     >
       {/* Student Photo or Index */}
@@ -174,6 +197,12 @@ const StopCard = memo(function StopCard({
             <Text style={styles.notesText}>{specialNotes}</Text>
           </View>
         ) : null}
+        {allergies ? (
+          <View style={styles.notesRow}>
+            <Ionicons name="alert-circle" size={14} color={Colors.danger} />
+            <Text style={styles.notesText}>알레르기: {allergies}</Text>
+          </View>
+        ) : null}
         {guardianPhoneMasked ? (
           <Pressable style={styles.phoneRow} onPress={handleCallGuardian}>
             <Ionicons name="call-outline" size={14} color={Colors.info} />
@@ -192,8 +221,35 @@ const StopCard = memo(function StopCard({
             <Text style={[styles.statusText, { color: Colors.success }]}>
               {t("schedule.completed")}
             </Text>
+            {notificationSent === true && (
+              <View style={styles.notifRow}>
+                <Ionicons name="checkmark-circle" size={14} color={Colors.success} />
+                <Text style={[styles.notifText, { color: Colors.success }]}>알림 전송됨</Text>
+              </View>
+            )}
+            {notificationSent === false && (
+              <View style={styles.notifRow}>
+                <Ionicons name="warning" size={14} color={Colors.danger} />
+                <Text style={[styles.notifText, { color: Colors.danger }]}>알림 전송 실패</Text>
+              </View>
+            )}
+            {!arrivalConfirmedAt ? (
+              <Pressable
+                style={[styles.arrivalBtn]}
+                onPress={handleArrivalConfirm}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="location" size={14} color={Colors.textInverse} />
+                <Text style={styles.arrivalBtnText}>도착 확인</Text>
+              </Pressable>
+            ) : (
+              <View style={styles.notifRow}>
+                <Ionicons name="checkmark-done" size={14} color={Colors.success} />
+                <Text style={[styles.notifText, { color: Colors.success }]}>학원 도착 확인됨</Text>
+              </View>
+            )}
             {canUndo(alightedAt) && (
-              <Pressable style={styles.undoBtn} onPress={handleUndoAlight}>
+              <Pressable style={styles.undoBtn} onPress={handleUndoAlight} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={styles.undoText}>하차 되돌리기</Text>
               </Pressable>
             )}
@@ -205,6 +261,7 @@ const StopCard = memo(function StopCard({
                 <Pressable
                   style={[styles.actionBtn, { backgroundColor: Colors.info }]}
                   onPress={handleBoard}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Ionicons name="enter-outline" size={16} color={Colors.textInverse} />
                   <Text style={styles.btnText}>{t("driver.markBoarded")}</Text>
@@ -212,6 +269,7 @@ const StopCard = memo(function StopCard({
                 <Pressable
                   style={[styles.actionBtn, { backgroundColor: Colors.neutral }]}
                   onPress={handleNoShow}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Ionicons name="close-circle-outline" size={16} color={Colors.textInverse} />
                   <Text style={styles.btnText}>미탑승</Text>
@@ -219,6 +277,7 @@ const StopCard = memo(function StopCard({
                 <Pressable
                   style={[styles.navBtn]}
                   onPress={handleNavigate}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Ionicons name="navigate-outline" size={16} color={Colors.info} />
                   <Text style={styles.navBtnText}>길안내</Text>
@@ -229,12 +288,13 @@ const StopCard = memo(function StopCard({
                 <Pressable
                   style={[styles.actionBtn, { backgroundColor: Colors.warning }]}
                   onPress={handleAlight}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Ionicons name="exit-outline" size={16} color={Colors.textInverse} />
                   <Text style={styles.btnText}>{t("driver.markAlighted")}</Text>
                 </Pressable>
                 {canUndo(boardedAt) && (
-                  <Pressable style={styles.undoBtn} onPress={handleUndoBoard}>
+                  <Pressable style={styles.undoBtn} onPress={handleUndoBoard} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Text style={styles.undoText}>탑승 되돌리기</Text>
                   </Pressable>
                 )}
@@ -374,6 +434,41 @@ export default function DriverRouteScreen() {
     [load]
   );
 
+  const [routeActive, setRouteActive] = useState(false);
+
+  const handleRouteToggle = useCallback(async () => {
+    if (!vehicleId) {
+      Alert.alert("오류", "배정된 차량 정보를 찾을 수 없습니다.");
+      return;
+    }
+    try {
+      if (routeActive) {
+        const unfinished = schedules.filter(s => s.status === "scheduled" || s.status === "boarded");
+        if (unfinished.length > 0) {
+          Alert.alert(
+            "미처리 학생 있음",
+            `아직 ${unfinished.length}명의 학생이 처리되지 않았습니다. 운행을 종료하시겠습니까?`,
+            [
+              { text: "취소", style: "cancel" },
+              { text: "종료", onPress: async () => {
+                await endRoute(vehicleId, todayStr());
+                setRouteActive(false);
+              }},
+            ]
+          );
+          return;
+        }
+        await endRoute(vehicleId, todayStr());
+        setRouteActive(false);
+      } else {
+        await startRoute(vehicleId, todayStr());
+        setRouteActive(true);
+      }
+    } catch {
+      Alert.alert("오류", "운행 상태 변경에 실패했습니다.");
+    }
+  }, [vehicleId, routeActive, schedules]);
+
   const [clearanceChecks, setClearanceChecks] = useState<Record<string, boolean>>({});
   const [showClearance, setShowClearance] = useState(false);
 
@@ -421,6 +516,20 @@ export default function DriverRouteScreen() {
     ]);
   }, [vehicleId, allClearanceChecked]);
 
+  const firstScheduledIdx = schedules.findIndex(s => s.status === "scheduled");
+
+  const handleArrivalConfirm = useCallback(
+    async (itemId: string) => {
+      try {
+        await confirmArrival(itemId);
+        await load();
+      } catch {
+        Alert.alert(t("common.error"));
+      }
+    },
+    [load, t]
+  );
+
   const renderItem = useCallback(
     ({ item, index }: { item: DriverDailySchedule; index: number }) => (
       <StopCard
@@ -434,22 +543,27 @@ export default function DriverRouteScreen() {
         pickupLatitude={item.pickup_latitude}
         pickupLongitude={item.pickup_longitude}
         specialNotes={item.special_notes}
+        allergies={item.allergies}
         guardianPhoneMasked={item.guardian_phone_masked}
         status={item.status}
         isBoarded={!!item.boarded_at}
         isCompleted={item.status === "completed"}
         isCancelled={item.status === "cancelled"}
         isNoShow={item.status === "no_show"}
+        isNextStop={index === firstScheduledIdx}
         boardedAt={item.boarded_at}
         alightedAt={item.alighted_at}
+        arrivalConfirmedAt={item.arrival_confirmed_at}
+        notificationSent={item.notification_sent}
         onBoard={handleBoard}
         onAlight={handleAlight}
         onNoShow={handleNoShow}
         onUndoBoard={handleUndoBoard}
         onUndoAlight={handleUndoAlight}
+        onArrivalConfirm={handleArrivalConfirm}
       />
     ),
-    [handleBoard, handleAlight, handleNoShow, handleUndoBoard, handleUndoAlight]
+    [handleBoard, handleAlight, handleNoShow, handleUndoBoard, handleUndoAlight, handleArrivalConfirm, firstScheduledIdx]
   );
 
   const keyExtractor = useCallback(
@@ -464,10 +578,22 @@ export default function DriverRouteScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle}>{t("driver.stopList")}</Text>
-        <View style={[styles.progressBadge, { backgroundColor: Colors.successLight }]}>
-          <Text style={[styles.progressText, { color: Colors.success }]}>
-            {completedCount}/{totalActive} 완료
-          </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={[styles.progressBadge, { backgroundColor: Colors.successLight }]}>
+            <Text style={[styles.progressText, { color: Colors.success }]}>
+              {completedCount}/{totalActive} 완료
+            </Text>
+          </View>
+          {schedules.length > 0 && (
+            <Pressable
+              style={[styles.routeToggleBtn, { backgroundColor: routeActive ? Colors.danger : Colors.success }]}
+              onPress={handleRouteToggle}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name={routeActive ? "stop-circle" : "play-circle"} size={16} color={Colors.textInverse} />
+              <Text style={styles.routeToggleText}>{routeActive ? "운행 종료" : "운행 시작"}</Text>
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -512,7 +638,7 @@ export default function DriverRouteScreen() {
           {totalActive > 0 && completedCount + schedules.filter(s => s.status === "no_show").length >= totalActive && (
             <View style={styles.clearanceContainer}>
               {!showClearance ? (
-                <Pressable style={styles.clearanceBtn} onPress={() => { setClearanceChecks({}); setShowClearance(true); }}>
+                <Pressable style={styles.clearanceBtn} onPress={() => { setClearanceChecks({}); setShowClearance(true); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Ionicons name="shield-checkmark-outline" size={20} color={Colors.textInverse} />
                   <Text style={styles.clearanceBtnText}>잔류 확인 시작</Text>
                 </Pressable>
@@ -604,7 +730,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.md,
   },
-  cardCancelled: { opacity: 0.5 },
+  cardDone: { opacity: 0.5 },
+  cardNextStop: {
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
   indexCircle: {
     width: 36,
     height: 36,
@@ -702,6 +833,32 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.semibold,
     fontSize: 16,
   },
+  notifRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  notifText: {
+    fontSize: 12,
+    fontWeight: Typography.weights.medium,
+  },
+  arrivalBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: Colors.success,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    marginTop: Spacing.xs,
+  },
+  arrivalBtnText: {
+    color: Colors.textInverse,
+    fontSize: 14,
+    fontWeight: Typography.weights.semibold,
+  },
   undoBtn: {
     marginTop: Spacing.xs,
     paddingVertical: Spacing.xs,
@@ -785,5 +942,18 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: Typography.sizes.base,
     color: Colors.textDisabled,
+  },
+  routeToggleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+  },
+  routeToggleText: {
+    color: Colors.textInverse,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semibold,
   },
 });

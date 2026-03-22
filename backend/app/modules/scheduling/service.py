@@ -334,13 +334,15 @@ async def mark_boarded(
     instance.boarded_at = datetime.now(UTC)
     await db.flush()
 
-    await _send_boarding_push(db, instance)
+    success = await _send_boarding_push(db, instance)
+    instance.notification_sent = success
+    await db.flush()
 
     return instance
 
 
 async def mark_no_show(
-    db: AsyncSession, instance_id: uuid.UUID, reason: str
+    db: AsyncSession, instance_id: uuid.UUID, reason: str, driver_id: uuid.UUID | None = None
 ) -> DailyScheduleInstance:
     """Mark a student as no-show and notify parent + academy admin."""
     stmt = select(DailyScheduleInstance).where(
@@ -350,6 +352,10 @@ async def mark_no_show(
     instance = result.scalar_one_or_none()
     if not instance:
         raise NotFoundError(detail="스케줄을 찾을 수 없습니다")
+
+    # IDOR: verify driver is assigned to this vehicle
+    if driver_id and instance.vehicle_id:
+        await _verify_driver_vehicle(db, driver_id, instance.vehicle_id, instance.schedule_date)
 
     if instance.status != "scheduled":
         raise ConflictError(detail="미탑승 처리할 수 없는 상태입니다")
@@ -474,6 +480,7 @@ async def get_driver_daily_schedules(
             Student.name.label("student_name"),
             Student.profile_photo_url.label("student_photo_url"),
             Student.special_notes.label("special_notes"),
+            Student.allergies.label("allergies"),
             Academy.name.label("academy_name"),
         )
         .join(Student, DailyScheduleInstance.student_id == Student.id)
@@ -513,6 +520,23 @@ async def get_driver_daily_schedules(
             phone = user_result.scalar_one_or_none()
             guardian_phone_masked = _mask_phone(phone)
 
+        # P1-28 법률: 건강정보(알레르기) 민감정보 동의 확인 (개인정보보호법 §23)
+        # health_info_sharing 미동의 시 알레르기 정보 마스킹
+        allergies_display = row.allergies
+        if row.allergies and guardian_id:
+            from app.modules.compliance.models import GuardianConsent
+            consent_stmt = select(GuardianConsent).where(
+                GuardianConsent.guardian_id == guardian_id,
+                GuardianConsent.child_id == inst.student_id,
+                GuardianConsent.withdrawn_at.is_(None),
+            )
+            consent = (await db.execute(consent_stmt)).scalar_one_or_none()
+            health_consented = False
+            if consent and consent.consent_scope:
+                health_consented = consent.consent_scope.get("health_info_sharing", False)
+            if not health_consented:
+                allergies_display = None  # 미동의 시 건강정보 미표시
+
         responses.append(
             DriverDailyScheduleResponse(
                 id=inst.id,
@@ -527,10 +551,13 @@ async def get_driver_daily_schedules(
                 pickup_longitude=inst.pickup_longitude,
                 pickup_address=pickup_address,
                 special_notes=row.special_notes,
+                allergies=allergies_display,
                 guardian_phone_masked=guardian_phone_masked,
                 status=inst.status,
                 boarded_at=inst.boarded_at,
                 alighted_at=inst.alighted_at,
+                arrival_confirmed_at=inst.arrival_confirmed_at,
+                notification_sent=inst.notification_sent,
             )
         )
 
@@ -556,15 +583,17 @@ async def mark_alighted(
     instance.status = "completed"
     await db.flush()
 
-    await _send_alighting_push(db, instance)
+    success = await _send_alighting_push(db, instance)
+    instance.notification_sent = success
+    await db.flush()
 
     return instance
 
 
 async def _send_boarding_push(
     db: AsyncSession, instance: DailyScheduleInstance
-) -> None:
-    """Send boarding push notification to parent (fire-and-forget)."""
+) -> bool:
+    """Send boarding push notification to parent. Returns True if sent."""
     from app.modules.auth.models import User
     from app.modules.notification import service as notif_service
     from app.modules.student_management.models import Student
@@ -574,12 +603,12 @@ async def _send_boarding_push(
         student_stmt = select(Student).where(Student.id == instance.student_id)
         student = (await db.execute(student_stmt)).scalar_one_or_none()
         if not student:
-            return
+            return False
 
         parent_stmt = select(User).where(User.id == student.guardian_id)
         parent = (await db.execute(parent_stmt)).scalar_one_or_none()
         if not parent or not parent.fcm_token:
-            return
+            return False
 
         vehicle_plate = "차량"
         if instance.vehicle_id:
@@ -588,17 +617,18 @@ async def _send_boarding_push(
             if vehicle:
                 vehicle_plate = vehicle.license_plate
 
-        await notif_service.send_boarding_notification(
+        return await notif_service.send_boarding_notification(
             parent.fcm_token, student.name, vehicle_plate
         )
     except Exception:
         logger.warning("Failed to send boarding push", exc_info=True)
+        return False
 
 
 async def _send_alighting_push(
     db: AsyncSession, instance: DailyScheduleInstance
-) -> None:
-    """Send alighting push notification to parent (fire-and-forget)."""
+) -> bool:
+    """Send alighting push notification to parent. Returns True if sent."""
     from app.modules.auth.models import User
     from app.modules.notification import service as notif_service
     from app.modules.student_management.models import Student
@@ -607,16 +637,17 @@ async def _send_alighting_push(
         student_stmt = select(Student).where(Student.id == instance.student_id)
         student = (await db.execute(student_stmt)).scalar_one_or_none()
         if not student:
-            return
+            return False
 
         parent_stmt = select(User).where(User.id == student.guardian_id)
         parent = (await db.execute(parent_stmt)).scalar_one_or_none()
         if not parent or not parent.fcm_token:
-            return
+            return False
 
-        await notif_service.send_alighting_notification(parent.fcm_token, student.name)
+        return await notif_service.send_alighting_notification(parent.fcm_token, student.name)
     except Exception:
         logger.warning("Failed to send alighting push", exc_info=True)
+        return False
 
 
 async def _send_no_show_notification(
@@ -650,3 +681,114 @@ async def _send_no_show_notification(
             await notif_service.send_critical_alert_sms(parent.phone, msg)
     except Exception:
         logger.warning("Failed to send no-show notification", exc_info=True)
+
+
+async def confirm_arrival(
+    db: AsyncSession, instance_id: uuid.UUID, user_id: uuid.UUID
+) -> DailyScheduleInstance:
+    """Mark a student as arrived at academy after alighting."""
+    stmt = select(DailyScheduleInstance).where(DailyScheduleInstance.id == instance_id)
+    result = await db.execute(stmt)
+    instance = result.scalar_one_or_none()
+    if not instance:
+        raise NotFoundError(detail="스케줄을 찾을 수 없습니다")
+
+    if instance.status != "completed":
+        raise ConflictError(detail="하차 완료 상태에서만 도착 확인이 가능합니다")
+
+    if instance.arrival_confirmed_at:
+        raise ConflictError(detail="이미 도착 확인이 완료되었습니다")
+
+    # Verify user is assigned to vehicle
+    if instance.vehicle_id:
+        await _verify_driver_vehicle(db, user_id, instance.vehicle_id, instance.schedule_date)
+
+    instance.arrival_confirmed_at = datetime.now(UTC)
+    await db.flush()
+
+    # Send arrival notification to parent
+    await _send_arrival_notification(db, instance)
+
+    return instance
+
+
+async def _send_arrival_notification(
+    db: AsyncSession, instance: DailyScheduleInstance
+) -> None:
+    """Send arrival confirmation notification to parent."""
+    from app.modules.academy_management.models import Academy
+    from app.modules.auth.models import User
+    from app.modules.notification import service as notif_service
+    from app.modules.student_management.models import Student
+
+    try:
+        student = (await db.execute(select(Student).where(Student.id == instance.student_id))).scalar_one_or_none()
+        if not student:
+            return
+
+        parent = (await db.execute(select(User).where(User.id == student.guardian_id))).scalar_one_or_none()
+        if not parent:
+            return
+
+        academy = (await db.execute(select(Academy).where(Academy.id == instance.academy_id))).scalar_one_or_none()
+        academy_name = academy.name if academy else "학원"
+
+        msg = f"[세이프웨이키즈] {student.name} 학생이 {academy_name}에 안전하게 도착했습니다."
+        if parent.fcm_token:
+            await notif_service._push_provider.send_push(
+                device_token=parent.fcm_token,
+                title="학원 도착 확인",
+                body=msg,
+                data={"type": "arrival_confirmed", "student_name": student.name},
+            )
+        if parent.phone and not parent.phone.startswith("kakao_"):
+            await notif_service.send_critical_alert_sms(parent.phone, msg)
+    except Exception:
+        logger.warning("Failed to send arrival notification", exc_info=True)
+
+
+async def start_route_session(
+    db: AsyncSession, driver_id: uuid.UUID, vehicle_id: uuid.UUID, schedule_date: date
+) -> "RouteSession":
+    """Start a route session for a vehicle."""
+    from app.modules.scheduling.models import RouteSession
+
+    # Check not already started
+    existing = (await db.execute(
+        select(RouteSession).where(
+            RouteSession.vehicle_id == vehicle_id,
+            RouteSession.schedule_date == schedule_date,
+        )
+    )).scalar_one_or_none()
+    if existing and not existing.ended_at:
+        raise ConflictError(detail="이미 운행이 시작되었습니다")
+
+    session = RouteSession(
+        vehicle_id=vehicle_id,
+        driver_id=driver_id,
+        schedule_date=schedule_date,
+    )
+    db.add(session)
+    await db.flush()
+    return session
+
+
+async def end_route_session(
+    db: AsyncSession, driver_id: uuid.UUID, vehicle_id: uuid.UUID, schedule_date: date
+) -> "RouteSession":
+    """End a route session for a vehicle."""
+    from app.modules.scheduling.models import RouteSession
+
+    stmt = select(RouteSession).where(
+        RouteSession.vehicle_id == vehicle_id,
+        RouteSession.schedule_date == schedule_date,
+        RouteSession.ended_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+    if not session:
+        raise NotFoundError(detail="활성 운행 세션을 찾을 수 없습니다")
+
+    session.ended_at = datetime.now(UTC)
+    await db.flush()
+    return session

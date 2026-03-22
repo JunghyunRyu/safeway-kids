@@ -116,10 +116,27 @@ async def update_student(
 
     student = await get_student(db, student_id)
 
-    # Platform admin and academy admin can edit any student; parent only their own
+    # IDOR: parent can only edit their own children
     if current_user.role == UserRole.PARENT and student.guardian_id != current_user.id:
         from app.common.exceptions import ForbiddenError
         raise ForbiddenError(detail="본인의 자녀만 수정할 수 있습니다")
+
+    # IDOR: academy admin can only edit students enrolled in their academy
+    if current_user.role == UserRole.ACADEMY_ADMIN:
+        from app.common.exceptions import ForbiddenError
+        from app.modules.academy_management.models import Academy
+        academy_stmt = select(Academy).where(Academy.admin_id == current_user.id)
+        academy = (await db.execute(academy_stmt)).scalar_one_or_none()
+        if not academy:
+            raise ForbiddenError(detail="소속 학원이 없습니다")
+        enrollment_stmt = select(Enrollment).where(
+            Enrollment.student_id == student_id,
+            Enrollment.academy_id == academy.id,
+            Enrollment.withdrawn_at.is_(None),
+        )
+        enrollment = (await db.execute(enrollment_stmt)).scalar_one_or_none()
+        if not enrollment:
+            raise ForbiddenError(detail="소속 학원에 등록된 학생만 수정할 수 있습니다")
 
     if request.name is not None:
         student.name = request.name
@@ -137,10 +154,27 @@ async def deactivate_student(
 
     student = await get_student(db, student_id)
 
-    # Platform admin and academy admin can deactivate any student; parent only their own
+    # IDOR: parent can only deactivate their own children
     if current_user.role == UserRole.PARENT and student.guardian_id != current_user.id:
         from app.common.exceptions import ForbiddenError
         raise ForbiddenError(detail="본인의 자녀만 비활성화할 수 있습니다")
+
+    # IDOR: academy admin can only deactivate students enrolled in their academy
+    if current_user.role == UserRole.ACADEMY_ADMIN:
+        from app.common.exceptions import ForbiddenError
+        from app.modules.academy_management.models import Academy
+        academy_stmt = select(Academy).where(Academy.admin_id == current_user.id)
+        academy = (await db.execute(academy_stmt)).scalar_one_or_none()
+        if not academy:
+            raise ForbiddenError(detail="소속 학원이 없습니다")
+        enrollment_stmt = select(Enrollment).where(
+            Enrollment.student_id == student_id,
+            Enrollment.academy_id == academy.id,
+            Enrollment.withdrawn_at.is_(None),
+        )
+        enrollment = (await db.execute(enrollment_stmt)).scalar_one_or_none()
+        if not enrollment:
+            raise ForbiddenError(detail="소속 학원에 등록된 학생만 비활성화할 수 있습니다")
 
     student.is_active = False
     student.deleted_at = datetime.now(UTC)

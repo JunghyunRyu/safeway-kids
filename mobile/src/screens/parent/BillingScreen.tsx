@@ -101,7 +101,14 @@ const InvoiceCard = memo(function InvoiceCard({
             size={18}
             color={Colors.textSecondary}
           />
-          <Text style={styles.monthText}>{invoice.billing_month}</Text>
+          <View>
+            <Text style={styles.monthText}>{invoice.billing_month}</Text>
+            {(invoice.student_name || invoice.academy_name) ? (
+              <Text style={styles.cardSubtext}>
+                {[invoice.student_name, invoice.academy_name].filter(Boolean).join(" · ")}
+              </Text>
+            ) : null}
+          </View>
         </View>
         <View style={styles.cardRight}>
           <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
@@ -430,6 +437,11 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.md,
     fontWeight: Typography.weights.bold,
     color: Colors.textPrimary,
+  },
+  cardSubtext: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
   statusBadge: {
     flexDirection: "row",

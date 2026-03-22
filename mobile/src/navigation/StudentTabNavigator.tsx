@@ -9,12 +9,14 @@ import { createTabScreenOptions } from "./tabConfig";
 import { Colors } from "../constants/theme";
 import StudentScheduleScreen from "../screens/student/ScheduleScreen";
 import StudentProfileScreen from "../screens/student/ProfileScreen";
+import MapScreen from "../screens/parent/MapScreen";
 import type { Ionicons } from "@expo/vector-icons";
 
 const Tab = createBottomTabNavigator();
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   StudentSchedule: "calendar",
+  StudentMap: "map",
   StudentProfile: "person",
 };
 
@@ -25,6 +27,11 @@ export default function StudentTabNavigator() {
         name="StudentSchedule"
         component={StudentScheduleScreen}
         options={{ tabBarLabel: "내 일정" }}
+      />
+      <Tab.Screen
+        name="StudentMap"
+        component={MapScreen}
+        options={{ tabBarLabel: "지도" }}
       />
       <Tab.Screen
         name="StudentProfile"

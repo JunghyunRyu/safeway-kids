@@ -13,6 +13,7 @@ class DocumentType(enum.StrEnum):
     POLICE_REPORT = "police_report"
     SAFETY_TRAINING = "safety_training"
     VEHICLE_INSPECTION = "vehicle_inspection"
+    SCHOOL_BUS_REGISTRATION = "school_bus_registration"
     OTHER = "other"
 
 
@@ -27,6 +28,8 @@ class GuardianConsent(Base):
     granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ip_address: Mapped[str | None] = mapped_column(String(45))
+    sms_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    terms_viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -70,6 +73,16 @@ class Contract(Base):
 
     # Relationships
     academy: Mapped["Academy"] = relationship(back_populates="contracts")  # type: ignore[name-defined] # noqa: F821
+
+
+class DriverLocationConsent(Base):
+    __tablename__ = "driver_location_consents"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False, unique=True)
+    consent_granted: Mapped[bool] = mapped_column(Boolean, default=True)
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ip_address: Mapped[str | None] = mapped_column(String(45))
 
 
 class DataRetentionPolicy(Base):

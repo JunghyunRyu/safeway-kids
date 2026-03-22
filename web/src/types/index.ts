@@ -60,11 +60,14 @@ export interface DailySchedule {
   student_id: string;
   student_name?: string;
   academy_id: string;
+  academy_name?: string;
   schedule_date: string;
   pickup_time: string;
   pickup_latitude: number;
   pickup_longitude: number;
   status: string;
+  driver_name?: string;
+  vehicle_license_plate?: string;
 }
 
 export interface BillingPlan {

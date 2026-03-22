@@ -82,12 +82,38 @@ class DailyScheduleInstance(Base):
     )
     boarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     alighted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delay_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    arrival_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notification_sent: Mapped[bool | None] = mapped_column(Boolean)
     version: Mapped[int] = mapped_column(Integer, default=1)  # optimistic locking
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class RouteSession(Base):
+    __tablename__ = "route_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4
+    )
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("vehicles.id"), nullable=False
+    )
+    driver_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False
+    )
+    schedule_date: Mapped[date] = mapped_column(Date, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("vehicle_id", "schedule_date", name="uq_route_session"),
     )
 
 

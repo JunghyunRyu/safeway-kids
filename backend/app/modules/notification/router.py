@@ -9,7 +9,9 @@ from app.middleware.auth import get_current_user
 from app.modules.auth.models import User, UserRole
 from app.modules.notification import service as notif_service
 from app.modules.notification.providers.fcm import FCMProvider
+from app.middleware.rbac import require_platform_admin
 from app.modules.notification.schemas import (
+    ManualSendRequest,
     RegisterFcmTokenRequest,
     SendTestPushRequest,
     SosRequest,
@@ -109,3 +111,99 @@ async def sos_alert(
     logger.info("[SOS] Alert from user=%s type=%s", current_user.id, body.sos_type)
 
     return SosResponse(success=True)
+
+
+@router.post("/manual-send")
+async def manual_send(
+    body: ManualSendRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_admin),
+) -> dict:
+    """ITEM-P1-32: 수동 SMS/FCM 발송 (플랫폼 관리자 전용)"""
+    import uuid as _uuid
+
+    from app.modules.admin.service import log_audit
+    from app.modules.notification.models import NotificationLog
+
+    sent_count = 0
+    failed_count = 0
+
+    for rid_str in body.recipient_ids:
+        try:
+            rid = _uuid.UUID(rid_str)
+        except ValueError:
+            failed_count += 1
+            continue
+
+        recipient = (await db.execute(
+            select(User).where(User.id == rid)
+        )).scalar_one_or_none()
+        if not recipient:
+            failed_count += 1
+            continue
+
+        success = False
+
+        # FCM
+        if body.channel in ("fcm", "both") and recipient.fcm_token:
+            fcm_ok = await notif_service._push_provider.send_push(
+                device_token=recipient.fcm_token,
+                title="[세이프웨이키즈] 안내",
+                body=body.message,
+                data={"type": "manual", "purpose": body.purpose},
+            )
+            if fcm_ok:
+                success = True
+            db.add(NotificationLog(
+                recipient_user_id=recipient.id,
+                recipient_phone=recipient.phone,
+                channel="fcm",
+                notification_type="manual",
+                title=f"[{body.purpose}]",
+                body=body.message,
+                status="sent" if fcm_ok else "failed",
+            ))
+
+        # SMS
+        if body.channel in ("sms", "both") and recipient.phone and not recipient.phone.startswith("kakao_"):
+            sms_ok = await notif_service._sms_provider.send_sms(
+                recipient.phone,
+                f"[세이프웨이키즈] {body.message}",
+            )
+            if sms_ok:
+                success = True
+            db.add(NotificationLog(
+                recipient_user_id=recipient.id,
+                recipient_phone=recipient.phone,
+                channel="sms",
+                notification_type="manual",
+                title=f"[{body.purpose}]",
+                body=body.message,
+                status="sent" if sms_ok else "failed",
+            ))
+
+        if success:
+            sent_count += 1
+        else:
+            failed_count += 1
+
+    # P1-32 법률: 발송자 + 목적 + 수신자 감사 로그
+    await log_audit(
+        db,
+        user_id=str(current_user.id),
+        user_name=current_user.name,
+        action="MANUAL_SEND",
+        entity_type="notification",
+        details={
+            "purpose": body.purpose,
+            "channel": body.channel,
+            "recipient_count": len(body.recipient_ids),
+            "sent": sent_count,
+            "failed": failed_count,
+        },
+        ip_address=request.client.host if request.client else None,
+    )
+
+    await db.flush()
+    return {"sent": sent_count, "failed": failed_count}

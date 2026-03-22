@@ -34,8 +34,10 @@ function ScheduleCard({ item }: { item: DailySchedule }) {
         <Text style={styles.studentName}>
           {item.academy_name ? `${item.academy_name} 등원` : "오늘의 등원"}
         </Text>
-        {item.vehicle_license_plate ? (
-          <Text style={styles.metaInfo}>{item.vehicle_license_plate}</Text>
+        {(item.vehicle_license_plate || item.driver_name) ? (
+          <Text style={styles.metaInfo}>
+            {[item.vehicle_license_plate, item.driver_name].filter(Boolean).join(" · ")}
+          </Text>
         ) : null}
         <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
           <Text style={[styles.statusText, { color: statusColor }]}>

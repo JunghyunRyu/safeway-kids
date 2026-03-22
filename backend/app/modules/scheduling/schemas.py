@@ -48,6 +48,8 @@ class DailyScheduleResponse(BaseModel):
     status: str
     boarded_at: datetime | None
     alighted_at: datetime | None
+    arrival_confirmed_at: datetime | None = None
+    notification_sent: bool | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -66,10 +68,13 @@ class DriverDailyScheduleResponse(BaseModel):
     pickup_longitude: float
     pickup_address: str | None = None
     special_notes: str | None = None
+    allergies: str | None = None
     guardian_phone_masked: str | None = None
     status: str
     boarded_at: datetime | None
     alighted_at: datetime | None
+    arrival_confirmed_at: datetime | None = None
+    notification_sent: bool | None = None
 
 
 class ScheduleCancelRequest(BaseModel):
@@ -78,6 +83,22 @@ class ScheduleCancelRequest(BaseModel):
 
 class NoShowRequest(BaseModel):
     reason: str = Field(..., description="미탑승 사유: student_absent, parent_cancelled, other")
+
+
+class RouteSessionRequest(BaseModel):
+    vehicle_id: uuid.UUID
+    schedule_date: date
+
+
+class RouteSessionResponse(BaseModel):
+    id: uuid.UUID
+    vehicle_id: uuid.UUID
+    driver_id: uuid.UUID
+    schedule_date: date
+    started_at: datetime
+    ended_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
 
 
 class VehicleClearanceRequest(BaseModel):

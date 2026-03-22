@@ -34,6 +34,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm text-gray-400">
               <li><Link to="/privacy" className="hover:text-white transition-colors">개인정보처리방침</Link></li>
               <li><Link to="/terms" className="hover:text-white transition-colors">이용약관</Link></li>
+              <li><Link to="/location-terms" className="hover:text-white transition-colors">위치정보 이용약관</Link></li>
             </ul>
           </div>
         </div>

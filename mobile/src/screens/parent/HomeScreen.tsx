@@ -2,7 +2,9 @@ import React, { memo, useCallback, useState } from "react";
 import {
   FlatList,
   Platform,
+  Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -92,6 +94,7 @@ export default function ParentHomeScreen() {
   const [students, setStudents] = useState<Student[]>([]);
   const [schedules, setSchedules] = useState<DailySchedule[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -117,6 +120,10 @@ export default function ParentHomeScreen() {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  const filteredSchedules = selectedStudentId
+    ? schedules.filter((s) => s.student_id === selectedStudentId)
+    : schedules;
 
   const renderItem = useCallback(
     ({ item }: { item: DailySchedule }) => {
@@ -161,19 +168,40 @@ export default function ParentHomeScreen() {
         </View>
       </View>
 
+      {/* 자녀별 필터 */}
+      {students.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          <Pressable
+            style={[styles.filterTab, !selectedStudentId && styles.filterTabActive]}
+            onPress={() => setSelectedStudentId(null)}
+          >
+            <Text style={[styles.filterTabText, !selectedStudentId && styles.filterTabTextActive]}>전체</Text>
+          </Pressable>
+          {students.map((s) => (
+            <Pressable
+              key={s.id}
+              style={[styles.filterTab, selectedStudentId === s.id && styles.filterTabActive]}
+              onPress={() => setSelectedStudentId(s.id)}
+            >
+              <Text style={[styles.filterTabText, selectedStudentId === s.id && styles.filterTabTextActive]}>{s.name}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+
       {/* 오늘 일정 */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{t("home.todaySchedule")}</Text>
-        <Text style={styles.sectionCount}>{schedules.length}건</Text>
+        <Text style={styles.sectionCount}>{filteredSchedules.length}건</Text>
       </View>
 
-      {schedules.length === 0 ? (
+      {filteredSchedules.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>{t("home.noSchedule")}</Text>
         </View>
       ) : (
         <FlatList
-          data={schedules}
+          data={filteredSchedules}
           keyExtractor={keyExtractor}
           refreshControl={
             <RefreshControl
@@ -226,6 +254,32 @@ const styles = StyleSheet.create({
   childLabel: {
     fontSize: Typography.sizes.xs,
     fontWeight: Typography.weights.medium,
+  },
+  filterRow: {
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  filterTab: {
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  filterTabActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  filterTabText: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+    fontWeight: Typography.weights.medium,
+  },
+  filterTabTextActive: {
+    color: Colors.textInverse,
+    fontWeight: Typography.weights.bold,
   },
   sectionHeader: {
     flexDirection: "row",

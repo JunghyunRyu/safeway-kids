@@ -101,6 +101,19 @@ def _start_daily_cron() -> None:
         except Exception:
             logger.exception("Cron: daily pipeline failed")
 
+    async def delay_checker_job() -> None:
+        """Check for delayed pickups every 5 minutes."""
+        from app.modules.scheduling.delay_checker import check_delays
+
+        try:
+            async with async_session_factory() as db:
+                count = await check_delays(db)
+                await db.commit()
+                if count:
+                    logger.info("Delay checker: processed %d delays", count)
+        except Exception:
+            logger.exception("Delay checker job failed")
+
     scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
     scheduler.add_job(
         daily_pipeline_job,
@@ -111,6 +124,54 @@ def _start_daily_cron() -> None:
         id="daily_pipeline",
         replace_existing=True,
     )
+
+    from apscheduler.triggers.interval import IntervalTrigger
+
+    scheduler.add_job(
+        delay_checker_job,
+        IntervalTrigger(minutes=5),
+        id="delay_checker",
+        replace_existing=True,
+    )
+
+    # REG-01: Daily driver qualification re-check at 00:05
+    async def qualification_checker_job() -> None:
+        from app.modules.auth.qualification_checker import check_driver_qualifications
+
+        try:
+            async with async_session_factory() as db:
+                result = await check_driver_qualifications(db)
+                await db.commit()
+                logger.info("Qualification checker: %s", result)
+        except Exception:
+            logger.exception("Qualification checker job failed")
+
+    scheduler.add_job(
+        qualification_checker_job,
+        CronTrigger(hour=0, minute=5),
+        id="qualification_checker",
+        replace_existing=True,
+    )
+
+    # REG-02: Daily vehicle compliance check at 00:10
+    async def vehicle_compliance_job() -> None:
+        from app.modules.vehicle_telemetry.compliance_checker import check_vehicle_compliance
+
+        try:
+            async with async_session_factory() as db:
+                result = await check_vehicle_compliance(db)
+                await db.commit()
+                logger.info("Vehicle compliance checker: %s", result)
+        except Exception:
+            logger.exception("Vehicle compliance checker job failed")
+
+    scheduler.add_job(
+        vehicle_compliance_job,
+        CronTrigger(hour=0, minute=10),
+        id="vehicle_compliance_checker",
+        replace_existing=True,
+    )
+
     scheduler.start()
     logger.info(
         "Daily pipeline cron started: %02d:%02d KST",
@@ -180,6 +241,21 @@ def create_app() -> FastAPI:
     application.state.limiter = limiter
     application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+    # REG-06: Audit log for 403 access control failures
+    from fastapi import Request
+    from fastapi.responses import JSONResponse
+    from app.common.exceptions import ForbiddenError
+
+    @application.exception_handler(ForbiddenError)
+    async def forbidden_audit_handler(request: Request, exc: ForbiddenError) -> JSONResponse:
+        client_ip = request.client.host if request.client else "unknown"
+        user_info = getattr(request.state, "user_id", None)
+        logger.warning(
+            "ACCESS_DENIED path=%s method=%s ip=%s user=%s detail=%s",
+            request.url.path, request.method, client_ip, user_info, exc.detail,
+        )
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
     # Request logging
     from app.middleware.request_logging import RequestLoggingMiddleware
 
@@ -219,10 +295,12 @@ def create_app() -> FastAPI:
     from app.modules.billing.router import router as billing_router
     from app.modules.contact.router import router as contact_router
     from app.modules.escort.router import router as escort_router
+    from app.modules.messaging.router import router as messaging_router
     application.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
     application.include_router(billing_router, prefix="/api/v1/billing", tags=["billing"])
     application.include_router(contact_router, prefix="/api/v1/contact", tags=["contact"])
     application.include_router(escort_router, prefix="/api/v1/escorts", tags=["escorts"])
+    application.include_router(messaging_router, prefix="/api/v1/messages", tags=["messages"])
 
     @application.get("/health")
     async def health_check() -> dict:

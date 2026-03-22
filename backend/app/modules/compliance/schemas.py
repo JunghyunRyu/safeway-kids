@@ -15,20 +15,19 @@ class ConsentScopeModel(BaseModel):
     push_notification: bool = Field(default=True, description="푸시 알림 수신 동의")
     marketing: bool = Field(default=False, description="마케팅 정보 수신 동의")
     third_party_sharing: bool = Field(default=False, description="제3자 제공 동의")
+    health_info_sharing: bool = Field(
+        default=False,
+        description=(
+            "건강정보(알레르기, 차멀미 등) 운행 기사 제공 동의 "
+            "(개인정보보호법 §23 민감정보 별도 동의)"
+        ),
+    )
 
 
 class ConsentCreateRequest(BaseModel):
     child_id: uuid.UUID
-    consent_scope: dict = Field(
-        default_factory=lambda: {
-            "service_terms": True,
-            "privacy_policy": True,
-            "child_info_collection": True,
-            "location_tracking": False,
-            "push_notification": True,
-            "marketing": False,
-            "third_party_sharing": False,
-        },
+    consent_scope: ConsentScopeModel = Field(
+        ...,
         description="동의 범위 (필수: service_terms, privacy_policy, child_info_collection)",
     )
     consent_method: str = Field(default="phone_otp", description="동의 방법")
@@ -82,7 +81,7 @@ class DocumentUploadRequest(BaseModel):
     academy_id: uuid.UUID
     document_type: str = Field(
         description=(
-            "문서 유형: insurance_cert, police_report, safety_training, vehicle_inspection, other"
+            "문서 유형: insurance_cert, police_report, safety_training, vehicle_inspection, school_bus_registration, other"
         ),
     )
     expires_at: datetime | None = Field(default=None, description="만료일")

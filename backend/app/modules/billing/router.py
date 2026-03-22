@@ -154,7 +154,7 @@ async def my_invoices(
 ) -> list[InvoiceResponse]:
     """내 청구서 목록 (학부모)"""
     invoices = await service.get_parent_invoices(db, current_user.id)
-    return [InvoiceResponse.model_validate(i) for i in invoices]
+    return [InvoiceResponse(**i) for i in invoices]
 
 
 @router.get("/invoices", response_model=list[InvoiceResponse])

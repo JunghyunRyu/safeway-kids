@@ -30,11 +30,12 @@ async def create_consent(
     ip_address: str | None = None,
 ) -> GuardianConsent:
     """Create a new guardian consent record."""
-    # 필수 동의 항목 검증 (A14)
-    required_items = ["service_terms", "privacy_policy", "child_info_collection"]
+    # 필수 동의 항목 검증 (A14) — ConsentScopeModel validates structure
     scope = request.consent_scope
+    required_items = ["service_terms", "privacy_policy", "child_info_collection"]
+    scope_dict = scope.model_dump() if hasattr(scope, "model_dump") else scope
     for item in required_items:
-        if not scope.get(item):
+        if not scope_dict.get(item):
             from app.common.exceptions import ValidationError
             raise ValidationError(
                 detail=f"필수 동의 항목 '{item}'에 동의해야 합니다"
@@ -51,12 +52,43 @@ async def create_consent(
     if existing:
         raise ConflictError(detail="이미 유효한 동의가 존재합니다")
 
+    consent_scope_data = scope.model_dump() if hasattr(scope, "model_dump") else scope
+
+    # ITEM-REG-05: Send SMS notification to guardian
+    try:
+        from app.modules.auth.models import User
+        from app.modules.notification import service as notif_service
+        from app.modules.student_management.models import Student
+
+        student = (await db.execute(
+            select(GuardianConsent).where(False)  # dummy to get Student
+        )).scalar_one_or_none()
+        # Get student name and guardian phone for SMS
+        student_row = (await db.execute(
+            select(Student).where(Student.id == request.child_id)
+        )).scalar_one_or_none()
+        guardian_row = (await db.execute(
+            select(User).where(User.id == guardian_id)
+        )).scalar_one_or_none()
+        if guardian_row and guardian_row.phone and not guardian_row.phone.startswith("kakao_"):
+            child_name = student_row.name if student_row else "자녀"
+            sms_msg = (
+                f"[세이프웨이키즈] {child_name}의 개인정보 수집/위치정보 이용에 대한 "
+                f"법정대리인 동의가 요청되었습니다. 앱에서 동의 내용을 확인해주세요."
+            )
+            await notif_service.send_critical_alert_sms(guardian_row.phone, sms_msg)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning("Failed to send consent SMS", exc_info=True)
+
+    from datetime import UTC as _UTC
     consent = GuardianConsent(
         guardian_id=guardian_id,
         child_id=request.child_id,
-        consent_scope=request.consent_scope,
+        consent_scope=consent_scope_data,
         consent_method=request.consent_method,
         ip_address=ip_address,
+        sms_sent_at=datetime.now(_UTC),
     )
     db.add(consent)
     await db.flush()

@@ -41,6 +41,8 @@ class InvoiceResponse(BaseModel):
     due_date: date
     paid_at: datetime | None
     created_at: datetime
+    academy_name: str | None = None
+    student_name: str | None = None
 
     model_config = {"from_attributes": True}
 

@@ -301,6 +301,137 @@ async def log_audit(
     await db.flush()
 
 
+async def search_students(db: AsyncSession, query: str) -> list:
+    """ITEM-P1-24: Search students by name or guardian phone."""
+    from app.modules.student_management.models import Enrollment
+
+    # Search by student name
+    name_stmt = (
+        select(Student, User, Academy)
+        .outerjoin(User, Student.guardian_id == User.id)
+        .outerjoin(Enrollment, Enrollment.student_id == Student.id)
+        .outerjoin(Academy, Enrollment.academy_id == Academy.id)
+        .where(Student.name.ilike(f"%{query}%"))
+        .limit(50)
+    )
+
+    # Search by guardian phone
+    phone_stmt = (
+        select(Student, User, Academy)
+        .outerjoin(User, Student.guardian_id == User.id)
+        .outerjoin(Enrollment, Enrollment.student_id == Student.id)
+        .outerjoin(Academy, Enrollment.academy_id == Academy.id)
+        .where(User.phone.ilike(f"%{query}%"))
+        .limit(50)
+    )
+
+    results = []
+    seen_ids = set()
+
+    for stmt in [name_stmt, phone_stmt]:
+        rows = (await db.execute(stmt)).all()
+        for student, guardian, academy in rows:
+            if student.id in seen_ids:
+                continue
+            seen_ids.add(student.id)
+            # P1-24 법률: 보호자 전화번호 마스킹 (개인정보보호법 §16 최소수집 원칙)
+            raw_phone = guardian.phone if guardian else None
+            masked_phone = _mask_phone_cs(raw_phone) if raw_phone else None
+            results.append({
+                "id": student.id,
+                "name": student.name,
+                "date_of_birth": str(student.date_of_birth) if student.date_of_birth else None,
+                "grade": student.grade,
+                "guardian_name": guardian.name if guardian else None,
+                "guardian_phone": masked_phone,
+                "academy_name": academy.name if academy else None,
+                "is_active": student.is_active,
+            })
+
+    return results
+
+
+def _mask_phone_cs(phone: str) -> str:
+    """마스킹: 010-1234-5678 → 010-****-5678 (앞3 + **** + 뒤4)"""
+    digits = phone.replace("-", "").replace(" ", "")
+    if len(digits) >= 7:
+        return digits[:3] + "****" + digits[-4:]
+    return "***"
+
+
+async def list_notification_logs(
+    db: AsyncSession,
+    user_id: str | None = None,
+    notification_type: str | None = None,
+    channel: str | None = None,
+    status: str | None = None,
+    skip: int = 0,
+    limit: int = 50,
+) -> dict:
+    """ITEM-P1-25: List notification logs with filters."""
+    from app.modules.notification.models import NotificationLog
+
+    query = select(NotificationLog).order_by(NotificationLog.sent_at.desc())
+    if user_id:
+        query = query.where(NotificationLog.recipient_user_id == user_id)
+    if notification_type:
+        query = query.where(NotificationLog.notification_type == notification_type)
+    if channel:
+        query = query.where(NotificationLog.channel == channel)
+    if status:
+        query = query.where(NotificationLog.status == status)
+
+    total = await db.scalar(select(func.count()).select_from(query.subquery()))
+    items = (await db.execute(query.offset(skip).limit(limit))).scalars().all()
+    return {"items": list(items), "total": total or 0}
+
+
+async def list_academy_drivers(db: AsyncSession, academy_id) -> list:
+    """ITEM-P1-31: List drivers assigned to vehicles operating for an academy."""
+    from app.modules.auth.models import DriverQualification
+    from app.modules.scheduling.models import DailyScheduleInstance
+    from app.modules.vehicle_telemetry.models import VehicleAssignment
+
+    # Find drivers through VehicleAssignment → vehicle → DailyScheduleInstance.academy_id
+    # or directly through DailyScheduleInstance which links vehicle_id to academy_id
+    driver_ids_stmt = (
+        select(VehicleAssignment.driver_id)
+        .join(DailyScheduleInstance, DailyScheduleInstance.vehicle_id == VehicleAssignment.vehicle_id)
+        .where(DailyScheduleInstance.academy_id == academy_id)
+        .distinct()
+    )
+
+    stmt = (
+        select(User, DriverQualification)
+        .outerjoin(DriverQualification, DriverQualification.user_id == User.id)
+        .where(
+            User.role == UserRole.DRIVER,
+            User.is_active.is_(True),
+            User.deleted_at.is_(None),
+            User.id.in_(driver_ids_stmt),
+        )
+    )
+
+    rows = (await db.execute(stmt)).all()
+    results = []
+    for user, dq in rows:
+        results.append({
+            "id": user.id,
+            "name": user.name,
+            "phone": user.phone[:3] + "****" + user.phone[-4:] if len(user.phone) >= 7 else user.phone,
+            "is_active": user.is_active,
+            "license_number": dq.license_number if dq else None,
+            "license_type": dq.license_type if dq else None,
+            "license_expiry": str(dq.license_expiry) if dq and dq.license_expiry else None,
+            "criminal_check_date": str(dq.criminal_check_date) if dq and dq.criminal_check_date else None,
+            "criminal_check_clear": dq.criminal_check_clear if dq else False,
+            "safety_training_date": str(dq.safety_training_date) if dq and dq.safety_training_date else None,
+            "safety_training_expiry": str(dq.safety_training_expiry) if dq and dq.safety_training_expiry else None,
+            "is_qualified": dq.is_qualified if dq else False,
+        })
+    return results
+
+
 async def list_audit_logs(
     db: AsyncSession,
     entity_type: str | None = None,

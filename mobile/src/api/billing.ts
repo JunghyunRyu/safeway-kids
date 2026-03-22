@@ -11,6 +11,8 @@ export interface Invoice {
   status: string;
   due_date: string;
   paid_at: string | null;
+  academy_name: string | null;
+  student_name: string | null;
 }
 
 export async function getMyInvoices(): Promise<Invoice[]> {

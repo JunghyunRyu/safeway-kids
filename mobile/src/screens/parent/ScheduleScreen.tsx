@@ -1,8 +1,9 @@
-import React, { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   Pressable,
@@ -204,6 +205,12 @@ export default function ScheduleScreen() {
   const [schedules, setSchedules] = useState<DailySchedule[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
+  const filteredSchedules = useMemo(
+    () => selectedStudentId ? schedules.filter((s) => s.student_id === selectedStudentId) : schedules,
+    [schedules, selectedStudentId],
+  );
 
   const load = useCallback(
     async (offset: number) => {
@@ -306,8 +313,29 @@ export default function ScheduleScreen() {
       {/* 날짜 네비게이션 */}
       <DateNavHeader offset={dateOffset} onPrev={handlePrev} onNext={handleNext} />
 
+      {/* 자녀별 필터 */}
+      {students.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterContent}>
+          <Pressable
+            style={[styles.filterTab, !selectedStudentId && styles.filterTabActive]}
+            onPress={() => setSelectedStudentId(null)}
+          >
+            <Text style={[styles.filterTabText, !selectedStudentId && styles.filterTabTextActive]}>전체</Text>
+          </Pressable>
+          {students.map((s) => (
+            <Pressable
+              key={s.id}
+              style={[styles.filterTab, selectedStudentId === s.id && styles.filterTabActive]}
+              onPress={() => setSelectedStudentId(s.id)}
+            >
+              <Text style={[styles.filterTabText, selectedStudentId === s.id && styles.filterTabTextActive]}>{s.name}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+
       {/* 목록 */}
-      {schedules.length === 0 ? (
+      {filteredSchedules.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="calendar-outline" size={56} color={Colors.textDisabled} />
           <Text style={styles.emptyTitle}>이 날에 일정이 없습니다</Text>
@@ -315,7 +343,7 @@ export default function ScheduleScreen() {
         </View>
       ) : (
         <FlatList
-          data={schedules}
+          data={filteredSchedules}
           keyExtractor={(item) => item.id}
           refreshing={refreshing}
           onRefresh={onRefresh}
@@ -375,6 +403,36 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.xs,
     color: Colors.textSecondary,
     marginTop: 2,
+  },
+
+  // Filter
+  filterRow: {
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  filterContent: {
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  filterTab: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceElevated,
+  },
+  filterTabActive: {
+    backgroundColor: Colors.primary,
+  },
+  filterTabText: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.medium,
+    color: Colors.textSecondary,
+  },
+  filterTabTextActive: {
+    color: Colors.surface,
+    fontWeight: Typography.weights.semibold,
   },
 
   // List

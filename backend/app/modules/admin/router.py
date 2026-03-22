@@ -1,13 +1,21 @@
-from fastapi import APIRouter, Depends, Query
+import uuid
+
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.exceptions import ForbiddenError
 from app.config import settings
 from app.database import get_db
-from app.middleware.rbac import require_platform_admin
+from app.middleware.auth import get_current_user
+from app.middleware.rbac import require_platform_admin, require_roles
 from app.modules.admin import service
-from app.modules.admin.schemas import PaginatedAuditLogResponse
-from app.modules.auth.models import User
+from app.modules.admin.schemas import (
+    DriverInfoResponse,
+    PaginatedAuditLogResponse,
+    PaginatedNotificationLogResponse,
+    StudentSearchResult,
+)
+from app.modules.auth.models import User, UserRole
 
 router = APIRouter()
 
@@ -38,3 +46,63 @@ async def list_audit_logs(
     return await service.list_audit_logs(
         db, entity_type=entity_type, action=action, skip=skip, limit=page_size,
     )
+
+
+@router.get("/students/search", response_model=list[StudentSearchResult])
+async def search_students(
+    q: str = Query(..., min_length=1, description="학생 이름 또는 보호자 전화번호"),
+    request: Request = None,  # type: ignore[assignment]
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_admin),
+) -> list:
+    """ITEM-P1-24: CS 학생 통합 조회 (감사 로그 포함)"""
+    results = await service.search_students(db, q)
+    # P1-24 법률: 개인정보 접속기록 (안전성 확보조치 기준 §8, 최소 1년 보관)
+    await service.log_audit(
+        db,
+        user_id=str(current_user.id),
+        user_name=current_user.name,
+        action="SEARCH",
+        entity_type="student",
+        entity_id=None,
+        details={"query": q, "result_count": len(results)},
+        ip_address=request.client.host if request and request.client else None,
+    )
+    return results
+
+
+@router.get("/notifications/logs", response_model=PaginatedNotificationLogResponse)
+async def list_notification_logs(
+    user_id: uuid.UUID | None = Query(None),
+    notification_type: str | None = Query(None),
+    channel: str | None = Query(None),
+    status: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_admin),
+) -> dict:
+    """ITEM-P1-25: 알림 발송 이력 조회"""
+    skip = (page - 1) * page_size
+    return await service.list_notification_logs(
+        db, user_id=user_id, notification_type=notification_type,
+        channel=channel, status=status, skip=skip, limit=page_size,
+    )
+
+
+@router.get("/academy/{academy_id}/drivers", response_model=list[DriverInfoResponse])
+async def list_academy_drivers(
+    academy_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
+) -> list:
+    """ITEM-P1-31: 학원별 기사 조회"""
+    if current_user.role == UserRole.ACADEMY_ADMIN:
+        from sqlalchemy import select as _select
+        from app.modules.academy_management.models import Academy
+        _result = await db.execute(
+            _select(Academy).where(Academy.id == academy_id, Academy.admin_id == current_user.id)
+        )
+        if not _result.scalar_one_or_none():
+            raise ForbiddenError(detail="본인 학원의 기사만 조회할 수 있습니다")
+    return await service.list_academy_drivers(db, academy_id)

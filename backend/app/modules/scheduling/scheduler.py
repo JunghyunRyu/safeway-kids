@@ -73,6 +73,19 @@ async def auto_assign_vehicles(
         )
 
     await db.flush()
+
+    # REG-07: Warn about assignments missing safety escorts
+    missing_escort = [a for a in assignments if not a.safety_escort_id]
+    if missing_escort:
+        plates = []
+        for a in missing_escort:
+            v = await db.get(Vehicle, a.vehicle_id)
+            plates.append(v.license_plate if v else str(a.vehicle_id))
+        logger.warning(
+            "SAFETY_ESCORT_MISSING: %d vehicle(s) assigned without safety escort for %s: %s",
+            len(missing_escort), target_date, ", ".join(plates),
+        )
+
     return assignments
 
 
@@ -93,6 +106,24 @@ async def run_daily_pipeline(
     # Step 2: Auto-assign vehicles if needed
     assignments = await auto_assign_vehicles(db, target_date)
     result["assignments_created"] = len(assignments)
+
+    # REG-07: Check all assignments (new + existing) for missing safety escorts
+    all_assign_stmt = select(VehicleAssignment).where(
+        VehicleAssignment.assigned_date == target_date,
+        VehicleAssignment.safety_escort_id.is_(None),
+    )
+    no_escort = list((await db.execute(all_assign_stmt)).scalars().all())
+    if no_escort:
+        result["safety_escort_warnings"] = len(no_escort)
+        for a in no_escort:
+            v = await db.get(Vehicle, a.vehicle_id)
+            plate = v.license_plate if v else str(a.vehicle_id)
+            logger.warning(
+                "SAFETY_ESCORT_MISSING: vehicle %s has no safety escort for %s",
+                plate, target_date,
+            )
+    else:
+        result["safety_escort_warnings"] = 0
 
     # If new assignments were created, update schedule instances with vehicle_id
     if assignments:

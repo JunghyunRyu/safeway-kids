@@ -175,14 +175,30 @@ async def generate_invoices(
 
 async def get_parent_invoices(
     db: AsyncSession, parent_id: uuid.UUID
-) -> list[Invoice]:
+) -> list[dict]:
+    from app.modules.academy_management.models import Academy
+
     stmt = (
-        select(Invoice)
+        select(
+            Invoice,
+            Academy.name.label("academy_name"),
+            Student.name.label("student_name"),
+        )
+        .outerjoin(Academy, Invoice.academy_id == Academy.id)
+        .outerjoin(Student, Invoice.student_id == Student.id)
         .where(Invoice.parent_id == parent_id)
         .order_by(Invoice.billing_month.desc())
     )
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    rows = result.all()
+    enriched = []
+    for row in rows:
+        inv = row.Invoice
+        d = {c.key: getattr(inv, c.key) for c in inv.__table__.columns}
+        d["academy_name"] = row.academy_name
+        d["student_name"] = row.student_name
+        enriched.append(d)
+    return enriched
 
 
 async def get_academy_invoices(

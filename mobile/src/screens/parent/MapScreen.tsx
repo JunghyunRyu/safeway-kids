@@ -35,6 +35,7 @@ export default function MapScreen() {
   const [vehicleIds, setVehicleIds] = useState<string[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER);
+  const [pickupPoints, setPickupPoints] = useState<Array<{lat: number; lng: number; label: string}>>([]);
 
   const { locations, connected, connectionState } = useVehicleTracking({
     vehicleIds,
@@ -57,17 +58,29 @@ export default function MapScreen() {
           ];
           setVehicleIds(ids);
 
-          // Load student templates to find pickup coordinates for map center
+          // Load student templates to find pickup coordinates for map center and markers
           const students = await listStudents();
+          const points: Array<{lat: number; lng: number; label: string}> = [];
           if (students.length > 0) {
-            const templates = await listTemplates(students[0].id);
-            const active = templates.find(
-              (t) => t.is_active && t.pickup_latitude && t.pickup_longitude
-            );
-            if (active) {
-              setMapCenter({ lat: active.pickup_latitude, lng: active.pickup_longitude });
+            let centerSet = false;
+            for (const stu of students) {
+              const templates = await listTemplates(stu.id);
+              templates.forEach((t) => {
+                if (t.is_active && t.pickup_latitude && t.pickup_longitude) {
+                  if (!centerSet) {
+                    setMapCenter({ lat: t.pickup_latitude, lng: t.pickup_longitude });
+                    centerSet = true;
+                  }
+                  points.push({
+                    lat: t.pickup_latitude,
+                    lng: t.pickup_longitude,
+                    label: t.pickup_address ?? "픽업 지점",
+                  });
+                }
+              });
             }
           }
+          setPickupPoints(points);
         } catch {
           // silent
         }
@@ -113,10 +126,12 @@ export default function MapScreen() {
       (s) => !s.boarded_at && s.status === "scheduled"
     ).length;
 
+    const AVG_STOP_MINUTES = 3;
     if (remaining > 0) {
+      const etaMinutes = remaining * AVG_STOP_MINUTES;
       sendToMap({
         type: "setEta",
-        text: `${remaining}정거장 전`,
+        text: remaining === 0 ? "곧 도착합니다" : `약 ${etaMinutes}분 후 도착`,
       });
     } else {
       sendToMap({ type: "setEta", text: null });
@@ -146,6 +161,19 @@ export default function MapScreen() {
     }
   }, [mapCenter, mapReady]);
 
+  // Send pickup markers to map
+  useEffect(() => {
+    if (!mapReady || pickupPoints.length === 0) return;
+    pickupPoints.forEach((p) => {
+      sendToMap({
+        type: "addPickupMarker",
+        lat: p.lat,
+        lng: p.lng,
+        label: p.label,
+      });
+    });
+  }, [pickupPoints, mapReady]);
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -167,7 +195,7 @@ export default function MapScreen() {
             {connectionState === "connected"
               ? "연결됨"
               : connectionState === "polling"
-                ? "폴링 모드"
+                ? "위치 업데이트 지연 중"
                 : connectionState === "connecting" || connectionState === "reconnecting"
                   ? "연결 중..."
                   : connectionState === "auth_failed"

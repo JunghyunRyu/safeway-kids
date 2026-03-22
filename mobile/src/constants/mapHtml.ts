@@ -78,6 +78,9 @@ export const MAP_HTML_CONTENT = `<!DOCTYPE html>
         case 'setDriverPosition':
           updateDriverMarker(msg.lat, msg.lng);
           break;
+        case 'addPickupMarker':
+          addPickupMarker(msg.lat, msg.lng, msg.label);
+          break;
       }
     }
 
@@ -144,6 +147,35 @@ export const MAP_HTML_CONTENT = `<!DOCTYPE html>
         busMarkers[vehicleId] = marker;
       }
       map.panTo(position);
+    }
+
+    var pickupMarkers = [];
+
+    function addPickupMarker(lat, lng, label) {
+      if (!map) return;
+      var position = new kakao.maps.LatLng(lat, lng);
+      var markerImage = new kakao.maps.MarkerImage(
+        'data:image/svg+xml,' + encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">' +
+          '<circle cx="14" cy="14" r="12" fill="#1976D2" stroke="white" stroke-width="2"/>' +
+          '<text x="14" y="19" text-anchor="middle" fill="white" font-size="12" font-weight="bold">P</text>' +
+          '</svg>'
+        ),
+        new kakao.maps.Size(28, 28),
+        { offset: new kakao.maps.Point(14, 14) }
+      );
+      var marker = new kakao.maps.Marker({
+        position: position,
+        map: map,
+        image: markerImage,
+      });
+      var infoWindow = new kakao.maps.InfoWindow({
+        content: '<div style="padding:4px 8px;font-size:12px;">' + label + '</div>',
+      });
+      kakao.maps.event.addListener(marker, 'click', function() {
+        infoWindow.open(map, marker);
+      });
+      pickupMarkers.push(marker);
     }
 
     var driverMarker = null;

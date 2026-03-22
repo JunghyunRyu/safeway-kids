@@ -136,15 +136,15 @@ export default function SchedulesPage() {
     try {
       const { data } = await api.post(`/schedules/daily/pipeline?target_date=${date}`);
       setPipelineResult(data as PipelineResult);
-      showToast('파이프라인이 실행되었습니다.', 'success');
+      showToast('자동 배차가 실행되었습니다.', 'success');
       setPipelineConfirmOpen(false);
       await fetchSchedules();
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data
           ?.detail;
-      setPipelineResult({ error: msg || '파이프라인 실행 실패' });
-      showToast('파이프라인 실행에 실패했습니다.', 'error');
+      setPipelineResult({ error: msg || '자동 배차 실행 실패' });
+      showToast('자동 배차 실행에 실패했습니다.', 'error');
       setPipelineConfirmOpen(false);
     } finally {
       setPipelineRunning(false);
@@ -171,6 +171,16 @@ export default function SchedulesPage() {
       sortable: true,
     },
     {
+      key: 'academy_id',
+      label: '학원',
+      render: (row) => <span>{row.academy_name || row.academy_id.slice(0, 8)}</span>,
+    },
+    {
+      key: 'vehicle_license_plate',
+      label: '차량',
+      render: (row) => <span>{row.vehicle_license_plate || '-'}</span>,
+    },
+    {
       key: 'status',
       label: '상태',
       sortable: true,
@@ -179,8 +189,6 @@ export default function SchedulesPage() {
           status={row.status}
           colorMap={{
             ...scheduleStatusColorMap,
-            // Add Korean labels through override trick - StatusBadge's default labels
-            // cover 'completed' and 'cancelled', but we need 'scheduled' and 'boarded'
           }}
         />
       ),
@@ -191,6 +199,8 @@ export default function SchedulesPage() {
     { key: 'student_id', label: '학생 ID' },
     { key: 'schedule_date', label: '날짜' },
     { key: 'pickup_time', label: '픽업 시간' },
+    { key: 'academy_name', label: '학원' },
+    { key: 'vehicle_license_plate', label: '차량' },
     { key: 'status', label: '상태' },
   ];
 
@@ -218,7 +228,7 @@ export default function SchedulesPage() {
           <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span className="font-medium text-teal-800">파이프라인 실행 완료</span>
+          <span className="font-medium text-teal-800">자동 배차 완료</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {pipelineResult.schedules_created != null && (
@@ -341,7 +351,7 @@ export default function SchedulesPage() {
             disabled={loading || pipelineRunning}
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
           >
-            일일 파이프라인 실행
+            자동 배차 실행
           </button>
           {fetched && schedules.length > 0 && (
             <ExportButton
@@ -386,8 +396,8 @@ export default function SchedulesPage() {
       {/* Pipeline Confirmation */}
       <ConfirmDialog
         open={pipelineConfirmOpen}
-        title="일일 파이프라인 실행"
-        message={`${date} 날짜의 일일 파이프라인을 실행하시겠습니까? 스케줄 생성 및 경로 최적화가 수행됩니다.`}
+        title="자동 배차 실행"
+        message={`${date} 날짜의 일일 자동 배차를 실행하시겠습니까? 스케줄 생성 및 경로 최적화가 수행됩니다.`}
         confirmText="실행"
         variant="warning"
         loading={pipelineRunning}

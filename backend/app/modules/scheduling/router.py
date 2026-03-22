@@ -13,6 +13,8 @@ from app.modules.scheduling.schemas import (
     DailyScheduleResponse,
     DriverDailyScheduleResponse,
     NoShowRequest,
+    RouteSessionRequest,
+    RouteSessionResponse,
     ScheduleCancelRequest,
     ScheduleTemplateCreateRequest,
     ScheduleTemplateResponse,
@@ -161,7 +163,7 @@ async def mark_no_show(
     """미탑승 처리 + 학부모/학원 알림"""
     from app.modules.admin.service import log_audit
 
-    instance = await service.mark_no_show(db, instance_id, body.reason)
+    instance = await service.mark_no_show(db, instance_id, body.reason, driver_id=current_user.id)
     await log_audit(
         db,
         user_id=str(current_user.id),
@@ -173,6 +175,39 @@ async def mark_no_show(
         ip_address=request.client.host if request.client else None,
     )
     return DailyScheduleResponse.model_validate(instance)
+
+
+@router.post("/daily/{instance_id}/arrival-confirm", response_model=DailyScheduleResponse)
+async def confirm_arrival(
+    instance_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER, UserRole.SAFETY_ESCORT)),
+) -> DailyScheduleResponse:
+    """학원 도착 확인 (하차 완료 후 학원 인계 확인)"""
+    instance = await service.confirm_arrival(db, instance_id, current_user.id)
+    return DailyScheduleResponse.model_validate(instance)
+
+
+@router.post("/daily/route/start", response_model=RouteSessionResponse, status_code=201)
+async def start_route(
+    body: RouteSessionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER)),
+) -> RouteSessionResponse:
+    """운행 시작"""
+    session = await service.start_route_session(db, current_user.id, body.vehicle_id, body.schedule_date)
+    return RouteSessionResponse.model_validate(session)
+
+
+@router.post("/daily/route/end", response_model=RouteSessionResponse)
+async def end_route(
+    body: RouteSessionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER)),
+) -> RouteSessionResponse:
+    """운행 종료"""
+    session = await service.end_route_session(db, current_user.id, body.vehicle_id, body.schedule_date)
+    return RouteSessionResponse.model_validate(session)
 
 
 @router.post("/daily/{instance_id}/undo-board", response_model=DailyScheduleResponse)

@@ -21,3 +21,13 @@ class SosRequest(BaseModel):
 class SosResponse(BaseModel):
     success: bool
     emergency_numbers: dict = Field(default_factory=lambda: {"police": "112", "fire": "119"})
+
+
+class ManualSendRequest(BaseModel):
+    recipient_ids: list[str] = Field(..., min_length=1, description="수신자 UUID 목록")
+    channel: str = Field(default="both", description="발송 채널: sms / fcm / both")
+    message: str = Field(..., min_length=1, max_length=200, description="메시지 내용")
+    purpose: str = Field(
+        default="기타 운영 안내",
+        description="발송 목적: 긴급 안전 안내 / 시스템 장애 공지 / 운행 변경 안내 / 기타 운영 안내",
+    )

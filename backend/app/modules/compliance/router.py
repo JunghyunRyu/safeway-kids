@@ -82,6 +82,69 @@ async def withdraw_consent(
     return ConsentResponse.model_validate(consent)
 
 
+@router.patch("/consents/{consent_id}/viewed")
+async def mark_consent_viewed(
+    consent_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.PARENT)),
+) -> dict:
+    """동의서 전문 열람 기록 (ITEM-REG-05)"""
+    from datetime import UTC
+
+    consent = await service.get_consent(db, consent_id)
+    if consent.guardian_id != current_user.id:
+        from app.common.exceptions import ForbiddenError
+        raise ForbiddenError(detail="본인의 동의 정보만 열람할 수 있습니다")
+    from datetime import datetime
+    consent.terms_viewed_at = datetime.now(UTC)
+    await db.flush()
+    return {"status": "ok", "terms_viewed_at": str(consent.terms_viewed_at)}
+
+
+@router.post("/driver-consent", status_code=201)
+async def create_driver_location_consent(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER, UserRole.SAFETY_ESCORT)),
+) -> dict:
+    """기사/안전도우미 위치정보 수집 동의 (ITEM-REG-07)"""
+    from sqlalchemy import select as _select
+
+    from app.modules.compliance.models import DriverLocationConsent
+
+    existing = (await db.execute(
+        _select(DriverLocationConsent).where(DriverLocationConsent.user_id == current_user.id)
+    )).scalar_one_or_none()
+    if existing:
+        return {"status": "already_consented", "granted_at": str(existing.granted_at)}
+
+    ip = request.client.host if request.client else None
+    consent = DriverLocationConsent(
+        user_id=current_user.id,
+        consent_granted=True,
+        ip_address=ip,
+    )
+    db.add(consent)
+    await db.flush()
+    return {"status": "ok", "granted_at": str(consent.granted_at)}
+
+
+@router.get("/driver-consent/check")
+async def check_driver_location_consent(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER, UserRole.SAFETY_ESCORT)),
+) -> dict:
+    """기사/안전도우미 위치정보 동의 여부 확인"""
+    from sqlalchemy import select as _select
+
+    from app.modules.compliance.models import DriverLocationConsent
+
+    existing = (await db.execute(
+        _select(DriverLocationConsent).where(DriverLocationConsent.user_id == current_user.id)
+    )).scalar_one_or_none()
+    return {"consented": existing is not None}
+
+
 @router.post("/contracts", response_model=ContractResponse, status_code=201)
 async def create_contract(
     body: ContractCreateRequest,

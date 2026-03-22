@@ -15,6 +15,8 @@ interface StudentForm {
   date_of_birth: string;
   grade: string;
   guardian_phone: string;
+  special_notes: string;
+  allergies: string;
 }
 
 const INITIAL_FORM: StudentForm = {
@@ -22,6 +24,8 @@ const INITIAL_FORM: StudentForm = {
   date_of_birth: '',
   grade: '',
   guardian_phone: '',
+  special_notes: '',
+  allergies: '',
 };
 
 interface FieldErrors {
@@ -127,6 +131,8 @@ export default function StudentsPage() {
       date_of_birth: student.date_of_birth,
       grade: student.grade ?? '',
       guardian_phone: '',
+      special_notes: (student as Record<string, unknown>).special_notes as string ?? '',
+      allergies: (student as Record<string, unknown>).allergies as string ?? '',
     });
     setFieldErrors({});
     setModalOpen(true);
@@ -151,6 +157,8 @@ export default function StudentsPage() {
         date_of_birth: form.date_of_birth,
         grade: form.grade.trim() || null,
         guardian_phone: form.guardian_phone.trim() || null,
+        special_notes: form.special_notes.trim() || null,
+        allergies: form.allergies.trim() || null,
       };
 
       if (editingStudent) {
@@ -383,6 +391,20 @@ export default function StudentsPage() {
           value={form.guardian_phone}
           onChange={(v) => setForm({ ...form, guardian_phone: v })}
           placeholder="010-1234-5678"
+        />
+        <FormField
+          label="특이사항"
+          name="special_notes"
+          value={form.special_notes}
+          onChange={(v) => setForm({ ...form, special_notes: v })}
+          placeholder="차멀미 심함, 앞자리 배정 등"
+        />
+        <FormField
+          label="알레르기"
+          name="allergies"
+          value={form.allergies}
+          onChange={(v) => setForm({ ...form, allergies: v })}
+          placeholder="땅콩, 우유 등"
         />
       </FormModal>
 

@@ -23,10 +23,11 @@ interface ComplianceDocument extends Record<string, unknown> {
 
 const DOC_TYPES = [
   { value: 'business_license', label: '사업자등록증' },
-  { value: 'insurance', label: '보험증서' },
+  { value: 'insurance_cert', label: '보험증서' },
   { value: 'vehicle_inspection', label: '차량검사증' },
-  { value: 'driver_license', label: '운전면허증' },
-  { value: 'criminal_record', label: '범죄경력조회' },
+  { value: 'police_report', label: '범죄경력조회' },
+  { value: 'safety_training', label: '안전교육이수증' },
+  { value: 'school_bus_registration', label: '통학버스 신고필증' },
   { value: 'other', label: '기타' },
 ];
 

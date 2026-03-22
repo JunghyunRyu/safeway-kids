@@ -48,10 +48,13 @@ export interface DriverDailySchedule {
   pickup_longitude: number;
   pickup_address: string | null;
   special_notes: string | null;
+  allergies: string | null;
   guardian_phone_masked: string | null;
   status: string;
   boarded_at: string | null;
   alighted_at: string | null;
+  arrival_confirmed_at: string | null;
+  notification_sent: boolean | null;
 }
 
 export async function listTemplates(studentId: string): Promise<ScheduleTemplate[]> {
@@ -101,6 +104,21 @@ export async function undoBoard(instanceId: string): Promise<DailySchedule> {
 
 export async function undoAlight(instanceId: string): Promise<DailySchedule> {
   const resp = await apiClient.post(`/schedules/daily/${instanceId}/undo-alight`);
+  return resp.data;
+}
+
+export async function confirmArrival(instanceId: string): Promise<DailySchedule> {
+  const resp = await apiClient.post(`/schedules/daily/${instanceId}/arrival-confirm`);
+  return resp.data;
+}
+
+export async function startRoute(vehicleId: string, scheduleDate: string): Promise<unknown> {
+  const resp = await apiClient.post(`/schedules/daily/route/start`, { vehicle_id: vehicleId, schedule_date: scheduleDate });
+  return resp.data;
+}
+
+export async function endRoute(vehicleId: string, scheduleDate: string): Promise<unknown> {
+  const resp = await apiClient.post(`/schedules/daily/route/end`, { vehicle_id: vehicleId, schedule_date: scheduleDate });
   return resp.data;
 }
 

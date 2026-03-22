@@ -22,6 +22,9 @@ const PlatformBillingPage = lazy(() => import('./pages/platform/PlatformBillingP
 const PlatformVehiclesPage = lazy(() => import('./pages/platform/PlatformVehiclesPage'));
 const PlatformAuditLogPage = lazy(() => import('./pages/platform/PlatformAuditLogPage'));
 const PlatformMapPage = lazy(() => import('./pages/platform/PlatformMapPage'));
+const PlatformStudentSearchPage = lazy(() => import('./pages/platform/PlatformStudentSearchPage'));
+const PlatformNotificationLogsPage = lazy(() => import('./pages/platform/PlatformNotificationLogsPage'));
+const DriversPage = lazy(() => import('./pages/DriversPage'));
 
 function App() {
   const { user, loading, login, logout } = useAuth();
@@ -61,6 +64,9 @@ function App() {
                 {!import.meta.env.PROD && <Route path="/seed" element={<PlatformSeedPage />} />}
                 <Route path="/audit-logs" element={<PlatformAuditLogPage />} />
                 <Route path="/map" element={<PlatformMapPage />} />
+                <Route path="/student-search" element={<PlatformStudentSearchPage />} />
+                <Route path="/notification-logs" element={<PlatformNotificationLogsPage />} />
+                <Route path="/drivers" element={<DriversPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
