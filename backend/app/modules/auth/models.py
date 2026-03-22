@@ -39,7 +39,7 @@ class User(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Relationships
-    students: Mapped[list["Student"]] = relationship(back_populates="guardian")  # type: ignore[name-defined] # noqa: F821
+    students: Mapped[list["Student"]] = relationship(back_populates="guardian", foreign_keys="[Student.guardian_id]")  # type: ignore[name-defined] # noqa: F821
     consents: Mapped[list["GuardianConsent"]] = relationship(back_populates="guardian")  # type: ignore[name-defined] # noqa: F821
 
 

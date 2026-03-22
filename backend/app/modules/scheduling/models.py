@@ -84,6 +84,7 @@ class DailyScheduleInstance(Base):
     alighted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delay_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     arrival_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    handoff_type: Mapped[str | None] = mapped_column(String(20))  # guardian / academy_staff / self
     notification_sent: Mapped[bool | None] = mapped_column(Boolean)
     version: Mapped[int] = mapped_column(Integer, default=1)  # optimistic locking
     created_at: Mapped[datetime] = mapped_column(
@@ -164,4 +165,23 @@ class VehicleClearance(Base):
 
     __table_args__ = (
         UniqueConstraint("vehicle_id", "schedule_date", name="uq_vehicle_clearance"),
+    )
+
+
+class DriverMemo(Base):
+    """ITEM-P2-49: Driver memo per student per daily schedule."""
+    __tablename__ = "driver_memos"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4
+    )
+    daily_schedule_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("daily_schedule_instances.id"), nullable=False
+    )
+    driver_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False
+    )
+    memo: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )

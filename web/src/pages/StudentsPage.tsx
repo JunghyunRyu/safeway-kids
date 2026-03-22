@@ -263,6 +263,21 @@ export default function StudentsPage() {
             columns={exportColumns}
             filename="학생목록"
           />
+          <button
+            onClick={() => {
+              const headers = ['이름', '생년월일(YYYY-MM-DD)', '성별(M/F)', '학교명', '보호자 이름', '보호자 연락처', '픽업 주소', '특이사항', '알레르기'];
+              const csvContent = '\uFEFF' + headers.join(',') + '\n';
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              const link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = '학생등록_템플릿.csv';
+              link.click();
+              URL.revokeObjectURL(link.href);
+            }}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
+          >
+            템플릿 다운로드
+          </button>
           <input
             ref={fileInputRef}
             type="file"

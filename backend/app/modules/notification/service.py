@@ -44,12 +44,41 @@ async def _log_notification(
         logger.warning("Failed to write notification log", exc_info=True)
 
 
+async def _is_notification_enabled(
+    user_id: uuid.UUID, notification_type: str, channel: str
+) -> bool:
+    """Check if a user has this notification type enabled. Default=True if no pref set."""
+    try:
+        from sqlalchemy import select
+
+        from app.database import async_session_factory
+        from app.modules.notification.models import NotificationPreference
+
+        async with async_session_factory() as db:
+            stmt = select(NotificationPreference).where(
+                NotificationPreference.user_id == user_id,
+                NotificationPreference.channel == channel,
+                NotificationPreference.notification_type == notification_type,
+            )
+            pref = (await db.execute(stmt)).scalar_one_or_none()
+            if pref is None:
+                return True  # default enabled
+            return pref.enabled
+    except Exception:
+        logger.warning("Failed to check notification preference", exc_info=True)
+        return True  # fail-open
+
+
 async def send_boarding_notification(
     device_token: str, student_name: str, vehicle_plate: str,
     parent_phone: str | None = None,
     recipient_user_id: uuid.UUID | None = None,
 ) -> bool:
-    """학생 탑승 알림 (FCM 실패 시 SMS 폴백)"""
+    """학생 탑승 알림 (FCM 실패 시 SMS 폴백) — P2-41: preference check"""
+    # P2-41: check user preference before sending
+    if recipient_user_id and not await _is_notification_enabled(recipient_user_id, "boarding", "fcm"):
+        logger.info("[NOTIFICATION] boarding FCM disabled for user=%s", recipient_user_id)
+        return True  # treated as success (user opted out)
     title = "탑승 완료"
     body = f"{student_name} 학생이 차량({vehicle_plate})에 탑승했습니다."
     success = await _push_provider.send_push(
@@ -80,7 +109,10 @@ async def send_alighting_notification(
     parent_phone: str | None = None,
     recipient_user_id: uuid.UUID | None = None,
 ) -> bool:
-    """학생 하차 알림 (FCM 실패 시 SMS 폴백)"""
+    """학생 하차 알림 (FCM 실패 시 SMS 폴백) — P2-41: preference check"""
+    if recipient_user_id and not await _is_notification_enabled(recipient_user_id, "alighting", "fcm"):
+        logger.info("[NOTIFICATION] alighting FCM disabled for user=%s", recipient_user_id)
+        return True
     title = "하차 완료"
     body = f"{student_name} 학생이 안전하게 하차했습니다."
     success = await _push_provider.send_push(
@@ -151,3 +183,62 @@ async def send_otp_sms(phone: str, code: str) -> bool:
     return await _sms_provider.send_sms(
         phone, f"[SAFEWAY KIDS] 인증번호: {code} (3분 내 입력해주세요)"
     )
+
+
+async def get_additional_notification_recipients(
+    student_id: uuid.UUID,
+) -> list[dict]:
+    """ITEM-P2-40/P2-46: Get secondary guardians + student user for additional notifications.
+
+    Returns list of dicts with keys: user_id, fcm_token, phone, role.
+    """
+    try:
+        from sqlalchemy import select
+
+        from app.database import async_session_factory
+        from app.modules.auth.models import User
+        from app.modules.student_management.models import SecondaryGuardian, Student
+
+        recipients: list[dict] = []
+        async with async_session_factory() as db:
+            # Secondary guardians
+            sg_stmt = (
+                select(SecondaryGuardian.guardian_id)
+                .where(
+                    SecondaryGuardian.student_id == student_id,
+                    SecondaryGuardian.is_active.is_(True),
+                )
+            )
+            sg_ids = list((await db.execute(sg_stmt)).scalars().all())
+            for gid in sg_ids:
+                user = (await db.execute(
+                    select(User).where(User.id == gid, User.is_active.is_(True))
+                )).scalar_one_or_none()
+                if user:
+                    recipients.append({
+                        "user_id": user.id,
+                        "fcm_token": user.fcm_token,
+                        "phone": user.phone if user.phone and not user.phone.startswith("kakao_") else None,
+                        "role": "secondary_guardian",
+                    })
+
+            # Student user account (P2-46)
+            student = (await db.execute(
+                select(Student).where(Student.id == student_id)
+            )).scalar_one_or_none()
+            if student and student.user_id:
+                stu_user = (await db.execute(
+                    select(User).where(User.id == student.user_id, User.is_active.is_(True))
+                )).scalar_one_or_none()
+                if stu_user:
+                    recipients.append({
+                        "user_id": stu_user.id,
+                        "fcm_token": stu_user.fcm_token,
+                        "phone": None,  # students don't get SMS
+                        "role": "student",
+                    })
+
+        return recipients
+    except Exception:
+        logger.warning("Failed to get additional notification recipients", exc_info=True)
+        return []

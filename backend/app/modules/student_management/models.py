@@ -24,6 +24,10 @@ class Student(Base):
     allergies: Mapped[str | None] = mapped_column(Text)
     medical_notes: Mapped[str | None] = mapped_column(Text)
     emergency_contact: Mapped[str | None] = mapped_column(String(20))
+    school_name: Mapped[str | None] = mapped_column(String(100))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id"), unique=True
+    )  # ITEM-P2-46: link to student user account
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -38,10 +42,34 @@ class Student(Base):
     )
 
     # Relationships
-    guardian: Mapped["User"] = relationship(back_populates="students")  # type: ignore[name-defined] # noqa: F821
+    guardian: Mapped["User"] = relationship(back_populates="students", foreign_keys=[guardian_id])  # type: ignore[name-defined] # noqa: F821
     enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="student")
     consents: Mapped[list["GuardianConsent"]] = relationship(back_populates="child")  # type: ignore[name-defined] # noqa: F821
     schedule_templates: Mapped[list["ScheduleTemplate"]] = relationship(back_populates="student")  # type: ignore[name-defined] # noqa: F821
+
+
+class SecondaryGuardian(Base):
+    """ITEM-P2-40: Secondary guardian for a student (max 3 per student)."""
+    __tablename__ = "secondary_guardians"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4
+    )
+    student_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("students.id"), nullable=False
+    )
+    guardian_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False
+    )
+    relationship: Mapped[str] = mapped_column(String(20), nullable=False)  # 배우자 / 조부모 / 기타
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("student_id", "guardian_id", name="uq_secondary_guardian"),
+    )
 
 
 class Enrollment(Base):

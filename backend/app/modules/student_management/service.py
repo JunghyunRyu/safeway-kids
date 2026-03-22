@@ -17,6 +17,7 @@ from app.modules.student_management.models import Enrollment, Student
 from app.modules.student_management.schemas import (
     BulkUploadRowResult,
     EnrollmentCreateRequest,
+    SecondaryGuardianCreateRequest,
     StudentCreateRequest,
     StudentUpdateRequest,
 )
@@ -142,6 +143,14 @@ async def update_student(
         student.name = request.name
     if request.grade is not None:
         student.grade = request.grade
+    if request.special_notes is not None:
+        student.special_notes = request.special_notes
+    if request.allergies is not None:
+        student.allergies = request.allergies
+    if request.emergency_contact is not None:
+        student.emergency_contact = request.emergency_contact
+    if request.school_name is not None:
+        student.school_name = request.school_name
 
     await db.flush()
     return student
@@ -253,6 +262,137 @@ async def withdraw_enrollment(
     enrollment.withdrawn_at = datetime.now(UTC)
     await db.flush()
     return enrollment
+
+
+async def add_secondary_guardian(
+    db: AsyncSession, student_id: uuid.UUID, primary_guardian_id: uuid.UUID,
+    request: SecondaryGuardianCreateRequest,
+) -> dict:
+    """ITEM-P2-40: Add secondary guardian. Only primary guardian can add. Max 3 per student."""
+    from app.modules.auth.models import User, UserRole
+    from app.modules.student_management.models import SecondaryGuardian
+
+    student = await get_student(db, student_id)
+    if student.guardian_id != primary_guardian_id:
+        from app.common.exceptions import ForbiddenError
+        raise ForbiddenError(detail="주 보호자만 보조 보호자를 추가할 수 있습니다")
+
+    # Check max 3 limit
+    count_stmt = select(SecondaryGuardian).where(
+        SecondaryGuardian.student_id == student_id,
+        SecondaryGuardian.is_active.is_(True),
+    )
+    existing = (await db.execute(count_stmt)).scalars().all()
+    if len(existing) >= 3:
+        raise ConflictError(detail="보조 보호자는 최대 3명까지 등록 가능합니다")
+
+    # Look up guardian user by phone
+    guardian_user = (await db.execute(
+        select(User).where(
+            User.phone == request.guardian_phone,
+            User.is_active.is_(True),
+            User.deleted_at.is_(None),
+        )
+    )).scalar_one_or_none()
+    if not guardian_user:
+        from app.common.exceptions import NotFoundError
+        raise NotFoundError(detail="해당 전화번호의 사용자를 찾을 수 없습니다")
+
+    # Check duplicate
+    dup = (await db.execute(
+        select(SecondaryGuardian).where(
+            SecondaryGuardian.student_id == student_id,
+            SecondaryGuardian.guardian_id == guardian_user.id,
+        )
+    )).scalar_one_or_none()
+    if dup:
+        if dup.is_active:
+            raise ConflictError(detail="이미 등록된 보조 보호자입니다")
+        dup.is_active = True
+        dup.relationship = request.relationship
+        await db.flush()
+    else:
+        sg = SecondaryGuardian(
+            student_id=student_id,
+            guardian_id=guardian_user.id,
+            relationship=request.relationship,
+        )
+        db.add(sg)
+        await db.flush()
+
+    return {
+        "id": dup.id if dup else sg.id,  # type: ignore[possibly-undefined]
+        "student_id": student_id,
+        "guardian_id": guardian_user.id,
+        "guardian_name": guardian_user.name,
+        "guardian_phone": guardian_user.phone[:3] + "****" + guardian_user.phone[-4:] if len(guardian_user.phone) >= 7 else guardian_user.phone,
+        "relationship": request.relationship,
+        "is_active": True,
+        "created_at": dup.created_at if dup else datetime.now(UTC),  # type: ignore[possibly-undefined]
+    }
+
+
+async def list_secondary_guardians(
+    db: AsyncSession, student_id: uuid.UUID, current_user: "User",
+) -> list[dict]:
+    """ITEM-P2-40: List secondary guardians for a student."""
+    from app.modules.auth.models import User, UserRole
+    from app.modules.student_management.models import SecondaryGuardian
+
+    student = await get_student(db, student_id)
+
+    # IDOR check
+    if current_user.role == UserRole.PARENT and student.guardian_id != current_user.id:
+        from app.common.exceptions import ForbiddenError
+        raise ForbiddenError(detail="본인 자녀의 보조 보호자만 조회할 수 있습니다")
+
+    stmt = (
+        select(SecondaryGuardian, User)
+        .outerjoin(User, SecondaryGuardian.guardian_id == User.id)
+        .where(
+            SecondaryGuardian.student_id == student_id,
+            SecondaryGuardian.is_active.is_(True),
+        )
+        .order_by(SecondaryGuardian.created_at)
+    )
+    rows = (await db.execute(stmt)).all()
+    return [
+        {
+            "id": sg.id,
+            "student_id": sg.student_id,
+            "guardian_id": sg.guardian_id,
+            "guardian_name": user.name if user else None,
+            "guardian_phone": (user.phone[:3] + "****" + user.phone[-4:]) if user and len(user.phone) >= 7 else None,
+            "relationship": sg.relationship,
+            "is_active": sg.is_active,
+            "created_at": sg.created_at,
+        }
+        for sg, user in rows
+    ]
+
+
+async def remove_secondary_guardian(
+    db: AsyncSession, student_id: uuid.UUID, primary_guardian_id: uuid.UUID,
+    guardian_id: uuid.UUID,
+) -> None:
+    """ITEM-P2-40: Remove (deactivate) secondary guardian."""
+    from app.modules.student_management.models import SecondaryGuardian
+
+    student = await get_student(db, student_id)
+    if student.guardian_id != primary_guardian_id:
+        from app.common.exceptions import ForbiddenError
+        raise ForbiddenError(detail="주 보호자만 보조 보호자를 삭제할 수 있습니다")
+
+    stmt = select(SecondaryGuardian).where(
+        SecondaryGuardian.student_id == student_id,
+        SecondaryGuardian.guardian_id == guardian_id,
+        SecondaryGuardian.is_active.is_(True),
+    )
+    sg = (await db.execute(stmt)).scalar_one_or_none()
+    if not sg:
+        raise NotFoundError(detail="해당 보조 보호자를 찾을 수 없습니다")
+    sg.is_active = False
+    await db.flush()
 
 
 # Column name mapping: Korean header → field name

@@ -87,8 +87,8 @@ export async function markBoarded(instanceId: string): Promise<DailySchedule> {
   return resp.data;
 }
 
-export async function markAlighted(instanceId: string): Promise<DailySchedule> {
-  const resp = await apiClient.post(`/schedules/daily/${instanceId}/alight`);
+export async function markAlighted(instanceId: string, handoffType?: string): Promise<DailySchedule> {
+  const resp = await apiClient.post(`/schedules/daily/${instanceId}/alight`, handoffType ? { handoff_type: handoffType } : undefined);
   return resp.data;
 }
 
@@ -119,6 +119,16 @@ export async function startRoute(vehicleId: string, scheduleDate: string): Promi
 
 export async function endRoute(vehicleId: string, scheduleDate: string): Promise<unknown> {
   const resp = await apiClient.post(`/schedules/daily/route/end`, { vehicle_id: vehicleId, schedule_date: scheduleDate });
+  return resp.data;
+}
+
+export async function batchBoard(instanceIds: string[]): Promise<unknown> {
+  const resp = await apiClient.post("/schedules/daily/batch-board", { instance_ids: instanceIds });
+  return resp.data;
+}
+
+export async function createDriverMemo(instanceId: string, memo: string): Promise<unknown> {
+  const resp = await apiClient.post(`/schedules/daily/${instanceId}/memo`, { memo });
   return resp.data;
 }
 

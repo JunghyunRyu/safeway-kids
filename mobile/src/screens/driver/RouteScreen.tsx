@@ -4,9 +4,11 @@ import {
   FlatList,
   Image,
   Linking,
+  Modal,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   Pressable,
   View,
 } from "react-native";
@@ -26,6 +28,8 @@ import {
   confirmArrival,
   startRoute,
   endRoute,
+  batchBoard,
+  createDriverMemo,
 } from "../../api/schedules";
 import { getMyRoute, RoutePlan } from "../../api/routes";
 import { getMyAssignment } from "../../api/vehicles";
@@ -70,6 +74,7 @@ interface StopCardProps {
   onUndoBoard: (id: string) => void;
   onUndoAlight: (id: string) => void;
   onArrivalConfirm: (id: string) => void;
+  onMemo: (id: string) => void;
 }
 
 const UNDO_TIMEOUT_MS = 5 * 60 * 1000;
@@ -109,6 +114,7 @@ const StopCard = memo(function StopCard({
   onUndoBoard,
   onUndoAlight,
   onArrivalConfirm,
+  onMemo,
 }: StopCardProps) {
   const { t } = useTranslation();
 
@@ -209,6 +215,12 @@ const StopCard = memo(function StopCard({
             <Text style={styles.phoneText}>{guardianPhoneMasked}</Text>
           </Pressable>
         ) : null}
+
+        {/* P2-49: Memo button */}
+        <Pressable style={styles.memoBtn} onPress={() => onMemo(id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="create-outline" size={14} color={Colors.info} />
+          <Text style={styles.memoBtnText}>메모</Text>
+        </Pressable>
 
         {isNoShow ? (
           <Text style={[styles.statusText, { color: Colors.neutral }]}>미탑승</Text>
@@ -368,14 +380,33 @@ export default function DriverRouteScreen() {
     [load, t]
   );
 
+  // P2-50: Handoff type selection on alight
   const handleAlight = useCallback(
-    async (itemId: string) => {
-      try {
-        await markAlighted(itemId);
-        await load();
-      } catch {
-        Alert.alert(t("common.error"));
-      }
+    (itemId: string) => {
+      Alert.alert("하차 인수자 확인", "인수자 유형을 선택해 주세요.", [
+        { text: "취소", style: "cancel" },
+        {
+          text: "보호자 인수",
+          onPress: async () => {
+            try { await markAlighted(itemId, "guardian"); await load(); }
+            catch { Alert.alert(t("common.error")); }
+          },
+        },
+        {
+          text: "학원 직원",
+          onPress: async () => {
+            try { await markAlighted(itemId, "academy_staff"); await load(); }
+            catch { Alert.alert(t("common.error")); }
+          },
+        },
+        {
+          text: "자가 귀가",
+          onPress: async () => {
+            try { await markAlighted(itemId, "self"); await load(); }
+            catch { Alert.alert(t("common.error")); }
+          },
+        },
+      ]);
     },
     [load, t]
   );
@@ -469,6 +500,71 @@ export default function DriverRouteScreen() {
     }
   }, [vehicleId, routeActive, schedules]);
 
+  // P2-49: Driver memo modal
+  const [memoModalId, setMemoModalId] = useState<string | null>(null);
+  const [memoText, setMemoText] = useState("");
+  const [memoSaving, setMemoSaving] = useState(false);
+
+  const handleMemo = useCallback((itemId: string) => {
+    setMemoModalId(itemId);
+    setMemoText("");
+  }, []);
+
+  const handleMemoSave = useCallback(async () => {
+    if (!memoModalId || !memoText.trim()) return;
+    setMemoSaving(true);
+    try {
+      await createDriverMemo(memoModalId, memoText.trim());
+      Alert.alert("저장 완료", "메모가 저장되었습니다.");
+      setMemoModalId(null);
+      setMemoText("");
+    } catch {
+      Alert.alert("오류", "메모 저장에 실패했습니다.");
+    } finally {
+      setMemoSaving(false);
+    }
+  }, [memoModalId, memoText]);
+
+  // P2-47: Batch board handler
+  const handleBatchBoard = useCallback(
+    async (address: string) => {
+      const ids = schedules
+        .filter((s) => s.status === "scheduled" && s.pickup_address === address)
+        .map((s) => s.id);
+      if (ids.length === 0) return;
+      Alert.alert(
+        "일괄 탑승",
+        `${address}의 ${ids.length}명을 일괄 탑승 처리하시겠습니까?`,
+        [
+          { text: "취소", style: "cancel" },
+          {
+            text: "확인",
+            onPress: async () => {
+              try {
+                await batchBoard(ids);
+                await load();
+              } catch {
+                Alert.alert(t("common.error"));
+              }
+            },
+          },
+        ]
+      );
+    },
+    [schedules, load, t]
+  );
+
+  // P2-52: Polling fallback for real-time schedule updates
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    pollingRef.current = setInterval(() => {
+      load();
+    }, 30000); // 30-second polling
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [load]);
+
   const [clearanceChecks, setClearanceChecks] = useState<Record<string, boolean>>({});
   const [showClearance, setShowClearance] = useState(false);
 
@@ -561,9 +657,10 @@ export default function DriverRouteScreen() {
         onUndoBoard={handleUndoBoard}
         onUndoAlight={handleUndoAlight}
         onArrivalConfirm={handleArrivalConfirm}
+        onMemo={handleMemo}
       />
     ),
-    [handleBoard, handleAlight, handleNoShow, handleUndoBoard, handleUndoAlight, handleArrivalConfirm, firstScheduledIdx]
+    [handleBoard, handleAlight, handleNoShow, handleUndoBoard, handleUndoAlight, handleArrivalConfirm, handleMemo, firstScheduledIdx]
   );
 
   const keyExtractor = useCallback(
@@ -573,6 +670,19 @@ export default function DriverRouteScreen() {
 
   const completedCount = schedules.filter((s) => s.status === "completed").length;
   const totalActive = schedules.filter((s) => s.status !== "cancelled").length;
+  const noShowCount = schedules.filter((s) => s.status === "no_show").length;
+  const cancelledCount = schedules.filter((s) => s.status === "cancelled").length;
+
+  // P2-47: Batch board groups — addresses with 2+ scheduled students
+  const batchGroups = React.useMemo(() => {
+    const groups = new Map<string, number>();
+    for (const s of schedules) {
+      if (s.status === "scheduled" && s.pickup_address) {
+        groups.set(s.pickup_address, (groups.get(s.pickup_address) ?? 0) + 1);
+      }
+    }
+    return Array.from(groups.entries()).filter(([, count]) => count >= 2);
+  }, [schedules]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -613,6 +723,24 @@ export default function DriverRouteScreen() {
           </Text>
         </View>
       ) : null}
+
+      {/* P2-47: Batch board buttons */}
+      {batchGroups.length > 0 && (
+        <View style={styles.batchContainer}>
+          {batchGroups.map(([address, count]) => (
+            <Pressable
+              key={address}
+              style={styles.batchBtn}
+              onPress={() => handleBatchBoard(address)}
+            >
+              <Ionicons name="people" size={16} color={Colors.textInverse} />
+              <Text style={styles.batchBtnText}>
+                일괄 탑승 ({count}명) - {address.length > 15 ? address.slice(0, 15) + "..." : address}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {schedules.length === 0 ? (
         <View style={styles.emptyState}>
@@ -680,6 +808,62 @@ export default function DriverRouteScreen() {
           )}
         </>
       )}
+
+      {/* P2-48: Daily summary — shown when all schedules are done */}
+      {schedules.length > 0 && totalActive > 0 && completedCount + noShowCount >= totalActive && (
+        <View style={[styles.summaryContainer, Shadows.sm]}>
+          <Text style={styles.summaryTitle}>오늘 운행 요약</Text>
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue}>{totalActive}</Text>
+              <Text style={styles.summaryLabel}>총 학생</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryValue, { color: Colors.success }]}>{completedCount}</Text>
+              <Text style={styles.summaryLabel}>완료</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryValue, { color: Colors.warning }]}>{noShowCount}</Text>
+              <Text style={styles.summaryLabel}>미탑승</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryValue, { color: Colors.neutral }]}>{cancelledCount}</Text>
+              <Text style={styles.summaryLabel}>취소</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* P2-49: Memo modal */}
+      <Modal visible={memoModalId !== null} animationType="slide" transparent>
+        <View style={styles.memoOverlay}>
+          <View style={styles.memoContent}>
+            <View style={styles.memoHeader}>
+              <Text style={styles.memoTitle}>특이사항 메모</Text>
+              <Pressable onPress={() => setMemoModalId(null)}>
+                <Ionicons name="close" size={24} color={Colors.textSecondary} />
+              </Pressable>
+            </View>
+            <TextInput
+              style={styles.memoInput}
+              value={memoText}
+              onChangeText={setMemoText}
+              placeholder="특이사항을 입력하세요 (예: 차멀미 호소)"
+              multiline
+              autoFocus
+            />
+            <Pressable
+              style={[styles.memoSaveBtn, memoSaving && { opacity: 0.5 }]}
+              onPress={handleMemoSave}
+              disabled={memoSaving || !memoText.trim()}
+            >
+              <Text style={styles.memoSaveBtnText}>
+                {memoSaving ? "저장 중..." : "저장"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -955,5 +1139,120 @@ const styles = StyleSheet.create({
     color: Colors.textInverse,
     fontSize: Typography.sizes.sm,
     fontWeight: Typography.weights.semibold,
+  },
+
+  // P2-47: Batch board
+  batchContainer: {
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.xs,
+    backgroundColor: Colors.infoLight,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  batchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    backgroundColor: Colors.info,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.base,
+    borderRadius: Radius.md,
+  },
+  batchBtnText: {
+    color: Colors.textInverse,
+    fontWeight: Typography.weights.semibold,
+    fontSize: Typography.sizes.sm,
+  },
+
+  // P2-48: Daily summary
+  summaryContainer: {
+    backgroundColor: Colors.surface,
+    margin: Spacing.base,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
+  },
+  summaryTitle: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+    textAlign: "center",
+  },
+  summaryGrid: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  summaryItem: {
+    alignItems: "center",
+  },
+  summaryValue: {
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+  },
+  summaryLabel: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+
+  // P2-49: Memo button & modal
+  memoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: Spacing.xs,
+  },
+  memoBtnText: {
+    fontSize: 13,
+    color: Colors.info,
+  },
+  memoOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  memoContent: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    padding: Spacing.base,
+    paddingBottom: Spacing.xxl,
+  },
+  memoHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  memoTitle: {
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+  },
+  memoInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    fontSize: Typography.sizes.md,
+    color: Colors.textPrimary,
+    minHeight: 100,
+    textAlignVertical: "top",
+    backgroundColor: Colors.background,
+  },
+  memoSaveBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md,
+    alignItems: "center",
+    marginTop: Spacing.md,
+  },
+  memoSaveBtnText: {
+    color: Colors.textInverse,
+    fontWeight: Typography.weights.semibold,
+    fontSize: Typography.sizes.md,
   },
 });

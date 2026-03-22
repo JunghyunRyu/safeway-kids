@@ -294,7 +294,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <QuickLink
                 to="/schedules"
-                label="일일 파이프라인 실행"
+                label="배차 자동 생성"
                 icon={
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />

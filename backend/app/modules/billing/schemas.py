@@ -47,6 +47,21 @@ class InvoiceResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class InvoiceDetailItem(BaseModel):
+    schedule_date: date
+    pickup_time: str | None = None
+    status: str
+    price_per_ride: int
+
+
+class InvoiceDetailResponse(BaseModel):
+    invoice: InvoiceResponse
+    rides: list[InvoiceDetailItem]
+    price_per_ride: int
+    monthly_cap: int | None = None
+    cap_applied: bool = False
+
+
 class GenerateInvoicesRequest(BaseModel):
     academy_id: uuid.UUID
     billing_month: str  # "2026-03"

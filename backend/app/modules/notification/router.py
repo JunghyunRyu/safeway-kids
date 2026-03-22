@@ -12,6 +12,9 @@ from app.modules.notification.providers.fcm import FCMProvider
 from app.middleware.rbac import require_platform_admin
 from app.modules.notification.schemas import (
     ManualSendRequest,
+    NotificationPreferenceItem,
+    NotificationPreferencesResponse,
+    NotificationPreferencesUpdateRequest,
     RegisterFcmTokenRequest,
     SendTestPushRequest,
     SosRequest,
@@ -111,6 +114,72 @@ async def sos_alert(
     logger.info("[SOS] Alert from user=%s type=%s", current_user.id, body.sos_type)
 
     return SosResponse(success=True)
+
+
+@router.get("/preferences", response_model=NotificationPreferencesResponse)
+async def get_notification_preferences(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> NotificationPreferencesResponse:
+    """ITEM-P2-41: 알림 설정 조회"""
+    from app.modules.notification.models import NotificationPreference
+
+    stmt = select(NotificationPreference).where(
+        NotificationPreference.user_id == current_user.id
+    )
+    result = await db.execute(stmt)
+    prefs = result.scalars().all()
+
+    # Return all known types with defaults if not set
+    all_types = ["boarding", "alighting", "delay", "arrival", "no_show", "sos"]
+    all_channels = ["fcm", "sms"]
+    pref_map = {(p.channel, p.notification_type): p.enabled for p in prefs}
+
+    items = []
+    for ch in all_channels:
+        for nt in all_types:
+            items.append(NotificationPreferenceItem(
+                channel=ch,
+                notification_type=nt,
+                enabled=pref_map.get((ch, nt), True),
+            ))
+    return NotificationPreferencesResponse(preferences=items)
+
+
+@router.patch("/preferences", response_model=NotificationPreferencesResponse)
+async def update_notification_preferences(
+    body: NotificationPreferencesUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> NotificationPreferencesResponse:
+    """ITEM-P2-41: 알림 설정 업데이트 (SOS는 항상 enabled)"""
+    from app.modules.notification.models import NotificationPreference
+
+    for item in body.preferences:
+        # SOS notifications cannot be disabled
+        enabled = True if item.notification_type == "sos" else item.enabled
+
+        stmt = select(NotificationPreference).where(
+            NotificationPreference.user_id == current_user.id,
+            NotificationPreference.channel == item.channel,
+            NotificationPreference.notification_type == item.notification_type,
+        )
+        result = await db.execute(stmt)
+        pref = result.scalar_one_or_none()
+        if pref:
+            pref.enabled = enabled
+        else:
+            pref = NotificationPreference(
+                user_id=current_user.id,
+                channel=item.channel,
+                notification_type=item.notification_type,
+                enabled=enabled,
+            )
+            db.add(pref)
+    await db.flush()
+
+    # Return updated prefs
+    return await get_notification_preferences(db=db, current_user=current_user)
 
 
 @router.post("/manual-send")

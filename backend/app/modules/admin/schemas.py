@@ -58,6 +58,66 @@ class StudentSearchResult(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SupportTicketCreateRequest(BaseModel):
+    category: str
+    subject: str
+    description: str
+
+
+class SupportTicketUpdateRequest(BaseModel):
+    status: str | None = None
+    assigned_to: str | None = None
+
+
+class SupportTicketResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    user_name: str | None = None
+    category: str
+    subject: str
+    description: str
+    status: str
+    assigned_to: uuid.UUID | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PaginatedTicketResponse(BaseModel):
+    items: list[SupportTicketResponse]
+    total: int
+
+
+class AcademyStatsResponse(BaseModel):
+    total_schedules: int
+    completed: int
+    cancelled: int
+    no_show: int
+    on_time_rate: float
+    avg_delay_minutes: float
+
+
+class BoardingStatusItem(BaseModel):
+    student_id: uuid.UUID
+    student_name: str
+    academy_name: str | None = None
+    status: str
+    pickup_time: str | None = None
+    boarded_at: datetime | None = None
+    alighted_at: datetime | None = None
+
+
+class BoardingStatusResponse(BaseModel):
+    total: int
+    scheduled: int
+    boarded: int
+    completed: int
+    cancelled: int
+    no_show: int
+    items: list[BoardingStatusItem]
+
+
 class DriverInfoResponse(BaseModel):
     id: uuid.UUID
     name: str

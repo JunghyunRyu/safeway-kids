@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.middleware.consent import require_consent
-from app.modules.scheduling.models import DailyScheduleInstance, ScheduleTemplate, VehicleClearance
+from app.modules.scheduling.models import DailyScheduleInstance, DriverMemo, ScheduleTemplate, VehicleClearance
 from app.modules.scheduling.schemas import (
     DriverDailyScheduleResponse,
     ScheduleTemplateCreateRequest,
@@ -16,6 +16,24 @@ from app.modules.scheduling.schemas import (
 from app.modules.student_management.service import get_student
 
 logger = logging.getLogger(__name__)
+
+
+async def _broadcast_schedule_update(instance: DailyScheduleInstance, status: str) -> None:
+    """P2-52: Broadcast schedule status change via Redis → WebSocket (best-effort)."""
+    if not instance.vehicle_id:
+        return
+    try:
+        import json
+        from app.redis import redis_client
+        channel = f"vehicle:{instance.vehicle_id}:gps_updates"
+        payload = json.dumps({
+            "type": "schedule_updated",
+            "instance_id": str(instance.id),
+            "status": status,
+        })
+        await redis_client.publish(channel, payload)
+    except Exception:
+        pass  # WebSocket broadcast is best-effort
 
 
 def _mask_phone(phone: str | None) -> str | None:
@@ -178,6 +196,10 @@ async def cancel_daily_schedule(
     instance.cancelled_at = datetime.now(UTC)
     instance.cancelled_by = cancelled_by
     await db.flush()
+
+    # P2-52: broadcast schedule update
+    await _broadcast_schedule_update(instance, "cancelled")
+
     return instance
 
 
@@ -338,6 +360,9 @@ async def mark_boarded(
     instance.notification_sent = success
     await db.flush()
 
+    # P2-52: broadcast schedule update
+    await _broadcast_schedule_update(instance, "boarded")
+
     return instance
 
 
@@ -365,6 +390,9 @@ async def mark_no_show(
 
     # Send no-show notification to parent
     await _send_no_show_notification(db, instance, reason)
+
+    # P2-52: broadcast schedule update
+    await _broadcast_schedule_update(instance, "no_show")
 
     return instance
 
@@ -587,6 +615,9 @@ async def mark_alighted(
     instance.notification_sent = success
     await db.flush()
 
+    # P2-52: broadcast schedule update
+    await _broadcast_schedule_update(instance, "completed")
+
     return instance
 
 
@@ -681,6 +712,75 @@ async def _send_no_show_notification(
             await notif_service.send_critical_alert_sms(parent.phone, msg)
     except Exception:
         logger.warning("Failed to send no-show notification", exc_info=True)
+
+
+async def mark_alighted_with_handoff(
+    db: AsyncSession, instance_id: uuid.UUID, driver_id: uuid.UUID, handoff_type: str
+) -> DailyScheduleInstance:
+    """ITEM-P2-50: Mark alighted with handoff type."""
+    valid_handoff_types = {"guardian", "academy_staff", "self"}
+    if handoff_type not in valid_handoff_types:
+        from app.common.exceptions import ValidationError
+        raise ValidationError(detail=f"인수자 유형은 {', '.join(valid_handoff_types)} 중 하나여야 합니다")
+
+    stmt = select(DailyScheduleInstance).where(DailyScheduleInstance.id == instance_id)
+    result = await db.execute(stmt)
+    instance = result.scalar_one_or_none()
+    if not instance:
+        raise NotFoundError(detail="스케줄을 찾을 수 없습니다")
+
+    if driver_id and instance.vehicle_id:
+        await _verify_driver_vehicle(db, driver_id, instance.vehicle_id, instance.schedule_date)
+
+    instance.alighted_at = datetime.now(UTC)
+    instance.status = "completed"
+    instance.handoff_type = handoff_type
+    await db.flush()
+
+    success = await _send_alighting_push(db, instance)
+    instance.notification_sent = success
+    await db.flush()
+
+    return instance
+
+
+async def create_driver_memo(
+    db: AsyncSession, instance_id: uuid.UUID, driver_id: uuid.UUID, memo_text: str
+) -> DriverMemo:
+    """ITEM-P2-49: Create or update driver memo for a schedule instance."""
+    # Check instance exists
+    inst = (await db.execute(
+        select(DailyScheduleInstance).where(DailyScheduleInstance.id == instance_id)
+    )).scalar_one_or_none()
+    if not inst:
+        raise NotFoundError(detail="스케줄을 찾을 수 없습니다")
+
+    # Check if memo already exists, update if so
+    existing = (await db.execute(
+        select(DriverMemo).where(DriverMemo.daily_schedule_id == instance_id)
+    )).scalar_one_or_none()
+    if existing:
+        existing.memo = memo_text
+        await db.flush()
+        return existing
+
+    memo = DriverMemo(
+        daily_schedule_id=instance_id,
+        driver_id=driver_id,
+        memo=memo_text,
+    )
+    db.add(memo)
+    await db.flush()
+    return memo
+
+
+async def get_driver_memo(
+    db: AsyncSession, instance_id: uuid.UUID
+) -> DriverMemo | None:
+    """ITEM-P2-49: Get driver memo for a schedule instance."""
+    return (await db.execute(
+        select(DriverMemo).where(DriverMemo.daily_schedule_id == instance_id)
+    )).scalar_one_or_none()
 
 
 async def confirm_arrival(

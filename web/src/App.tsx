@@ -25,6 +25,9 @@ const PlatformMapPage = lazy(() => import('./pages/platform/PlatformMapPage'));
 const PlatformStudentSearchPage = lazy(() => import('./pages/platform/PlatformStudentSearchPage'));
 const PlatformNotificationLogsPage = lazy(() => import('./pages/platform/PlatformNotificationLogsPage'));
 const DriversPage = lazy(() => import('./pages/DriversPage'));
+const StatsPage = lazy(() => import('./pages/StatsPage'));
+const PlatformTicketsPage = lazy(() => import('./pages/platform/PlatformTicketsPage'));
+const PlatformBoardingStatusPage = lazy(() => import('./pages/platform/PlatformBoardingStatusPage'));
 
 function App() {
   const { user, loading, login, logout } = useAuth();
@@ -67,6 +70,9 @@ function App() {
                 <Route path="/student-search" element={<PlatformStudentSearchPage />} />
                 <Route path="/notification-logs" element={<PlatformNotificationLogsPage />} />
                 <Route path="/drivers" element={<DriversPage />} />
+                <Route path="/stats" element={<StatsPage />} />
+                <Route path="/tickets" element={<PlatformTicketsPage />} />
+                <Route path="/boarding-status" element={<PlatformBoardingStatusPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

@@ -105,12 +105,15 @@ export default function MapScreen() {
     if (!mapReady) return;
 
     locations.forEach((loc, vehicleId) => {
+      // P2-43: Include vehicle license plate as label
+      const schedule = schedules.find((s) => s.vehicle_id === vehicleId);
       sendToMap({
         type: "updateBus",
         vehicleId,
         lat: loc.latitude,
         lng: loc.longitude,
         heading: loc.heading,
+        label: schedule?.vehicle_license_plate ?? undefined,
       });
     });
 

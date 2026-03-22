@@ -173,6 +173,88 @@ async def generate_invoices(
     return {"invoices_created": invoices_created, "total_amount": total_amount}
 
 
+async def get_invoice_details(
+    db: AsyncSession, invoice_id: uuid.UUID, current_user,
+) -> dict:
+    """ITEM-P2-39: Get detailed invoice with per-ride breakdown."""
+    from app.common.exceptions import ForbiddenError, NotFoundError
+    from app.modules.academy_management.models import Academy
+    from app.modules.auth.models import UserRole
+
+    stmt = (
+        select(
+            Invoice,
+            Academy.name.label("academy_name"),
+            Student.name.label("student_name"),
+        )
+        .outerjoin(Academy, Invoice.academy_id == Academy.id)
+        .outerjoin(Student, Invoice.student_id == Student.id)
+        .where(Invoice.id == invoice_id)
+    )
+    row = (await db.execute(stmt)).one_or_none()
+    if not row:
+        raise NotFoundError(detail="청구서를 찾을 수 없습니다")
+
+    inv = row.Invoice
+    # IDOR: parent can only see own invoices
+    if current_user.role == UserRole.PARENT and inv.parent_id != current_user.id:
+        raise ForbiddenError(detail="본인의 청구서만 조회할 수 있습니다")
+
+    # Get billing plan for price_per_ride
+    plan = (await db.execute(
+        select(BillingPlan).where(
+            BillingPlan.academy_id == inv.academy_id,
+            BillingPlan.is_active.is_(True),
+        )
+    )).scalar_one_or_none()
+
+    price_per_ride = plan.price_per_ride if plan else 0
+    monthly_cap = plan.monthly_cap if plan else None
+
+    # Get individual rides for the billing month
+    year, month = int(inv.billing_month[:4]), int(inv.billing_month[5:7])
+    month_start = date(year, month, 1)
+    month_end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+
+    rides_stmt = (
+        select(DailyScheduleInstance)
+        .where(
+            DailyScheduleInstance.student_id == inv.student_id,
+            DailyScheduleInstance.academy_id == inv.academy_id,
+            DailyScheduleInstance.schedule_date >= month_start,
+            DailyScheduleInstance.schedule_date < month_end,
+            DailyScheduleInstance.status.in_(["boarded", "completed"]),
+        )
+        .order_by(DailyScheduleInstance.schedule_date, DailyScheduleInstance.pickup_time)
+    )
+    rides = (await db.execute(rides_stmt)).scalars().all()
+
+    ride_items = [
+        {
+            "schedule_date": r.schedule_date,
+            "pickup_time": str(r.pickup_time) if r.pickup_time else None,
+            "status": r.status,
+            "price_per_ride": price_per_ride,
+        }
+        for r in rides
+    ]
+
+    raw_total = len(rides) * price_per_ride
+    cap_applied = monthly_cap is not None and raw_total > monthly_cap
+
+    invoice_dict = {c.key: getattr(inv, c.key) for c in inv.__table__.columns}
+    invoice_dict["academy_name"] = row.academy_name
+    invoice_dict["student_name"] = row.student_name
+
+    return {
+        "invoice": invoice_dict,
+        "rides": ride_items,
+        "price_per_ride": price_per_ride,
+        "monthly_cap": monthly_cap,
+        "cap_applied": cap_applied,
+    }
+
+
 async def get_parent_invoices(
     db: AsyncSession, parent_id: uuid.UUID
 ) -> list[dict]:

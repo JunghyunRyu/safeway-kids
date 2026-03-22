@@ -18,6 +18,7 @@ from app.modules.billing.schemas import (
     BillingPlanUpdateRequest,
     GenerateInvoicesRequest,
     GenerateInvoicesResponse,
+    InvoiceDetailResponse,
     InvoiceResponse,
     PaymentConfirmRequest,
     PaymentConfirmResponse,
@@ -172,6 +173,17 @@ async def academy_invoices(
     else:
         invoices = await service.get_all_invoices(db, billing_month)
     return [InvoiceResponse.model_validate(i) for i in invoices]
+
+
+@router.get("/invoices/{invoice_id}/details", response_model=InvoiceDetailResponse)
+async def get_invoice_details(
+    invoice_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> InvoiceDetailResponse:
+    """ITEM-P2-39: 청구서 상세 내역 (일자별 탑승 기록)"""
+    result = await service.get_invoice_details(db, invoice_id, current_user)
+    return InvoiceDetailResponse(**result)
 
 
 @router.post("/invoices/{invoice_id}/mark-paid", response_model=InvoiceResponse)

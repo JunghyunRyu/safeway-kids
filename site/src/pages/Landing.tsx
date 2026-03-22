@@ -344,6 +344,70 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <section className="py-20 md:py-28 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-4">이용 후기</h2>
+            <p className="text-gray-500 text-lg">실제 이용자분들의 생생한 후기입니다</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "김지현 학부모",
+                role: "초등학교 2학년 자녀",
+                quote: "아이가 학원버스에 탔는지 안 탔는지 매번 전화해서 확인했는데, 이제 앱으로 바로 알림이 와서 너무 편해요. 실시간 위치도 볼 수 있어서 안심이 됩니다.",
+              },
+              {
+                name: "박민수 원장",
+                role: "영어학원 운영 15년차",
+                quote: "차량 3대를 직접 관리하던 때보다 운영비가 줄었어요. 기사 관리, 보험, 차량 유지비 부담이 없어지니 학원 운영에만 집중할 수 있습니다.",
+              },
+              {
+                name: "이승호 기사님",
+                role: "셔틀버스 운전 7년차",
+                quote: "AI가 경로를 잡아주니까 운행 시간이 확실히 줄었어요. 정규직으로 전환되면서 고용 안정도 생기고, 체계적인 교육도 받을 수 있어서 좋습니다.",
+              },
+            ].map((t) => (
+              <div
+                key={t.name}
+                className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="text-primary text-3xl mb-4">"</div>
+                <p className="text-gray-600 text-sm leading-relaxed mb-6">{t.quote}</p>
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="font-bold text-gray-800">{t.name}</p>
+                  <p className="text-xs text-gray-500">{t.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Mid-funnel CTA — Brochure Download */}
+      <section className="py-16 bg-primary">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-4">
+            서비스 소개서 다운로드
+          </h2>
+          <p className="text-primary-light text-lg mb-8">
+            SAFEWAY KIDS의 서비스 안내, 요금 정보, 안전 시스템을 한눈에 확인하세요
+          </p>
+          <a
+            href="/brochure/safeway-kids-brochure.pdf"
+            download
+            className="inline-flex items-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-primary font-semibold rounded-2xl transition shadow-lg hover:-translate-y-0.5"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            소개서 PDF 다운로드
+          </a>
+        </div>
+      </section>
+
       {/* Pricing */}
       <section id="pricing" className="py-20 md:py-28 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">

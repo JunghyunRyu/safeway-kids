@@ -167,9 +167,29 @@ export default function PlatformUploadPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">엑셀 업로드</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">엑셀 업로드</h2>
+        <button
+          onClick={() => {
+            const headers = ['이름', '생년월일(YYYY-MM-DD)', '성별(M/F)', '학교명', '보호자 이름', '보호자 연락처', '픽업 주소', '특이사항', '알레르기'];
+            const csvContent = '\uFEFF' + headers.join(',') + '\n';
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '학생등록_템플릿.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm font-medium transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          템플릿 다운로드
+        </button>
+      </div>
 
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
         {/* Academy selector */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-1">학원 선택</label>

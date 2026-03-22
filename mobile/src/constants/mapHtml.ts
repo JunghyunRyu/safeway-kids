@@ -59,7 +59,10 @@ export const MAP_HTML_CONTENT = `<!DOCTYPE html>
           initMap(msg.apiKey, msg.center);
           break;
         case 'updateBus':
-          updateBusMarker(msg.vehicleId, msg.lat, msg.lng, msg.heading);
+          updateBusMarker(msg.vehicleId, msg.lat, msg.lng, msg.heading, msg.label);
+          break;
+        case 'drawRoute':
+          drawRouteLine(msg.coords);
           break;
         case 'setStops':
           setStopMarkers(msg.stops);
@@ -123,11 +126,16 @@ export const MAP_HTML_CONTENT = `<!DOCTYPE html>
       sendToRN({ type: 'mapReady' });
     }
 
-    function updateBusMarker(vehicleId, lat, lng, heading) {
+    var busLabels = {};
+
+    function updateBusMarker(vehicleId, lat, lng, heading, label) {
       if (!map) return;
       var position = new kakao.maps.LatLng(lat, lng);
       if (busMarkers[vehicleId]) {
         busMarkers[vehicleId].setPosition(position);
+        if (label && busLabels[vehicleId]) {
+          busLabels[vehicleId].setPosition(position);
+        }
       } else {
         var markerImage = new kakao.maps.MarkerImage(
           'data:image/svg+xml,' + encodeURIComponent(
@@ -145,8 +153,38 @@ export const MAP_HTML_CONTENT = `<!DOCTYPE html>
           image: markerImage,
         });
         busMarkers[vehicleId] = marker;
+
+        // P2-43: Add label overlay for bus marker
+        if (label) {
+          var content = '<div style="padding:2px 6px;background:rgba(33,150,243,0.85);color:#fff;font-size:11px;border-radius:8px;white-space:nowrap;margin-bottom:36px;font-weight:bold;">' + label + '</div>';
+          var customOverlay = new kakao.maps.CustomOverlay({
+            position: position,
+            content: content,
+            yAnchor: 1,
+          });
+          customOverlay.setMap(map);
+          busLabels[vehicleId] = customOverlay;
+        }
       }
       map.panTo(position);
+    }
+
+    // P2-51: Draw route polyline
+    var routePolyline = null;
+
+    function drawRouteLine(coords) {
+      if (!map) return;
+      if (routePolyline) routePolyline.setMap(null);
+      if (!coords || coords.length < 2) return;
+      var path = coords.map(function(c) { return new kakao.maps.LatLng(c.lat, c.lng); });
+      routePolyline = new kakao.maps.Polyline({
+        map: map,
+        path: path,
+        strokeWeight: 4,
+        strokeColor: '#1976D2',
+        strokeOpacity: 0.8,
+        strokeStyle: 'solid',
+      });
     }
 
     var pickupMarkers = [];

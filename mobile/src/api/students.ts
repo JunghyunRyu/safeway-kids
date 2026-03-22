@@ -6,6 +6,10 @@ export interface Student {
   name: string;
   date_of_birth: string;
   grade: string | null;
+  special_notes: string | null;
+  allergies: string | null;
+  emergency_contact: string | null;
+  school_name: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -30,5 +34,19 @@ export async function getStudent(studentId: string): Promise<Student> {
 
 export async function listEnrollments(studentId: string): Promise<Enrollment[]> {
   const resp = await apiClient.get(`/students/${studentId}/enrollments`);
+  return resp.data;
+}
+
+export async function updateStudentProfile(
+  studentId: string,
+  data: {
+    special_notes?: string;
+    allergies?: string;
+    emergency_contact?: string;
+    school_name?: string;
+    grade?: string;
+  },
+): Promise<Student> {
+  const resp = await apiClient.patch(`/students/${studentId}`, data);
   return resp.data;
 }

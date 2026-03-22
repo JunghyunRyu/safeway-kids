@@ -49,6 +49,7 @@ class DailyScheduleResponse(BaseModel):
     boarded_at: datetime | None
     alighted_at: datetime | None
     arrival_confirmed_at: datetime | None = None
+    handoff_type: str | None = None
     notification_sent: bool | None = None
     created_at: datetime
 
@@ -75,6 +76,28 @@ class DriverDailyScheduleResponse(BaseModel):
     alighted_at: datetime | None
     arrival_confirmed_at: datetime | None = None
     notification_sent: bool | None = None
+
+
+class BatchBoardRequest(BaseModel):
+    instance_ids: list[uuid.UUID] = Field(..., min_length=1, description="일괄 탑승 처리할 인스턴스 ID 목록")
+
+
+class AlightWithHandoffRequest(BaseModel):
+    handoff_type: str = Field(..., description="인수자 유형: guardian / academy_staff / self")
+
+
+class DriverMemoRequest(BaseModel):
+    memo: str = Field(..., min_length=1, max_length=500, description="특이사항 메모")
+
+
+class DriverMemoResponse(BaseModel):
+    id: uuid.UUID
+    daily_schedule_id: uuid.UUID
+    driver_id: uuid.UUID
+    memo: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class ScheduleCancelRequest(BaseModel):

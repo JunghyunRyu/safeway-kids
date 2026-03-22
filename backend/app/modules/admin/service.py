@@ -432,6 +432,213 @@ async def list_academy_drivers(db: AsyncSession, academy_id) -> list:
     return results
 
 
+async def get_academy_stats(
+    db: AsyncSession, academy_id, start_date, end_date,
+) -> dict:
+    """ITEM-P2-54: Academy operation stats for a date range."""
+    from app.modules.scheduling.models import DailyScheduleInstance
+
+    stmt = select(DailyScheduleInstance).where(
+        DailyScheduleInstance.academy_id == academy_id,
+        DailyScheduleInstance.schedule_date >= start_date,
+        DailyScheduleInstance.schedule_date <= end_date,
+    )
+    result = await db.execute(stmt)
+    instances = list(result.scalars().all())
+
+    total = len(instances)
+    completed = sum(1 for i in instances if i.status == "completed")
+    cancelled = sum(1 for i in instances if i.status == "cancelled")
+    no_show = sum(1 for i in instances if i.status == "no_show")
+
+    # On-time rate: completed without delay_notified_at
+    on_time = sum(1 for i in instances if i.status == "completed" and not i.delay_notified_at)
+    on_time_rate = (on_time / completed * 100) if completed > 0 else 100.0
+
+    # Avg delay (only delayed instances)
+    delayed = [i for i in instances if i.delay_notified_at and i.boarded_at]
+    avg_delay = 0.0
+    if delayed:
+        delays = []
+        for i in delayed:
+            from datetime import datetime, time as time_type
+            scheduled_dt = datetime.combine(i.schedule_date, i.pickup_time)
+            actual_dt = i.boarded_at.replace(tzinfo=None) if i.boarded_at else scheduled_dt
+            diff = (actual_dt - scheduled_dt).total_seconds() / 60
+            delays.append(max(0, diff))
+        avg_delay = sum(delays) / len(delays) if delays else 0.0
+
+    return {
+        "total_schedules": total,
+        "completed": completed,
+        "cancelled": cancelled,
+        "no_show": no_show,
+        "on_time_rate": round(on_time_rate, 1),
+        "avg_delay_minutes": round(avg_delay, 1),
+    }
+
+
+async def create_support_ticket(db: AsyncSession, user, body) -> dict:
+    """ITEM-P2-57: Create a support ticket."""
+    from app.modules.admin.models import SupportTicket
+
+    ticket = SupportTicket(
+        user_id=user.id,
+        category=body.category,
+        subject=body.subject,
+        description=body.description,
+    )
+    db.add(ticket)
+    await db.flush()
+    return {
+        "id": ticket.id,
+        "user_id": ticket.user_id,
+        "user_name": user.name,
+        "category": ticket.category,
+        "subject": ticket.subject,
+        "description": ticket.description,
+        "status": ticket.status,
+        "assigned_to": ticket.assigned_to,
+        "created_at": ticket.created_at,
+        "updated_at": ticket.updated_at,
+    }
+
+
+async def list_support_tickets(db: AsyncSession, user, status_filter, skip, limit) -> dict:
+    """ITEM-P2-57: List support tickets."""
+    from app.modules.admin.models import SupportTicket
+    from app.modules.auth.models import UserRole
+
+    query = select(SupportTicket).order_by(SupportTicket.created_at.desc())
+
+    # Non-admin users see only their own tickets
+    if user.role not in (UserRole.PLATFORM_ADMIN, UserRole.ACADEMY_ADMIN):
+        query = query.where(SupportTicket.user_id == user.id)
+
+    if status_filter:
+        query = query.where(SupportTicket.status == status_filter)
+
+    total = await db.scalar(select(func.count()).select_from(query.subquery()))
+    items = (await db.execute(query.offset(skip).limit(limit))).scalars().all()
+
+    # Enrich with user_name
+    user_ids = {t.user_id for t in items}
+    users_map = {}
+    if user_ids:
+        u_result = await db.execute(select(User).where(User.id.in_(user_ids)))
+        users_map = {u.id: u.name for u in u_result.scalars().all()}
+
+    ticket_list = []
+    for t in items:
+        ticket_list.append({
+            "id": t.id,
+            "user_id": t.user_id,
+            "user_name": users_map.get(t.user_id),
+            "category": t.category,
+            "subject": t.subject,
+            "description": t.description,
+            "status": t.status,
+            "assigned_to": t.assigned_to,
+            "created_at": t.created_at,
+            "updated_at": t.updated_at,
+        })
+    return {"items": ticket_list, "total": total or 0}
+
+
+async def update_support_ticket(db: AsyncSession, ticket_id, body) -> dict:
+    """ITEM-P2-57: Update ticket status."""
+    from app.modules.admin.models import SupportTicket
+    from app.common.exceptions import NotFoundError
+
+    ticket = (await db.execute(
+        select(SupportTicket).where(SupportTicket.id == ticket_id)
+    )).scalar_one_or_none()
+    if not ticket:
+        raise NotFoundError(detail="문의를 찾을 수 없습니다")
+
+    if body.status:
+        ticket.status = body.status
+    if body.assigned_to:
+        import uuid as _uuid
+        ticket.assigned_to = _uuid.UUID(body.assigned_to)
+    await db.flush()
+
+    return {
+        "id": ticket.id,
+        "user_id": ticket.user_id,
+        "user_name": None,
+        "category": ticket.category,
+        "subject": ticket.subject,
+        "description": ticket.description,
+        "status": ticket.status,
+        "assigned_to": ticket.assigned_to,
+        "created_at": ticket.created_at,
+        "updated_at": ticket.updated_at,
+    }
+
+
+async def get_boarding_status(db: AsyncSession, target_date, current_user) -> dict:
+    """ITEM-P2-58: Get boarding status for a date."""
+    from app.modules.academy_management.models import Academy
+    from app.modules.auth.models import UserRole
+    from app.modules.scheduling.models import DailyScheduleInstance
+    from app.modules.student_management.models import Student
+
+    stmt = select(DailyScheduleInstance).where(
+        DailyScheduleInstance.schedule_date == target_date,
+    )
+    # Academy admin sees only their academy
+    if current_user.role == UserRole.ACADEMY_ADMIN:
+        academy = (await db.execute(
+            select(Academy).where(Academy.admin_id == current_user.id)
+        )).scalar_one_or_none()
+        if academy:
+            stmt = stmt.where(DailyScheduleInstance.academy_id == academy.id)
+
+    result = await db.execute(stmt.order_by(DailyScheduleInstance.pickup_time))
+    instances = list(result.scalars().all())
+
+    # Batch-load students and academies
+    student_ids = {i.student_id for i in instances}
+    academy_ids = {i.academy_id for i in instances}
+    students_map = {}
+    if student_ids:
+        s_result = await db.execute(select(Student).where(Student.id.in_(student_ids)))
+        students_map = {s.id: s.name for s in s_result.scalars().all()}
+    academies_map = {}
+    if academy_ids:
+        a_result = await db.execute(select(Academy).where(Academy.id.in_(academy_ids)))
+        academies_map = {a.id: a.name for a in a_result.scalars().all()}
+
+    scheduled = sum(1 for i in instances if i.status == "scheduled" and not i.boarded_at)
+    boarded = sum(1 for i in instances if i.boarded_at and not i.alighted_at and i.status != "completed")
+    completed = sum(1 for i in instances if i.status == "completed")
+    cancelled = sum(1 for i in instances if i.status == "cancelled")
+    no_show = sum(1 for i in instances if i.status == "no_show")
+
+    items = []
+    for inst in instances:
+        items.append({
+            "student_id": inst.student_id,
+            "student_name": students_map.get(inst.student_id, ""),
+            "academy_name": academies_map.get(inst.academy_id),
+            "status": inst.status,
+            "pickup_time": str(inst.pickup_time) if inst.pickup_time else None,
+            "boarded_at": inst.boarded_at,
+            "alighted_at": inst.alighted_at,
+        })
+
+    return {
+        "total": len(instances),
+        "scheduled": scheduled,
+        "boarded": boarded,
+        "completed": completed,
+        "cancelled": cancelled,
+        "no_show": no_show,
+        "items": items,
+    }
+
+
 async def list_audit_logs(
     db: AsyncSession,
     entity_type: str | None = None,

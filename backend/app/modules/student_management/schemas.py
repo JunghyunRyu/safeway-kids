@@ -14,6 +14,10 @@ class StudentCreateRequest(BaseModel):
 class StudentUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     grade: str | None = None
+    special_notes: str | None = None
+    allergies: str | None = None
+    emergency_contact: str | None = Field(default=None, max_length=20)
+    school_name: str | None = Field(default=None, max_length=100)
 
 
 class StudentResponse(BaseModel):
@@ -22,6 +26,10 @@ class StudentResponse(BaseModel):
     name: str
     date_of_birth: date
     grade: str | None
+    special_notes: str | None = None
+    allergies: str | None = None
+    emergency_contact: str | None = None
+    school_name: str | None = None
     is_active: bool
     created_at: datetime
 
@@ -45,6 +53,24 @@ class EnrollmentResponse(BaseModel):
 class PaginatedStudentListResponse(BaseModel):
     items: list[StudentResponse]
     total: int
+
+
+class SecondaryGuardianCreateRequest(BaseModel):
+    guardian_phone: str = Field(..., pattern=r"^01[0-9]{8,9}$", description="보조 보호자 전화번호")
+    relationship: str = Field(..., max_length=20, description="관계 (배우자/조부모/기타)")
+
+
+class SecondaryGuardianResponse(BaseModel):
+    id: uuid.UUID
+    student_id: uuid.UUID
+    guardian_id: uuid.UUID
+    guardian_name: str | None = None
+    guardian_phone: str | None = None
+    relationship: str
+    is_active: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class BulkUploadRowResult(BaseModel):

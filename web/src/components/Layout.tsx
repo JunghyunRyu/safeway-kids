@@ -11,6 +11,8 @@ const academyNavItems = [
   { to: '/drivers', label: '기사 관리', icon: '🚗' },
   { to: '/billing', label: '청구 관리', icon: '💰' },
   { to: '/upload', label: '엑셀 업로드', icon: '📤' },
+  { to: '/compliance', label: '컴플라이언스', icon: '📋' },
+  { to: '/stats', label: '운행 통계', icon: '📈' },
   { to: '/map', label: '관제 센터', icon: '🗺️' },
 ];
 
@@ -25,6 +27,8 @@ const platformNavItems = [
   { to: '/upload', label: '엑셀 업로드', icon: '📤' },
   { to: '/compliance', label: '컴플라이언스', icon: '📋' },
   { to: '/notification-logs', label: '알림 이력', icon: '🔔' },
+  { to: '/tickets', label: 'CS 문의 관리', icon: '🎫' },
+  { to: '/boarding-status', label: '탑승 현황', icon: '🚌' },
   { to: '/seed', label: '시드 데이터', icon: '🌱' },
   { to: '/audit-logs', label: '감사 로그', icon: '🔍' },
   { to: '/map', label: '관제 센터', icon: '🗺️' },

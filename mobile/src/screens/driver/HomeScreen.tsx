@@ -115,15 +115,16 @@ export default function DriverHomeScreen() {
             ) : null}
           </View>
 
+          {/* P2-48: Driver daily report summary */}
           <View style={[styles.statCard, Shadows.sm]}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{boardedCount}</Text>
-              <Text style={styles.statLabel}>탑승</Text>
-            </View>
-            <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{schedules.length}</Text>
               <Text style={styles.statLabel}>총 학생</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{boardedCount}</Text>
+              <Text style={styles.statLabel}>탑승</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
@@ -132,7 +133,27 @@ export default function DriverHomeScreen() {
               </Text>
               <Text style={styles.statLabel}>완료</Text>
             </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: Colors.danger }]}>
+                {schedules.filter((s) => s.status === "no_show").length}
+              </Text>
+              <Text style={styles.statLabel}>미탑승</Text>
+            </View>
           </View>
+
+          {/* Daily report: cancellations */}
+          {schedules.filter((s) => s.status === "cancelled").length > 0 && (
+            <View style={[styles.card, Shadows.sm, { marginTop: Spacing.md }]}>
+              <View style={styles.cardHeaderRow}>
+                <Ionicons name="information-circle-outline" size={20} color={Colors.warning} />
+                <Text style={styles.cardTitle}>취소 현황</Text>
+              </View>
+              <Text style={styles.infoLabel}>
+                {schedules.filter((s) => s.status === "cancelled").length}건 취소됨
+              </Text>
+            </View>
+          )}
         </>
       )}
     </ScrollView>

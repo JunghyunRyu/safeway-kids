@@ -10,10 +10,16 @@ from app.middleware.auth import get_current_user
 from app.middleware.rbac import require_platform_admin, require_roles
 from app.modules.admin import service
 from app.modules.admin.schemas import (
+    AcademyStatsResponse,
+    BoardingStatusResponse,
     DriverInfoResponse,
     PaginatedAuditLogResponse,
     PaginatedNotificationLogResponse,
+    PaginatedTicketResponse,
     StudentSearchResult,
+    SupportTicketCreateRequest,
+    SupportTicketResponse,
+    SupportTicketUpdateRequest,
 )
 from app.modules.auth.models import User, UserRole
 
@@ -106,3 +112,83 @@ async def list_academy_drivers(
         if not _result.scalar_one_or_none():
             raise ForbiddenError(detail="본인 학원의 기사만 조회할 수 있습니다")
     return await service.list_academy_drivers(db, academy_id)
+
+
+# --- P2-54: Academy stats ---
+
+
+@router.get("/academy/{academy_id}/stats", response_model=AcademyStatsResponse)
+async def get_academy_stats(
+    academy_id: uuid.UUID,
+    start_date: str = Query(..., description="시작일 YYYY-MM-DD"),
+    end_date: str = Query(..., description="종료일 YYYY-MM-DD"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
+) -> AcademyStatsResponse:
+    """ITEM-P2-54: 학원별 운행 통계"""
+    from datetime import date as date_type
+
+    if current_user.role == UserRole.ACADEMY_ADMIN:
+        from sqlalchemy import select as _select
+        from app.modules.academy_management.models import Academy
+        _result = await db.execute(
+            _select(Academy).where(Academy.id == academy_id, Academy.admin_id == current_user.id)
+        )
+        if not _result.scalar_one_or_none():
+            raise ForbiddenError(detail="본인 학원의 통계만 조회할 수 있습니다")
+
+    sd = date_type.fromisoformat(start_date)
+    ed = date_type.fromisoformat(end_date)
+    return await service.get_academy_stats(db, academy_id, sd, ed)
+
+
+# --- P2-57: Support tickets ---
+
+
+@router.post("/support/tickets", response_model=SupportTicketResponse, status_code=201)
+async def create_ticket(
+    body: SupportTicketCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SupportTicketResponse:
+    """ITEM-P2-57: 문의 접수"""
+    return await service.create_support_ticket(db, current_user, body)
+
+
+@router.get("/support/tickets", response_model=PaginatedTicketResponse)
+async def list_tickets(
+    status_filter: str | None = Query(None, alias="status"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """ITEM-P2-57: 문의 목록 (본인 or 관리자 전체)"""
+    skip = (page - 1) * page_size
+    return await service.list_support_tickets(db, current_user, status_filter, skip, page_size)
+
+
+@router.patch("/support/tickets/{ticket_id}", response_model=SupportTicketResponse)
+async def update_ticket(
+    ticket_id: uuid.UUID,
+    body: SupportTicketUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.PLATFORM_ADMIN, UserRole.ACADEMY_ADMIN)),
+) -> SupportTicketResponse:
+    """ITEM-P2-57: 문의 상태 변경 (관리자)"""
+    return await service.update_support_ticket(db, ticket_id, body)
+
+
+# --- P2-58: Boarding status dashboard ---
+
+
+@router.get("/boarding-status", response_model=BoardingStatusResponse)
+async def get_boarding_status(
+    date: str = Query(..., description="조회 날짜 YYYY-MM-DD"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.PLATFORM_ADMIN, UserRole.ACADEMY_ADMIN)),
+) -> BoardingStatusResponse:
+    """ITEM-P2-58: 탑승 현황 대시보드"""
+    from datetime import date as date_type
+    d = date_type.fromisoformat(date)
+    return await service.get_boarding_status(db, d, current_user)

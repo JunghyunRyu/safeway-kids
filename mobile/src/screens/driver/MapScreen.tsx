@@ -124,6 +124,16 @@ export default function DriverMapScreen() {
     }));
 
     sendToMap({ type: "setStops", stops });
+
+    // P2-51: Draw route polyline from ordered stop coordinates
+    if (orderedSchedules.length >= 2) {
+      const coords = orderedSchedules
+        .filter((s) => s.pickup_latitude && s.pickup_longitude)
+        .map((s) => ({ lat: s.pickup_latitude, lng: s.pickup_longitude }));
+      if (coords.length >= 2) {
+        sendToMap({ type: "drawRoute", coords });
+      }
+    }
   }, [mapReady, schedules, routePlan]);
 
   // Update driver position on map from local GPS

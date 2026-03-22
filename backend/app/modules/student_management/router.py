@@ -12,6 +12,8 @@ from app.modules.student_management.schemas import (
     EnrollmentCreateRequest,
     EnrollmentResponse,
     PaginatedStudentListResponse,
+    SecondaryGuardianCreateRequest,
+    SecondaryGuardianResponse,
     StudentCreateRequest,
     StudentResponse,
     StudentUpdateRequest,
@@ -203,6 +205,40 @@ async def enroll_student(
     """학원 등록"""
     enrollment = await service.enroll_student(db, student_id, current_user.id, body)
     return EnrollmentResponse.model_validate(enrollment)
+
+
+@router.post("/{student_id}/guardians", response_model=SecondaryGuardianResponse, status_code=201)
+async def add_secondary_guardian(
+    student_id: uuid.UUID,
+    body: SecondaryGuardianCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.PARENT)),
+) -> SecondaryGuardianResponse:
+    """ITEM-P2-40: 보조 보호자 추가 (주 보호자만 가능, 최대 3명)"""
+    result = await service.add_secondary_guardian(db, student_id, current_user.id, body)
+    return result
+
+
+@router.get("/{student_id}/guardians", response_model=list[SecondaryGuardianResponse])
+async def list_secondary_guardians(
+    student_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.PARENT, UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)),
+) -> list[SecondaryGuardianResponse]:
+    """ITEM-P2-40: 보조 보호자 목록"""
+    return await service.list_secondary_guardians(db, student_id, current_user)
+
+
+@router.delete("/{student_id}/guardians/{guardian_id}")
+async def remove_secondary_guardian(
+    student_id: uuid.UUID,
+    guardian_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.PARENT)),
+) -> dict:
+    """ITEM-P2-40: 보조 보호자 삭제"""
+    await service.remove_secondary_guardian(db, student_id, current_user.id, guardian_id)
+    return {"status": "ok"}
 
 
 @router.delete(

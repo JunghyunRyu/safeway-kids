@@ -10,8 +10,12 @@ from app.middleware.rbac import require_roles
 from app.modules.auth.models import User, UserRole
 from app.modules.scheduling import service
 from app.modules.scheduling.schemas import (
+    AlightWithHandoffRequest,
+    BatchBoardRequest,
     DailyScheduleResponse,
     DriverDailyScheduleResponse,
+    DriverMemoRequest,
+    DriverMemoResponse,
     NoShowRequest,
     RouteSessionRequest,
     RouteSessionResponse,
@@ -116,6 +120,59 @@ async def list_daily_schedules(
         guardian_id=current_user.id if current_user.role == UserRole.PARENT else None,
     )
     return [DailyScheduleResponse(**r) for r in results]
+
+
+@router.post("/daily/batch-board", response_model=list[DailyScheduleResponse])
+async def batch_board(
+    body: BatchBoardRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER, UserRole.SAFETY_ESCORT)),
+) -> list[DailyScheduleResponse]:
+    """ITEM-P2-47: 동일 정류장 일괄 탑승 처리"""
+    results = []
+    for instance_id in body.instance_ids:
+        instance = await service.mark_boarded(db, instance_id, driver_id=current_user.id)
+        results.append(DailyScheduleResponse.model_validate(instance))
+    return results
+
+
+@router.post("/daily/{instance_id}/alight-handoff", response_model=DailyScheduleResponse)
+async def alight_with_handoff(
+    instance_id: uuid.UUID,
+    body: AlightWithHandoffRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER, UserRole.SAFETY_ESCORT)),
+) -> DailyScheduleResponse:
+    """ITEM-P2-50: 하차 처리 + 인수자 확인"""
+    instance = await service.mark_alighted_with_handoff(
+        db, instance_id, current_user.id, body.handoff_type
+    )
+    return DailyScheduleResponse.model_validate(instance)
+
+
+@router.post("/daily/{instance_id}/memo", response_model=DriverMemoResponse, status_code=201)
+async def create_driver_memo(
+    instance_id: uuid.UUID,
+    body: DriverMemoRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER, UserRole.SAFETY_ESCORT)),
+) -> DriverMemoResponse:
+    """ITEM-P2-49: 기사 특이사항 메모 등록"""
+    memo = await service.create_driver_memo(db, instance_id, current_user.id, body.memo)
+    return DriverMemoResponse.model_validate(memo)
+
+
+@router.get("/daily/{instance_id}/memo", response_model=DriverMemoResponse | None)
+async def get_driver_memo(
+    instance_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(
+        UserRole.DRIVER, UserRole.SAFETY_ESCORT, UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN
+    )),
+) -> DriverMemoResponse | None:
+    """ITEM-P2-49: 기사 메모 조회"""
+    memo = await service.get_driver_memo(db, instance_id)
+    return DriverMemoResponse.model_validate(memo) if memo else None
 
 
 @router.post("/daily/{instance_id}/cancel", response_model=DailyScheduleResponse)

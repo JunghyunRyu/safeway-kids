@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
@@ -48,6 +49,7 @@ interface ScheduleCardProps {
   academyName: string | null;
   vehiclePlate: string | null;
   driverName: string | null;
+  onPress?: () => void;
 }
 
 const ScheduleCard = memo(function ScheduleCard({
@@ -57,13 +59,17 @@ const ScheduleCard = memo(function ScheduleCard({
   academyName,
   vehiclePlate,
   driverName,
+  onPress,
 }: ScheduleCardProps) {
   const { t } = useTranslation();
   const statusColor = STATUS_COLORS[status] ?? Colors.neutral;
   const statusBg = STATUS_BG_COLORS[status] ?? Colors.neutralLight;
 
   return (
-    <View style={[styles.card, Shadows.sm]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.card, Shadows.sm, pressed && { opacity: 0.8 }]}
+    >
       <View style={styles.cardHeader}>
         <Text style={styles.studentName}>{studentName}</Text>
         <View style={[styles.badge, { backgroundColor: statusBg }]}>
@@ -83,18 +89,20 @@ const ScheduleCard = memo(function ScheduleCard({
           {[vehiclePlate, driverName].filter(Boolean).join(" · ")}
         </Text>
       ) : null}
-    </View>
+    </Pressable>
   );
 });
 
 export default function ParentHomeScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [students, setStudents] = useState<Student[]>([]);
   const [schedules, setSchedules] = useState<DailySchedule[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -121,9 +129,17 @@ export default function ParentHomeScreen() {
     setRefreshing(false);
   }, [load]);
 
-  const filteredSchedules = selectedStudentId
+  const allFiltered = selectedStudentId
     ? schedules.filter((s) => s.student_id === selectedStudentId)
     : schedules;
+
+  // P2-42: Separate active vs completed/cancelled
+  const activeSchedules = allFiltered.filter(
+    (s) => s.status === "scheduled" || s.status === "boarded"
+  );
+  const completedSchedules = allFiltered.filter(
+    (s) => s.status === "completed" || s.status === "cancelled" || s.status === "no_show"
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: DailySchedule }) => {
@@ -136,10 +152,18 @@ export default function ParentHomeScreen() {
           academyName={item.academy_name}
           vehiclePlate={item.vehicle_license_plate}
           driverName={item.driver_name}
+          onPress={() => {
+            // P2-44: Navigate to Map tab on card tap
+            try {
+              navigation.navigate("ParentMap");
+            } catch {
+              // tab may not exist
+            }
+          }}
         />
       );
     },
-    [students]
+    [students, navigation]
   );
 
   const keyExtractor = useCallback((item: DailySchedule) => item.id, []);
@@ -192,16 +216,16 @@ export default function ParentHomeScreen() {
       {/* 오늘 일정 */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{t("home.todaySchedule")}</Text>
-        <Text style={styles.sectionCount}>{filteredSchedules.length}건</Text>
+        <Text style={styles.sectionCount}>{activeSchedules.length}건</Text>
       </View>
 
-      {filteredSchedules.length === 0 ? (
+      {activeSchedules.length === 0 && completedSchedules.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>{t("home.noSchedule")}</Text>
         </View>
       ) : (
         <FlatList
-          data={filteredSchedules}
+          data={activeSchedules}
           keyExtractor={keyExtractor}
           refreshControl={
             <RefreshControl
@@ -212,6 +236,36 @@ export default function ParentHomeScreen() {
           }
           renderItem={renderItem}
           contentContainerStyle={styles.list}
+          ListFooterComponent={
+            completedSchedules.length > 0 ? (
+              <View>
+                <Pressable
+                  style={styles.completedToggle}
+                  onPress={() => setShowCompleted((v) => !v)}
+                >
+                  <Text style={styles.completedToggleText}>
+                    {showCompleted ? "완료된 일정 접기" : `완료된 일정 ${completedSchedules.length}건`}
+                  </Text>
+                </Pressable>
+                {showCompleted &&
+                  completedSchedules.map((item) => {
+                    const student = students.find((s) => s.id === item.student_id);
+                    return (
+                      <View key={item.id} style={{ marginBottom: Spacing.sm }}>
+                        <ScheduleCard
+                          studentName={student?.name ?? item.student_name ?? "학생"}
+                          status={item.status}
+                          pickupTime={item.pickup_time}
+                          academyName={item.academy_name}
+                          vehiclePlate={item.vehicle_license_plate}
+                          driverName={item.driver_name}
+                        />
+                      </View>
+                    );
+                  })}
+              </View>
+            ) : null
+          }
         />
       )}
     </View>
@@ -341,5 +395,15 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: Typography.sizes.base,
     color: Colors.textDisabled,
+  },
+  completedToggle: {
+    paddingVertical: Spacing.md,
+    alignItems: "center",
+    marginTop: Spacing.sm,
+  },
+  completedToggleText: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.primary,
+    fontWeight: Typography.weights.medium,
   },
 });

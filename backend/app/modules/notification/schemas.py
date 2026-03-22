@@ -31,3 +31,17 @@ class ManualSendRequest(BaseModel):
         default="기타 운영 안내",
         description="발송 목적: 긴급 안전 안내 / 시스템 장애 공지 / 운행 변경 안내 / 기타 운영 안내",
     )
+
+
+class NotificationPreferenceItem(BaseModel):
+    channel: str = Field(..., description="fcm / sms")
+    notification_type: str = Field(..., description="boarding / alighting / delay / arrival / no_show / sos")
+    enabled: bool
+
+
+class NotificationPreferencesResponse(BaseModel):
+    preferences: list[NotificationPreferenceItem]
+
+
+class NotificationPreferencesUpdateRequest(BaseModel):
+    preferences: list[NotificationPreferenceItem] = Field(..., min_length=1)
