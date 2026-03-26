@@ -119,6 +119,35 @@ async def list_templates_by_academy(
     return list(result.scalars().all())
 
 
+async def update_schedule_template(
+    db: AsyncSession, template_id: uuid.UUID, request
+) -> ScheduleTemplate:
+    stmt = select(ScheduleTemplate).where(ScheduleTemplate.id == template_id)
+    result = await db.execute(stmt)
+    template = result.scalar_one_or_none()
+    if not template:
+        raise NotFoundError(detail="스케줄 템플릿을 찾을 수 없습니다")
+
+    update_data = request.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(template, field, value)
+    await db.flush()
+    return template
+
+
+async def delete_schedule_template(
+    db: AsyncSession, template_id: uuid.UUID
+) -> ScheduleTemplate:
+    stmt = select(ScheduleTemplate).where(ScheduleTemplate.id == template_id)
+    result = await db.execute(stmt)
+    template = result.scalar_one_or_none()
+    if not template:
+        raise NotFoundError(detail="스케줄 템플릿을 찾을 수 없습니다")
+    template.is_active = False
+    await db.flush()
+    return template
+
+
 async def materialize_daily_schedules(
     db: AsyncSession, target_date: date
 ) -> list[DailyScheduleInstance]:

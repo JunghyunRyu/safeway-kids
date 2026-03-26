@@ -23,6 +23,7 @@ from app.modules.scheduling.schemas import (
     ScheduleCancelRequest,
     ScheduleTemplateCreateRequest,
     ScheduleTemplateResponse,
+    ScheduleTemplateUpdateRequest,
     VehicleClearanceRequest,
     VehicleClearanceResponse,
 )
@@ -68,6 +69,33 @@ async def list_academy_templates(
     """학원별 전체 템플릿 조회"""
     templates = await service.list_templates_by_academy(db, academy_id)
     return [ScheduleTemplateResponse.model_validate(t) for t in templates]
+
+
+@router.patch("/templates/{template_id}", response_model=ScheduleTemplateResponse)
+async def update_schedule_template(
+    template_id: uuid.UUID,
+    body: ScheduleTemplateUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(
+        UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN
+    )),
+) -> ScheduleTemplateResponse:
+    """스케줄 템플릿 수정"""
+    template = await service.update_schedule_template(db, template_id, body)
+    return ScheduleTemplateResponse.model_validate(template)
+
+
+@router.delete("/templates/{template_id}", response_model=ScheduleTemplateResponse)
+async def delete_schedule_template(
+    template_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(
+        UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN
+    )),
+) -> ScheduleTemplateResponse:
+    """스케줄 템플릿 비활성화 (소프트 삭제)"""
+    template = await service.delete_schedule_template(db, template_id)
+    return ScheduleTemplateResponse.model_validate(template)
 
 
 @router.post("/daily/materialize", response_model=list[DailyScheduleResponse])

@@ -24,7 +24,9 @@ export interface Enrollment {
 
 export async function listStudents(): Promise<Student[]> {
   const resp = await apiClient.get("/students");
-  return resp.data;
+  // API returns { items: [...], total: N } (paginated)
+  const data = resp.data;
+  return Array.isArray(data) ? data : (data.items ?? []);
 }
 
 export async function getStudent(studentId: string): Promise<Student> {

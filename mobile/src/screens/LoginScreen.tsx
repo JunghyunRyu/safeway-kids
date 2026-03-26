@@ -1,9 +1,14 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   Pressable,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -170,7 +175,7 @@ function ProductionLoginScreen() {
   );
 }
 
-/* ── Dev Login (unchanged from original) ── */
+/* ── Dev Login ── */
 function DevLoginScreen() {
   const { t } = useTranslation();
   const { onLoginSuccess } = useAuth();
@@ -179,6 +184,7 @@ function DevLoginScreen() {
   const [role, setRole] = useState<RoleOption>("parent");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const nameRef = useRef<TextInput>(null);
 
   const handleLogin = useCallback(async () => {
     setError("");
@@ -198,80 +204,95 @@ function DevLoginScreen() {
   const activeColor = ROLE_COLORS[role];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.logoArea}>
-        <View style={[styles.logoCircle, { backgroundColor: activeColor }]}>
-          <Ionicons name="shield-checkmark" size={36} color={Colors.textInverse} />
-        </View>
-        <Text style={[styles.title, { color: activeColor }]}>SAFEWAY KIDS</Text>
-        <Text style={styles.subtitle}>개발 모드 로그인</Text>
-      </View>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.logoArea}>
+            <View style={[styles.logoCircle, { backgroundColor: activeColor }]}>
+              <Ionicons name="shield-checkmark" size={36} color={Colors.textInverse} />
+            </View>
+            <Text style={[styles.title, { color: activeColor }]}>SAFEWAY KIDS</Text>
+            <Text style={styles.subtitle}>개발 모드 로그인</Text>
+          </View>
 
-      {error ? (
-        <View style={styles.errorBox}>
-          <Ionicons name="alert-circle-outline" size={16} color={Colors.danger} />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
+          {error ? (
+            <View style={styles.errorBox}>
+              <Ionicons name="alert-circle-outline" size={16} color={Colors.danger} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
-      <View style={styles.roleGrid}>
-        {ROLE_OPTIONS.map(({ value, label, icon }) => {
-          const isActive = role === value;
-          const roleColor = ROLE_COLORS[value];
-          return (
-            <Pressable
-              key={value}
-              style={[
-                styles.roleBtn,
-                isActive && { borderColor: roleColor, backgroundColor: roleColor + "15" },
-              ]}
-              onPress={() => setRole(value)}
-            >
-              <Ionicons name={icon} size={20} color={isActive ? roleColor : Colors.textDisabled} />
-              <Text style={[styles.roleTxt, isActive && { color: roleColor, fontWeight: Typography.weights.bold }]}>
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+          <View style={styles.roleGrid}>
+            {ROLE_OPTIONS.map(({ value, label, icon }) => {
+              const isActive = role === value;
+              const roleColor = ROLE_COLORS[value];
+              return (
+                <Pressable
+                  key={value}
+                  style={[
+                    styles.roleBtn,
+                    isActive && { borderColor: roleColor, backgroundColor: roleColor + "15" },
+                  ]}
+                  onPress={() => setRole(value)}
+                >
+                  <Ionicons name={icon} size={20} color={isActive ? roleColor : Colors.textDisabled} />
+                  <Text style={[styles.roleTxt, isActive && { color: roleColor, fontWeight: Typography.weights.bold }]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder={t("auth.enterPhone")}
-        placeholderTextColor={Colors.textDisabled}
-        keyboardType="phone-pad"
-        value={phone}
-        onChangeText={setPhone}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={t("auth.enterName")}
-        placeholderTextColor={Colors.textDisabled}
-        value={name}
-        onChangeText={setName}
-      />
+          <TextInput
+            style={styles.input}
+            placeholder={t("auth.enterPhone")}
+            placeholderTextColor={Colors.textDisabled}
+            keyboardType="number-pad"
+            returnKeyType="next"
+            value={phone}
+            onChangeText={setPhone}
+            onSubmitEditing={() => nameRef.current?.focus()}
+          />
+          <TextInput
+            ref={nameRef}
+            style={styles.input}
+            placeholder={t("auth.enterName")}
+            placeholderTextColor={Colors.textDisabled}
+            returnKeyType="done"
+            value={name}
+            onChangeText={setName}
+            onSubmitEditing={handleLogin}
+          />
 
-      <Pressable
-        style={[styles.loginBtn, { backgroundColor: activeColor }, loading && styles.disabled]}
-        onPress={handleLogin}
-        disabled={loading}
-      >
-        {loading ? (
-          <Text style={styles.loginBtnText}>{t("common.loading")}</Text>
-        ) : (
-          <>
-            <Ionicons name="log-in-outline" size={20} color={Colors.textInverse} />
-            <Text style={styles.loginBtnText}>{t("auth.login")}</Text>
-          </>
-        )}
-      </Pressable>
+          <Pressable
+            style={[styles.loginBtn, { backgroundColor: activeColor }, loading && styles.disabled]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <Text style={styles.loginBtnText}>{t("common.loading")}</Text>
+            ) : (
+              <>
+                <Ionicons name="log-in-outline" size={20} color={Colors.textInverse} />
+                <Text style={styles.loginBtnText}>{t("auth.login")}</Text>
+              </>
+            )}
+          </Pressable>
 
-      <Text style={styles.hint}>
-        테스트: 01033333333 / 박보호자{"\n"}
-        01011111111 / 김기사
-      </Text>
-    </View>
+          <Text style={styles.hint}>
+            테스트: 01033333333 / 박보호자{"\n"}
+            01011111111 / 김기사
+          </Text>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -283,7 +304,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
     padding: Spacing.xl,
     backgroundColor: Colors.background,

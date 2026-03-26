@@ -56,10 +56,10 @@ class Settings(BaseSettings):
     dev_login_secret: str = "change-me-dev"
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://192.168.44.128:5173", "http://192.168.44.128:5174"]
 
     # Rate limiting
-    rate_limit_auth: str = "100/minute"
+    rate_limit_auth: str = "1000/minute"
 
     # Database pool
     db_pool_size: int = 20

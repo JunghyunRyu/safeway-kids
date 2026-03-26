@@ -33,6 +33,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(me);
         }
       } catch {
+        // 토큰 만료 등으로 실패 시 토큰 삭제하고 로그인 화면으로
+        await logout();
         setUser(null);
       } finally {
         setLoading(false);

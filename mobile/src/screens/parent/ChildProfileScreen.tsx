@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Pressable,
@@ -10,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import {
   listStudents,
@@ -25,6 +27,7 @@ export default function ChildProfileScreen() {
   const [students, setStudents] = useState<Student[]>([]);
   const [selected, setSelected] = useState<Student | null>(null);
   const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     special_notes: "",
     allergies: "",
@@ -33,22 +36,36 @@ export default function ChildProfileScreen() {
     grade: "",
   });
   const [saving, setSaving] = useState(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await listStudents();
-      const items = Array.isArray(data) ? data : (data as { items: Student[] }).items ?? [];
-      setStudents(items);
+      if (!mountedRef.current) return;
+      setStudents(data);
     } catch {
-      showError("자녀 목록을 불러올 수 없습니다.");
+      if (mountedRef.current) showError("자녀 목록을 불러올 수 없습니다.");
+    } finally {
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const selectChild = useCallback(async (s: Student) => {
     try {
       const detail = await getStudent(s.id);
+      if (!mountedRef.current) return;
       setSelected(detail);
       setForm({
         special_notes: detail.special_notes || "",
@@ -59,7 +76,7 @@ export default function ChildProfileScreen() {
       });
       setEditing(false);
     } catch {
-      showError("자녀 정보를 불러올 수 없습니다.");
+      if (mountedRef.current) showError("자녀 정보를 불러올 수 없습니다.");
     }
   }, []);
 
@@ -127,24 +144,30 @@ export default function ChildProfileScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Text style={styles.title}>자녀 관리</Text>
-      <FlatList
-        data={students}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <Pressable style={[styles.childRow, Shadows.sm]} onPress={() => selectChild(item)}>
-            <View style={[styles.avatarSm, { backgroundColor: Colors.roleParent }]}>
-              <Text style={styles.avatarSmText}>{item.name.charAt(0)}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.childRowName}>{item.name}</Text>
-              <Text style={styles.childRowSub}>{item.grade ? `${item.grade}학년` : ""} {item.date_of_birth}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
-          </Pressable>
-        )}
-        ListEmptyComponent={<Text style={styles.empty}>등록된 자녀가 없습니다.</Text>}
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={students}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <Pressable style={[styles.childRow, Shadows.sm]} onPress={() => selectChild(item)}>
+              <View style={[styles.avatarSm, { backgroundColor: Colors.roleParent }]}>
+                <Text style={styles.avatarSmText}>{item.name.charAt(0)}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.childRowName}>{item.name}</Text>
+                <Text style={styles.childRowSub}>{item.grade ? `${item.grade}학년` : ""} {item.date_of_birth}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+            </Pressable>
+          )}
+          ListEmptyComponent={<Text style={styles.empty}>등록된 자녀가 없습니다.</Text>}
+        />
+      )}
     </View>
   );
 }
@@ -184,6 +207,7 @@ const styles = StyleSheet.create({
   childRowSub: { fontSize: Typography.sizes.sm, color: Colors.textSecondary },
   avatarSm: { width: 40, height: 40, borderRadius: Radius.full, justifyContent: "center", alignItems: "center" },
   avatarSmText: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.bold, color: Colors.textInverse },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   empty: { textAlign: "center", color: Colors.textSecondary, marginTop: Spacing.xl },
   backBtn: { flexDirection: "row", alignItems: "center", gap: Spacing.xs, padding: Spacing.base },
   backText: { fontSize: Typography.sizes.md, color: Colors.primary },

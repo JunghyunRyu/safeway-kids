@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Colors } from "../../constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Constants from "expo-constants";
@@ -36,6 +36,8 @@ export default function MapScreen() {
   const [mapReady, setMapReady] = useState(false);
   const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER);
   const [pickupPoints, setPickupPoints] = useState<Array<{lat: number; lng: number; label: string}>>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState(false);
 
   const { locations, connected, connectionState } = useVehicleTracking({
     vehicleIds,
@@ -45,9 +47,13 @@ export default function MapScreen() {
   // Load schedules to find vehicle IDs and dynamic map center
   useFocusEffect(
     useCallback(() => {
+      let cancelled = false;
       (async () => {
+        setDataLoading(true);
+        setDataError(false);
         try {
           const data = await listDailySchedules(todayStr());
+          if (cancelled) return;
           setSchedules(data);
           const ids = [
             ...new Set(
@@ -60,21 +66,23 @@ export default function MapScreen() {
 
           // Load student templates to find pickup coordinates for map center and markers
           const students = await listStudents();
+          if (cancelled) return;
           const points: Array<{lat: number; lng: number; label: string}> = [];
           if (students.length > 0) {
             let centerSet = false;
             for (const stu of students) {
               const templates = await listTemplates(stu.id);
-              templates.forEach((t) => {
-                if (t.is_active && t.pickup_latitude && t.pickup_longitude) {
+              if (cancelled) return;
+              templates.forEach((tmpl) => {
+                if (tmpl.is_active && tmpl.pickup_latitude && tmpl.pickup_longitude) {
                   if (!centerSet) {
-                    setMapCenter({ lat: t.pickup_latitude, lng: t.pickup_longitude });
+                    setMapCenter({ lat: tmpl.pickup_latitude, lng: tmpl.pickup_longitude });
                     centerSet = true;
                   }
                   points.push({
-                    lat: t.pickup_latitude,
-                    lng: t.pickup_longitude,
-                    label: t.pickup_address ?? "픽업 지점",
+                    lat: tmpl.pickup_latitude,
+                    lng: tmpl.pickup_longitude,
+                    label: tmpl.pickup_address ?? "픽업 지점",
                   });
                 }
               });
@@ -82,9 +90,12 @@ export default function MapScreen() {
           }
           setPickupPoints(points);
         } catch {
-          // silent
+          if (!cancelled) setDataError(true);
+        } finally {
+          if (!cancelled) setDataLoading(false);
         }
       })();
+      return () => { cancelled = true; };
     }, [])
   );
 
@@ -181,61 +192,84 @@ export default function MapScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.title}>{t("map.tracking")}</Text>
-        <View style={styles.statusRow}>
-          <View
-            style={[
-              styles.dot,
-              connectionState === "connected"
-                ? styles.dotGreen
+        {connectionState !== "idle" && (
+          <View style={styles.statusRow}>
+            <View
+              style={[
+                styles.dot,
+                connectionState === "connected"
+                  ? styles.dotGreen
+                  : connectionState === "polling"
+                    ? styles.dotOrange
+                    : connectionState === "connecting" || connectionState === "reconnecting"
+                      ? styles.dotYellow
+                      : connectionState === "error" || connectionState === "auth_failed"
+                        ? styles.dotRed
+                        : styles.dotGray,
+              ]}
+            />
+            <Text style={styles.statusText}>
+              {connectionState === "connected"
+                ? "연결됨"
                 : connectionState === "polling"
-                  ? styles.dotOrange
+                  ? "위치 업데이트 중"
                   : connectionState === "connecting" || connectionState === "reconnecting"
-                    ? styles.dotYellow
-                    : styles.dotRed,
-            ]}
-          />
-          <Text style={styles.statusText}>
-            {connectionState === "connected"
-              ? "연결됨"
-              : connectionState === "polling"
-                ? "위치 업데이트 지연 중"
-                : connectionState === "connecting" || connectionState === "reconnecting"
-                  ? "연결 중..."
-                  : connectionState === "auth_failed"
-                    ? "인증 만료 — 다시 로그인해주세요"
-                    : connectionState === "idle"
-                      ? ""
+                    ? "연결 중..."
+                    : connectionState === "auth_failed"
+                      ? "인증 만료 — 다시 로그인해주세요"
                       : t("map.disconnected")}
-          </Text>
-        </View>
+            </Text>
+          </View>
+        )}
       </View>
 
-      {vehicleIds.length === 0 && connectionState === "idle" ? (
+      {dataLoading ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.empty}>오늘 운행 스케줄이 없습니다</Text>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={[styles.empty, { marginTop: 12 }]}>데이터를 불러오는 중...</Text>
+        </View>
+      ) : dataError ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.empty}>데이터를 불러오지 못했습니다</Text>
+          <Pressable
+            style={styles.retryBtn}
+            onPress={() => { setDataLoading(true); setDataError(false); }}
+          >
+            <Text style={styles.retryText}>다시 시도</Text>
+          </Pressable>
         </View>
       ) : Platform.OS === "web" || !WebView ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.empty}>
             지도 기능은 모바일 앱에서만 사용 가능합니다.
           </Text>
-          <Text style={styles.emptySubtext}>
-            차량 {vehicleIds.length}대 추적 중
-            {connected ? " (연결됨)" : " (연결 대기)"}
-          </Text>
+          {vehicleIds.length > 0 && (
+            <Text style={styles.emptySubtext}>
+              차량 {vehicleIds.length}대 추적 중
+              {connected ? " (연결됨)" : " (연결 대기)"}
+            </Text>
+          )}
         </View>
       ) : (
-        <WebView
-          ref={webViewRef}
-          source={WEBVIEW_SOURCE}
-          style={styles.webview}
-          onMessage={onMessage}
-          onLoad={onWebViewLoad}
-          javaScriptEnabled
-          domStorageEnabled
-          originWhitelist={["*"]}
-          mixedContentMode="always"
-        />
+        <>
+          <WebView
+            ref={webViewRef}
+            source={WEBVIEW_SOURCE}
+            style={styles.webview}
+            onMessage={onMessage}
+            onLoad={onWebViewLoad}
+            javaScriptEnabled
+            domStorageEnabled
+            originWhitelist={["*"]}
+            mixedContentMode="always"
+          />
+          {vehicleIds.length === 0 && !dataLoading && (
+            <View style={styles.noVehicleOverlay}>
+              <Text style={styles.noVehicleText}>오늘 운행 스케줄이 없습니다</Text>
+              <Text style={styles.noVehicleSub}>픽업 지점은 지도에 표시됩니다</Text>
+            </View>
+          )}
+        </>
       )}
     </View>
   );
@@ -257,9 +291,35 @@ const styles = StyleSheet.create({
   dotOrange: { backgroundColor: Colors.warning },
   dotYellow: { backgroundColor: "#FFC107" },
   dotRed: { backgroundColor: Colors.danger },
+  dotGray: { backgroundColor: Colors.textDisabled },
   statusText: { fontSize: 12, color: Colors.textSecondary },
   emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   empty: { fontSize: 14, color: Colors.textSecondary },
   emptySubtext: { marginTop: 8, fontSize: 12, color: Colors.textDisabled },
+  retryBtn: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+  },
+  retryText: { color: "#fff", fontSize: 14, fontWeight: "600" },
   webview: { flex: 1 },
+  noVehicleOverlay: {
+    position: "absolute",
+    top: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  noVehicleText: { fontSize: 14, color: Colors.textSecondary, fontWeight: "600" },
+  noVehicleSub: { fontSize: 12, color: Colors.textDisabled, marginTop: 4 },
 });

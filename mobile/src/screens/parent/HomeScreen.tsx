@@ -159,7 +159,7 @@ export default function ParentHomeScreen() {
           onPress={() => {
             // P2-44: Navigate to Map tab on card tap
             try {
-              navigation.navigate("ParentMap");
+              navigation.navigate("Map");
             } catch {
               // tab may not exist
             }

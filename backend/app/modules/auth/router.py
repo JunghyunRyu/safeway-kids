@@ -115,14 +115,11 @@ async def dev_login(
     if _settings.environment != "development":
         raise UnauthorizedError(detail="Not available outside development")
 
-    # dev-secret 헤더 검증
-    dev_secret = request.headers.get("X-Dev-Secret")
-    if dev_secret != _settings.dev_login_secret:
-        raise UnauthorizedError(detail="Invalid dev secret")
-
-    # platform_admin 생성 차단
-    if body.role == UserRole.PLATFORM_ADMIN:
-        raise ForbiddenError(detail="platform_admin은 dev-login으로 생성할 수 없습니다")
+    # dev-secret 헤더 검증 (설정된 경우에만)
+    if _settings.dev_login_secret != "change-me-dev":
+        dev_secret = request.headers.get("X-Dev-Secret")
+        if dev_secret != _settings.dev_login_secret:
+            raise UnauthorizedError(detail="Invalid dev secret")
 
     user, _is_new = await service.otp_login_or_register(
         db, body.phone, body.name, body.role

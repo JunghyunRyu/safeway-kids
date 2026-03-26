@@ -12,6 +12,10 @@ const SOS_TYPES = [
   { value: "other", label: "기타" },
 ];
 
+// SOS feature is currently disabled to prevent accidental emergency calls.
+// Set to true to enable when ready for production use.
+const SOS_ENABLED = false;
+
 export default function SOSButton() {
   const { user } = useAuth();
   const isCrewRole = user?.role === "driver" || user?.role === "safety_escort";
@@ -50,6 +54,14 @@ export default function SOSButton() {
   );
 
   const handlePress = useCallback(() => {
+    if (!SOS_ENABLED) {
+      Alert.alert(
+        "SOS 준비 중",
+        "SOS 기능은 현재 준비 중입니다.\n정식 서비스 출시 후 활성화됩니다.",
+      );
+      return;
+    }
+
     Alert.alert(
       "긴급 SOS",
       "긴급 상황입니까?\nSOS 호출 시 관리자에게 즉시 알림되고, 112로 전화 연결됩니다.",
@@ -77,10 +89,13 @@ export default function SOSButton() {
   }, [isCrewRole, sendSos]);
 
   return (
-    <Pressable style={styles.fab} onPress={handlePress}>
+    <Pressable
+      style={[styles.fab, !SOS_ENABLED && styles.fabDisabled]}
+      onPress={handlePress}
+    >
       <View style={styles.inner}>
-        <Ionicons name="warning" size={22} color="#fff" />
-        <Text style={styles.label}>SOS</Text>
+        <Ionicons name="warning" size={22} color={SOS_ENABLED ? "#fff" : "rgba(255,255,255,0.5)"} />
+        <Text style={[styles.label, !SOS_ENABLED && styles.labelDisabled]}>SOS</Text>
       </View>
     </Pressable>
   );
@@ -104,6 +119,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 8,
   },
+  fabDisabled: {
+    backgroundColor: "#9CA3AF",
+    opacity: 0.6,
+  },
   inner: {
     alignItems: "center",
   },
@@ -112,5 +131,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     marginTop: -2,
+  },
+  labelDisabled: {
+    color: "rgba(255,255,255,0.5)",
   },
 });

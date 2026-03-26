@@ -47,7 +47,10 @@ export const API_BASE_URL = getApiBaseUrl();
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
+  },
 });
 
 // Attach auth token to every request
@@ -69,7 +72,7 @@ apiClient.interceptors.response.use(
         try {
           const resp = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             refresh_token: refreshToken,
-          });
+          }, { timeout: 3000, headers: { "ngrok-skip-browser-warning": "true" } });
           await tokenStorage.setItem("access_token", resp.data.access_token);
           await tokenStorage.setItem("refresh_token", resp.data.refresh_token);
           error.config.headers.Authorization = `Bearer ${resp.data.access_token}`;
@@ -82,10 +85,12 @@ apiClient.interceptors.response.use(
     }
 
     // User-friendly error messages for non-401 errors
-    if (error.response?.status !== 401) {
+    // Skip toast for /auth/me (initial session check) and /auth/refresh
+    const url = error.config?.url || "";
+    const isAuthCheck = url.includes("/auth/me") || url.includes("/auth/refresh");
+    if (error.response?.status !== 401 && !isAuthCheck) {
       const status = error.response?.status;
       if (!error.response) {
-        // Network error (no response received)
         showError("네트워크 연결을 확인해 주세요");
       } else if (status === 403) {
         showError("접근 권한이 없습니다");

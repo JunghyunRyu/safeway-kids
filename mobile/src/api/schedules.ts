@@ -69,7 +69,8 @@ export async function listDailySchedules(
   let url = `/schedules/daily?target_date=${targetDate}`;
   if (studentId) url += `&student_id=${studentId}`;
   const resp = await apiClient.get(url);
-  return resp.data;
+  const data = resp.data;
+  return Array.isArray(data) ? data : (data.items ?? []);
 }
 
 export async function cancelSchedule(instanceId: string, reason?: string): Promise<DailySchedule> {

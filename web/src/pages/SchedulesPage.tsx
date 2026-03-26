@@ -1,11 +1,13 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, type FormEvent } from 'react';
 import api from '../api/client';
 import { showToast } from '../components/Toast';
 import DataTable, { type Column } from '../components/DataTable';
+import FormModal from '../components/FormModal';
+import FormField from '../components/FormField';
 import ConfirmDialog from '../components/ConfirmDialog';
 import StatusBadge from '../components/StatusBadge';
 import ExportButton from '../components/ExportButton';
-import type { DailySchedule } from '../types';
+import type { Academy, DailySchedule, Student } from '../types';
 
 interface ScheduleTemplate {
   id: string;
@@ -14,6 +16,8 @@ interface ScheduleTemplate {
   academy_id: string;
   day_of_week: number;
   pickup_time: string;
+  pickup_latitude?: number;
+  pickup_longitude?: number;
   pickup_address: string | null;
   is_active: boolean;
   created_at: string;
@@ -43,6 +47,42 @@ interface PipelineResult {
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
+const DAY_OPTIONS = [
+  { value: '1', label: '월' },
+  { value: '2', label: '화' },
+  { value: '3', label: '수' },
+  { value: '4', label: '목' },
+  { value: '5', label: '금' },
+  { value: '6', label: '토' },
+  { value: '0', label: '일' },
+];
+
+// -- Template form --
+interface TemplateForm {
+  student_id: string;
+  day_of_week: string;
+  pickup_time: string;
+  pickup_address: string;
+  pickup_latitude: string;
+  pickup_longitude: string;
+}
+
+const INITIAL_TEMPLATE_FORM: TemplateForm = {
+  student_id: '',
+  day_of_week: '1',
+  pickup_time: '08:00',
+  pickup_address: '',
+  pickup_latitude: '37.4979',
+  pickup_longitude: '127.0276',
+};
+
+interface TemplateFieldErrors {
+  student_id?: string;
+  pickup_time?: string;
+  pickup_latitude?: string;
+  pickup_longitude?: string;
+}
+
 export default function SchedulesPage() {
   const [activeTab, setActiveTab] = useState<'daily' | 'templates'>('daily');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -54,28 +94,80 @@ export default function SchedulesPage() {
   const [templates, setTemplates] = useState<ScheduleTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
 
+  // Academy & Students (for template form)
+  const [academy, setAcademy] = useState<Academy | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+
+  // Template form modal
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<ScheduleTemplate | null>(null);
+  const [templateForm, setTemplateForm] = useState<TemplateForm>(INITIAL_TEMPLATE_FORM);
+  const [templateFieldErrors, setTemplateFieldErrors] = useState<TemplateFieldErrors>({});
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Template delete
+  const [deleteTemplateTarget, setDeleteTemplateTarget] = useState<ScheduleTemplate | null>(null);
+  const [deletingTemplate, setDeletingTemplate] = useState(false);
+
   // Pipeline
   const [pipelineConfirmOpen, setPipelineConfirmOpen] = useState(false);
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null);
 
+  // Fetch academy info
+  const fetchAcademy = useCallback(async () => {
+    try {
+      const { data } = await api.get<Academy>('/academies/mine');
+      setAcademy(data);
+      return data;
+    } catch {
+      // Try from localStorage as fallback
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.academy_id) {
+          setAcademy({ id: user.academy_id, name: '', address: '', latitude: 0, longitude: 0 });
+          return { id: user.academy_id } as Academy;
+        }
+      } catch { /* ignore */ }
+      return null;
+    }
+  }, []);
+
+  // Fetch students for dropdown
+  const fetchStudents = useCallback(async () => {
+    try {
+      const { data } = await api.get<{ items: Student[]; total: number } | Student[]>('/students');
+      const list = Array.isArray(data) ? data : data.items;
+      setStudents(list.filter((s) => s.is_active));
+    } catch {
+      setStudents([]);
+    }
+  }, []);
+
   const fetchTemplates = useCallback(async () => {
     setTemplatesLoading(true);
     try {
-      const { data } = await api.get('/schedules/templates/academy');
+      let acad = academy;
+      if (!acad) {
+        acad = await fetchAcademy();
+      }
+      const params = acad ? { academy_id: acad.id } : {};
+      const { data } = await api.get('/schedules/templates/academy', { params });
       setTemplates(Array.isArray(data) ? data : []);
     } catch {
       setTemplates([]);
     } finally {
       setTemplatesLoading(false);
     }
-  }, []);
+  }, [academy, fetchAcademy]);
 
   useEffect(() => {
     if (activeTab === 'templates') {
       fetchTemplates();
+      fetchStudents();
+      if (!academy) fetchAcademy();
     }
-  }, [activeTab, fetchTemplates]);
+  }, [activeTab, fetchTemplates, fetchStudents, fetchAcademy, academy]);
 
   const toggleTemplate = useCallback(async (template: ScheduleTemplate) => {
     try {
@@ -86,6 +178,126 @@ export default function SchedulesPage() {
       showToast('템플릿 상태 변경에 실패했습니다.', 'error');
     }
   }, [fetchTemplates]);
+
+  // -- Template CRUD --
+
+  const validateTemplateForm = (): boolean => {
+    const errors: TemplateFieldErrors = {};
+    if (!templateForm.student_id) {
+      errors.student_id = '학생을 선택해 주세요.';
+    }
+    if (!templateForm.pickup_time) {
+      errors.pickup_time = '픽업 시간을 입력해 주세요.';
+    }
+    const lat = parseFloat(templateForm.pickup_latitude);
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      errors.pickup_latitude = '유효한 위도를 입력해 주세요. (-90 ~ 90)';
+    }
+    const lng = parseFloat(templateForm.pickup_longitude);
+    if (isNaN(lng) || lng < -180 || lng > 180) {
+      errors.pickup_longitude = '유효한 경도를 입력해 주세요. (-180 ~ 180)';
+    }
+    setTemplateFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const openTemplateCreate = () => {
+    setEditingTemplate(null);
+    setTemplateForm(INITIAL_TEMPLATE_FORM);
+    setTemplateFieldErrors({});
+    setTemplateModalOpen(true);
+  };
+
+  const openTemplateEdit = (template: ScheduleTemplate) => {
+    setEditingTemplate(template);
+    setTemplateForm({
+      student_id: template.student_id,
+      day_of_week: String(template.day_of_week),
+      pickup_time: template.pickup_time ? template.pickup_time.slice(0, 5) : '08:00',
+      pickup_address: template.pickup_address || '',
+      pickup_latitude: template.pickup_latitude != null ? String(template.pickup_latitude) : '37.4979',
+      pickup_longitude: template.pickup_longitude != null ? String(template.pickup_longitude) : '127.0276',
+    });
+    setTemplateFieldErrors({});
+    setTemplateModalOpen(true);
+  };
+
+  const closeTemplateModal = () => {
+    setTemplateModalOpen(false);
+    setEditingTemplate(null);
+    setTemplateForm(INITIAL_TEMPLATE_FORM);
+    setTemplateFieldErrors({});
+  };
+
+  const handleTemplateSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!validateTemplateForm()) return;
+
+    setSavingTemplate(true);
+    try {
+      if (editingTemplate) {
+        // Update
+        const payload = {
+          day_of_week: parseInt(templateForm.day_of_week),
+          pickup_time: templateForm.pickup_time,
+          pickup_latitude: parseFloat(templateForm.pickup_latitude),
+          pickup_longitude: parseFloat(templateForm.pickup_longitude),
+          pickup_address: templateForm.pickup_address.trim() || null,
+        };
+        await api.patch(`/schedules/templates/${editingTemplate.id}`, payload);
+        showToast('템플릿이 수정되었습니다.', 'success');
+      } else {
+        // Create
+        const academyId = academy?.id;
+        if (!academyId) {
+          showToast('학원 정보를 불러올 수 없습니다.', 'error');
+          setSavingTemplate(false);
+          return;
+        }
+        const payload = {
+          student_id: templateForm.student_id,
+          academy_id: academyId,
+          day_of_week: parseInt(templateForm.day_of_week),
+          pickup_time: templateForm.pickup_time,
+          pickup_latitude: parseFloat(templateForm.pickup_latitude),
+          pickup_longitude: parseFloat(templateForm.pickup_longitude),
+          pickup_address: templateForm.pickup_address.trim() || null,
+        };
+        await api.post('/schedules/templates', payload);
+        showToast('템플릿이 등록되었습니다.', 'success');
+      }
+      closeTemplateModal();
+      await fetchTemplates();
+    } catch {
+      showToast(
+        editingTemplate ? '템플릿 수정에 실패했습니다.' : '템플릿 등록에 실패했습니다.',
+        'error',
+      );
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handleTemplateDelete = async () => {
+    if (!deleteTemplateTarget) return;
+    setDeletingTemplate(true);
+    try {
+      await api.delete(`/schedules/templates/${deleteTemplateTarget.id}`);
+      showToast('템플릿이 삭제되었습니다.', 'success');
+      setDeleteTemplateTarget(null);
+      await fetchTemplates();
+    } catch {
+      showToast('템플릿 삭제에 실패했습니다.', 'error');
+    } finally {
+      setDeletingTemplate(false);
+    }
+  };
+
+  // Student options for select dropdown
+  const studentOptions = students.map((s) => ({
+    value: s.id,
+    label: s.name,
+  }));
 
   const templateColumns: Column<ScheduleTemplate>[] = [
     {
@@ -304,20 +516,140 @@ export default function SchedulesPage() {
       </div>
 
       {activeTab === 'templates' ? (
-        <DataTable<ScheduleTemplate>
-          columns={templateColumns}
-          data={templates}
-          loading={templatesLoading}
-          emptyMessage="등록된 스케줄 템플릿이 없습니다."
-          actions={(row) => (
+        <>
+          {/* Template header with add button */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-500">
+              주간 반복 스케줄 템플릿을 관리합니다.
+            </p>
             <button
-              onClick={() => toggleTemplate(row)}
-              className={`text-sm px-3 py-1.5 rounded-lg font-medium ${row.is_active ? 'text-red-700 bg-red-50 hover:bg-red-100' : 'text-teal-700 bg-teal-50 hover:bg-teal-100'}`}
+              onClick={openTemplateCreate}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium"
             >
-              {row.is_active ? '비활성화' : '활성화'}
+              + 템플릿 추가
             </button>
-          )}
-        />
+          </div>
+
+          <DataTable<ScheduleTemplate>
+            columns={templateColumns}
+            data={templates}
+            loading={templatesLoading}
+            emptyMessage="등록된 스케줄 템플릿이 없습니다."
+            actions={(row) => (
+              <>
+                <button
+                  onClick={() => openTemplateEdit(row)}
+                  className="text-sm px-3 py-1.5 text-teal-700 bg-teal-50 rounded-lg hover:bg-teal-100 font-medium"
+                >
+                  수정
+                </button>
+                <button
+                  onClick={() => toggleTemplate(row)}
+                  className={`text-sm px-3 py-1.5 rounded-lg font-medium ${row.is_active ? 'text-yellow-700 bg-yellow-50 hover:bg-yellow-100' : 'text-green-700 bg-green-50 hover:bg-green-100'}`}
+                >
+                  {row.is_active ? '비활성화' : '활성화'}
+                </button>
+                <button
+                  onClick={() => setDeleteTemplateTarget(row)}
+                  className="text-sm px-3 py-1.5 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 font-medium"
+                >
+                  삭제
+                </button>
+              </>
+            )}
+          />
+
+          {/* Template Create/Edit Modal */}
+          <FormModal
+            open={templateModalOpen}
+            title={editingTemplate ? '템플릿 수정' : '템플릿 등록'}
+            onClose={closeTemplateModal}
+            onSubmit={handleTemplateSubmit}
+            loading={savingTemplate}
+            submitText={editingTemplate ? '수정' : '등록'}
+          >
+            {!editingTemplate && (
+              <FormField
+                label="학생"
+                name="student_id"
+                type="select"
+                value={templateForm.student_id}
+                onChange={(v) => setTemplateForm({ ...templateForm, student_id: v })}
+                error={templateFieldErrors.student_id}
+                required
+                placeholder="학생을 선택해 주세요"
+                options={studentOptions}
+              />
+            )}
+            {editingTemplate && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">학생</label>
+                <p className="text-sm text-gray-600 dark:text-gray-400 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  {editingTemplate.student_name || editingTemplate.student_id.slice(0, 8)}
+                </p>
+              </div>
+            )}
+            <FormField
+              label="요일"
+              name="day_of_week"
+              type="select"
+              value={templateForm.day_of_week}
+              onChange={(v) => setTemplateForm({ ...templateForm, day_of_week: v })}
+              required
+              options={DAY_OPTIONS}
+            />
+            <FormField
+              label="픽업 시간"
+              name="pickup_time"
+              type="time"
+              value={templateForm.pickup_time}
+              onChange={(v) => setTemplateForm({ ...templateForm, pickup_time: v })}
+              error={templateFieldErrors.pickup_time}
+              required
+            />
+            <FormField
+              label="픽업 주소"
+              name="pickup_address"
+              value={templateForm.pickup_address}
+              onChange={(v) => setTemplateForm({ ...templateForm, pickup_address: v })}
+              placeholder="서울시 강남구 역삼동 123-45"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                label="위도"
+                name="pickup_latitude"
+                type="number"
+                value={templateForm.pickup_latitude}
+                onChange={(v) => setTemplateForm({ ...templateForm, pickup_latitude: v })}
+                error={templateFieldErrors.pickup_latitude}
+                required
+                placeholder="37.4979"
+              />
+              <FormField
+                label="경도"
+                name="pickup_longitude"
+                type="number"
+                value={templateForm.pickup_longitude}
+                onChange={(v) => setTemplateForm({ ...templateForm, pickup_longitude: v })}
+                error={templateFieldErrors.pickup_longitude}
+                required
+                placeholder="127.0276"
+              />
+            </div>
+          </FormModal>
+
+          {/* Template Delete Confirmation */}
+          <ConfirmDialog
+            open={!!deleteTemplateTarget}
+            title="템플릿 삭제"
+            message={`"${deleteTemplateTarget?.student_name || deleteTemplateTarget?.student_id?.slice(0, 8) || ''}" 학생의 ${DAY_LABELS[deleteTemplateTarget?.day_of_week ?? 0]}요일 템플릿을 삭제하시겠습니까?`}
+            confirmText="삭제"
+            variant="danger"
+            loading={deletingTemplate}
+            onConfirm={handleTemplateDelete}
+            onCancel={() => setDeleteTemplateTarget(null)}
+          />
+        </>
       ) : (
       <>
 

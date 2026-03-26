@@ -16,8 +16,8 @@ export interface Invoice {
 }
 
 export async function getMyInvoices(): Promise<Invoice[]> {
-  const { data } = await apiClient.get<Invoice[]>("/billing/invoices/my");
-  return data;
+  const { data } = await apiClient.get("/billing/invoices/my");
+  return Array.isArray(data) ? data : (data.items ?? []);
 }
 
 // Admin API

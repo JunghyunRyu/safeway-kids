@@ -58,16 +58,25 @@ export default function OnboardingScreen({ onComplete }: Props) {
 
   const handleNext = async () => {
     if (currentIndex < SLIDES.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
-      setCurrentIndex(currentIndex + 1);
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
     } else {
-      await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+      try {
+        await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+      } catch {
+        // AsyncStorage 실패해도 진행
+      }
       onComplete();
     }
   };
 
   const handleSkip = async () => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+    try {
+      await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+    } catch {
+      // AsyncStorage 실패해도 진행
+    }
     onComplete();
   };
 

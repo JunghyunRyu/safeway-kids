@@ -14,6 +14,15 @@ class ScheduleTemplateCreateRequest(BaseModel):
     pickup_address: str | None = None
 
 
+class ScheduleTemplateUpdateRequest(BaseModel):
+    day_of_week: int | None = Field(default=None, ge=0, le=6)
+    pickup_time: time | None = None
+    pickup_latitude: float | None = Field(default=None, ge=-90, le=90)
+    pickup_longitude: float | None = Field(default=None, ge=-180, le=180)
+    pickup_address: str | None = None
+    is_active: bool | None = None
+
+
 class ScheduleTemplateResponse(BaseModel):
     id: uuid.UUID
     student_id: uuid.UUID
