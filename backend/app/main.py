@@ -318,12 +318,14 @@ def create_app() -> FastAPI:
     from app.modules.escort.router import router as escort_router
     from app.modules.integration.router import router as integration_router
     from app.modules.messaging.router import router as messaging_router
+    from app.modules.edge_gateway.router import router as edge_router
     application.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
     application.include_router(billing_router, prefix="/api/v1/billing", tags=["billing"])
     application.include_router(contact_router, prefix="/api/v1/contact", tags=["contact"])
     application.include_router(escort_router, prefix="/api/v1/escorts", tags=["escorts"])
     application.include_router(integration_router, prefix="/api/v1/integration", tags=["integration"])
     application.include_router(messaging_router, prefix="/api/v1/messages", tags=["messages"])
+    application.include_router(edge_router, prefix="/api/v1/edge", tags=["edge-ai"])
 
     @application.get("/health")
     async def health_check() -> dict:

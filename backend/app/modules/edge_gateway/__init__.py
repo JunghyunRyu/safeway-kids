@@ -1,1 +1,1 @@
-# Stub — Edge AI integration in M6
+# Edge AI Gateway — receives events from edge devices (CCTV, face recognition, etc.)

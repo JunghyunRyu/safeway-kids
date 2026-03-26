@@ -29,6 +29,7 @@ from app.modules.vehicle_telemetry.models import (  # noqa: F401
     Vehicle,
     VehicleAssignment,
 )
+from app.modules.edge_gateway.models import EdgeEvent  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url_sync)

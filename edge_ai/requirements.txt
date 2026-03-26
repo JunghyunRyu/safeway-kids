@@ -1,0 +1,12 @@
+# Install PyTorch CPU first:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# Then install the rest:
+#   pip install -r requirements.txt
+
+ultralytics>=8.0.0
+mediapipe>=0.10.0
+opencv-python-headless>=4.8.0
+flask>=3.0.0
+requests>=2.31.0
+numpy>=1.24.0
+Pillow>=10.0.0
