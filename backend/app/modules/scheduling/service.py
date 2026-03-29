@@ -392,6 +392,17 @@ async def mark_boarded(
     # P2-52: broadcast schedule update
     await _broadcast_schedule_update(instance, "boarded")
 
+    # F10: Webhook dispatch for boarding event
+    import asyncio
+    from app.modules.integration.webhook_dispatcher import dispatch_webhook
+    asyncio.create_task(dispatch_webhook(instance.academy_id, "boarding", {
+        "instance_id": str(instance.id),
+        "student_id": str(instance.student_id),
+        "vehicle_id": str(instance.vehicle_id) if instance.vehicle_id else None,
+        "schedule_date": str(instance.schedule_date),
+        "boarded_at": instance.boarded_at.isoformat() if instance.boarded_at else None,
+    }))
+
     return instance
 
 
@@ -647,6 +658,17 @@ async def mark_alighted(
     # P2-52: broadcast schedule update
     await _broadcast_schedule_update(instance, "completed")
 
+    # F10: Webhook dispatch for alighting event
+    import asyncio
+    from app.modules.integration.webhook_dispatcher import dispatch_webhook
+    asyncio.create_task(dispatch_webhook(instance.academy_id, "alighting", {
+        "instance_id": str(instance.id),
+        "student_id": str(instance.student_id),
+        "vehicle_id": str(instance.vehicle_id) if instance.vehicle_id else None,
+        "schedule_date": str(instance.schedule_date),
+        "alighted_at": instance.alighted_at.isoformat() if instance.alighted_at else None,
+    }))
+
     return instance
 
 
@@ -769,6 +791,18 @@ async def mark_alighted_with_handoff(
     success = await _send_alighting_push(db, instance)
     instance.notification_sent = success
     await db.flush()
+
+    # F10: Webhook dispatch for alighting event (with handoff)
+    import asyncio
+    from app.modules.integration.webhook_dispatcher import dispatch_webhook
+    asyncio.create_task(dispatch_webhook(instance.academy_id, "alighting", {
+        "instance_id": str(instance.id),
+        "student_id": str(instance.student_id),
+        "vehicle_id": str(instance.vehicle_id) if instance.vehicle_id else None,
+        "schedule_date": str(instance.schedule_date),
+        "alighted_at": instance.alighted_at.isoformat() if instance.alighted_at else None,
+        "handoff_type": handoff_type,
+    }))
 
     return instance
 

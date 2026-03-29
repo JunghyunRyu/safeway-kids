@@ -16,7 +16,8 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
 import InfoRow from "../../components/InfoRow";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
-import { createSupportTicket } from "../../api/support";
+import { createSupportTicket, getMyTickets, SupportTicket } from "../../api/support";
+import { listConsents, withdrawConsent, Consent } from "../../api/compliance";
 import { showError } from "../../utils/toast";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -44,6 +45,10 @@ export default function ProfileScreen() {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [supportForm, setSupportForm] = useState({ category: "일반", subject: "", description: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [withdrawingConsent, setWithdrawingConsent] = useState(false);
+  const [showTicketsModal, setShowTicketsModal] = useState(false);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
 
   const roleColor = user ? (ROLE_COLORS[user.role] ?? Colors.primary) : Colors.primary;
   const initials = user?.name ? user.name.charAt(0) : "?";
@@ -74,6 +79,81 @@ export default function ProfileScreen() {
       showError("문의 접수에 실패했습니다.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleWithdrawConsent = () => {
+    Alert.alert(
+      "동의 철회",
+      "모든 개인정보 수집 동의를 철회하시겠습니까?\n철회 후 일부 서비스 이용이 제한될 수 있습니다.",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "철회",
+          style: "destructive",
+          onPress: async () => {
+            setWithdrawingConsent(true);
+            try {
+              const consents = await listConsents();
+              const active = consents.filter((c: Consent) => c.withdrawn_at === null);
+              if (active.length === 0) {
+                Alert.alert("알림", "철회할 동의 내역이 없습니다.");
+                return;
+              }
+              let failCount = 0;
+              for (const consent of active) {
+                try {
+                  await withdrawConsent(consent.id);
+                } catch {
+                  failCount++;
+                }
+              }
+              if (failCount === 0) {
+                Alert.alert("철회 완료", "모든 동의가 철회되었습니다.");
+              } else {
+                Alert.alert("부분 완료", `${active.length - failCount}건 철회, ${failCount}건 실패`);
+              }
+            } catch {
+              showError("동의 철회에 실패했습니다.");
+            } finally {
+              setWithdrawingConsent(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleShowTickets = async () => {
+    setShowTicketsModal(true);
+    setLoadingTickets(true);
+    try {
+      const data = await getMyTickets();
+      setTickets(data);
+    } catch {
+      showError("문의 내역을 불러올 수 없습니다.");
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  const getTicketStatusColor = (status: string) => {
+    switch (status) {
+      case "open": return "#3B82F6";
+      case "in_progress": return "#F59E0B";
+      case "resolved": return "#10B981";
+      case "closed": return "#9CA3AF";
+      default: return Colors.textSecondary;
+    }
+  };
+
+  const getTicketStatusLabel = (status: string) => {
+    switch (status) {
+      case "open": return "접수";
+      case "in_progress": return "처리 중";
+      case "resolved": return "해결";
+      case "closed": return "종료";
+      default: return status;
     }
   };
 
@@ -169,6 +249,22 @@ export default function ProfileScreen() {
             <Text style={styles.menuText}>문의하기</Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
           </Pressable>
+          <Pressable style={styles.menuRow} onPress={handleShowTickets}>
+            <Ionicons name="document-text-outline" size={20} color={Colors.primary} />
+            <Text style={styles.menuText}>내 문의 내역</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
+          </Pressable>
+          <Pressable
+            style={styles.menuRow}
+            onPress={handleWithdrawConsent}
+            disabled={withdrawingConsent}
+          >
+            <Ionicons name="shield-outline" size={20} color={Colors.danger} />
+            <Text style={[styles.menuText, { color: Colors.danger }]}>
+              {withdrawingConsent ? "처리 중..." : "개인정보 동의 철회"}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
+          </Pressable>
         </View>
       )}
 
@@ -188,6 +284,47 @@ export default function ProfileScreen() {
         <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
         <Text style={styles.logoutText}>{t("auth.logout")}</Text>
       </Pressable>
+
+      {/* 내 문의 내역 모달 */}
+      <Modal visible={showTicketsModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>내 문의 내역</Text>
+              <Pressable onPress={() => setShowTicketsModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.textSecondary} />
+              </Pressable>
+            </View>
+            {loadingTickets ? (
+              <Text style={{ textAlign: "center", color: Colors.textSecondary, paddingVertical: Spacing.xl }}>
+                불러오는 중...
+              </Text>
+            ) : tickets.length === 0 ? (
+              <Text style={{ textAlign: "center", color: Colors.textSecondary, paddingVertical: Spacing.xl }}>
+                문의 내역이 없습니다.
+              </Text>
+            ) : (
+              <ScrollView style={{ maxHeight: 400 }}>
+                {tickets.map((ticket) => (
+                  <View key={ticket.id} style={styles.ticketRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.ticketSubject}>{ticket.subject}</Text>
+                      <Text style={styles.ticketDate}>
+                        {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString("ko-KR") : ""}
+                      </Text>
+                    </View>
+                    <View style={[styles.ticketBadge, { backgroundColor: getTicketStatusColor(ticket.status) + "20" }]}>
+                      <Text style={[styles.ticketBadgeText, { color: getTicketStatusColor(ticket.status) }]}>
+                        {getTicketStatusLabel(ticket.status)}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* P2-57: 문의하기 모달 */}
       <Modal visible={showSupportModal} animationType="slide" transparent>
@@ -434,5 +571,34 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.md,
     fontWeight: Typography.weights.semibold,
     color: Colors.textInverse,
+  },
+
+  // Ticket list styles
+  ticketRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  ticketSubject: {
+    fontSize: Typography.sizes.md,
+    color: Colors.textPrimary,
+    fontWeight: Typography.weights.medium,
+  },
+  ticketDate: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  ticketBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    marginLeft: Spacing.sm,
+  },
+  ticketBadgeText: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.semibold,
   },
 });

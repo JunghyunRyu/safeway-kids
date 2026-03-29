@@ -92,9 +92,16 @@ export default function AvailabilityScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  const isValidDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d));
+  const isValidTime = (t: string) => /^\d{2}:\d{2}$/.test(t);
+
   const handleRegister = useCallback(async () => {
-    if (!date) {
-      Alert.alert("알림", "날짜를 입력해 주세요 (예: 2026-03-16)");
+    if (!date || !isValidDate(date)) {
+      Alert.alert("알림", "올바른 날짜를 입력해 주세요 (YYYY-MM-DD 형식)");
+      return;
+    }
+    if (!isValidTime(startTime) || !isValidTime(endTime)) {
+      Alert.alert("알림", "올바른 시간을 입력해 주세요 (HH:MM 형식)");
       return;
     }
     try {
@@ -149,7 +156,10 @@ export default function AvailabilityScreen() {
             value={date}
             onChangeText={setDate}
             placeholderTextColor={Colors.textDisabled}
+            keyboardType="numbers-and-punctuation"
+            maxLength={10}
           />
+          <Text style={styles.formatHint}>형식: YYYY-MM-DD</Text>
           <Text style={styles.formLabel}>시간</Text>
           <View style={styles.timeInputRow}>
             <TextInput
@@ -168,6 +178,7 @@ export default function AvailabilityScreen() {
               placeholderTextColor={Colors.textDisabled}
             />
           </View>
+          <Text style={styles.formatHint}>형식: HH:MM (예: 07:00 ~ 09:00)</Text>
           <Pressable
             style={styles.submitBtn}
             onPress={handleRegister}
@@ -258,6 +269,12 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     backgroundColor: Colors.background,
     marginBottom: Spacing.sm,
+  },
+  formatHint: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textDisabled,
+    marginBottom: Spacing.sm,
+    marginTop: -4,
   },
   timeInputRow: {
     flexDirection: "row",

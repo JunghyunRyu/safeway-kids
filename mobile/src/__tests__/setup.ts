@@ -23,6 +23,9 @@ jest.mock('expo-constants', () => ({
     expoConfig: {
       extra: {
         apiBaseUrl: 'http://localhost:8000/api/v1',
+        eas: {
+          projectId: 'test-project-id',
+        },
       },
     },
   },

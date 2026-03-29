@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     toss_payments_client_key: str = ""
     toss_payments_webhook_secret: str = ""
 
+    # Edge AI Gateway
+    edge_api_key: str = ""  # env: EDGE_API_KEY
+
     # Encryption
     aes_encryption_key: str = "change-me-32-byte-key-for-prod!!"
 
@@ -104,6 +107,8 @@ class Settings(BaseSettings):
                 missing.append("toss_payments_secret_key")
             if not self.toss_payments_client_key:
                 missing.append("toss_payments_client_key")
+            if not self.edge_api_key:
+                missing.append("edge_api_key")
             if missing:
                 raise ValueError(
                     f"Production environment requires these keys: {', '.join(missing)}"

@@ -114,5 +114,24 @@ def academy_admin_token(academy_admin_user: User) -> str:
     return create_access_token(academy_admin_user.id, academy_admin_user.role)
 
 
+@pytest.fixture
+async def platform_admin_user(db_session: AsyncSession) -> User:
+    user = User(
+        id=uuid.uuid4(),
+        role=UserRole.PLATFORM_ADMIN,
+        phone="01011112222",
+        name="테스트 플랫폼관리자",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    return user
+
+
+@pytest.fixture
+def platform_admin_token(platform_admin_user: User) -> str:
+    return create_access_token(platform_admin_user.id, platform_admin_user.role)
+
+
 def auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}

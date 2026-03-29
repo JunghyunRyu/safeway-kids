@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.middleware.auth import get_current_user
+from app.middleware.rbac import require_platform_admin
+from app.modules.auth.models import User
 from app.modules.edge_gateway import service
+from app.modules.edge_gateway.dependencies import verify_edge_api_key
 from app.modules.edge_gateway.schemas import (
     EdgeEventCreate,
     EdgeEventListResponse,
@@ -23,11 +27,11 @@ async def create_event(
     body: EdgeEventCreate,
     request: Request,
     db: AsyncSession = Depends(get_db),
+    device_id: str = Depends(verify_edge_api_key),
 ) -> EdgeEventResponse:
     """Edge AI 디바이스에서 이벤트 수신.
 
-    데모용: 인증 없이 이벤트를 수신한다.
-    프로덕션에서는 API 키 또는 JWT 인증을 추가해야 한다.
+    Authorization: Bearer <EDGE_API_KEY> 헤더로 인증한다.
     """
     # 감사 로그
     from app.modules.admin.service import log_audit
@@ -42,7 +46,7 @@ async def create_event(
 
     await log_audit(
         db,
-        user_id="edge_device",
+        user_id=device_id,
         user_name="Edge AI Device",
         action="EDGE_EVENT",
         entity_type="edge_event",
@@ -78,8 +82,9 @@ async def list_events(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_admin),
 ) -> EdgeEventListResponse:
-    """Edge AI 이벤트 목록 조회."""
+    """Edge AI 이벤트 목록 조회. 플랫폼 관리자만 접근 가능."""
     events, total = await service.list_edge_events(
         db=db,
         event_type=event_type,

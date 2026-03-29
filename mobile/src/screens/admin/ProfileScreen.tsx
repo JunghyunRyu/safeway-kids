@@ -1,7 +1,6 @@
 import React from "react";
 import {
   Alert,
-  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -41,9 +40,11 @@ export default function AdminProfileScreen() {
   };
 
   const openWebDashboard = () => {
-    Linking.openURL("https://admin.safeway-kids.com").catch(() => {
-      // silent
-    });
+    Alert.alert(
+      "웹 대시보드",
+      "웹 대시보드는 별도 URL로 제공됩니다.\nPC 브라우저에서 접속해 주세요.",
+      [{ text: "확인" }],
+    );
   };
 
   return (

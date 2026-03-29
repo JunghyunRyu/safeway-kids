@@ -28,8 +28,7 @@
       "Read(./secrets/**)",
       "Read(./config/credentials.json)",
       "Bash(curl *)",
-      "Bash(wget *)",
-      "Bash(git push *)"
+      "Bash(wget *)"
     ]
   },
   "hooks": {

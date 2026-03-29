@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
+import Constants from "expo-constants";
 import { registerFcmToken } from "../api/notifications";
 import { debugLog } from "../utils/debug";
 
@@ -40,8 +41,12 @@ export function useNotifications(authenticated: boolean) {
 
     // Listen for notification taps
     responseListener.current =
-      Notifications.addNotificationResponseReceivedListener((_response) => {
-        // User tapped the notification — could navigate to relevant screen
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data;
+        if (data?.screen) {
+          // Navigation will be handled by the navigation container
+          debugLog("[Notifications] Tapped notification, target:", data.screen);
+        }
       });
 
     return () => {
@@ -83,9 +88,13 @@ async function registerForPushNotifications(): Promise<string | null> {
     });
   }
 
-  const tokenData = await Notifications.getExpoPushTokenAsync({
-    projectId: "your-expo-project-id", // Replace with actual Expo project ID
-  });
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+  if (!projectId) {
+    debugLog("[Notifications] Missing Expo project ID in app config");
+    return null;
+  }
+
+  const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
 
   return tokenData.data;
 }

@@ -17,7 +17,9 @@ import {
   listStudents,
   getStudent,
   updateStudentProfile,
+  listEnrollments,
   Student,
+  Enrollment,
 } from "../../api/students";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
 import { showError } from "../../utils/toast";
@@ -36,6 +38,8 @@ export default function ChildProfileScreen() {
     grade: "",
   });
   const [saving, setSaving] = useState(false);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [loadingEnrollments, setLoadingEnrollments] = useState(false);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -75,6 +79,16 @@ export default function ChildProfileScreen() {
         grade: detail.grade || "",
       });
       setEditing(false);
+      // Load enrollment history
+      setLoadingEnrollments(true);
+      try {
+        const enr = await listEnrollments(s.id);
+        if (mountedRef.current) setEnrollments(enr);
+      } catch {
+        if (mountedRef.current) setEnrollments([]);
+      } finally {
+        if (mountedRef.current) setLoadingEnrollments(false);
+      }
     } catch {
       if (mountedRef.current) showError("자녀 정보를 불러올 수 없습니다.");
     }
@@ -135,6 +149,48 @@ export default function ChildProfileScreen() {
             <Pressable style={styles.saveBtn} onPress={handleSave} disabled={saving}>
               <Text style={styles.saveBtnText}>{saving ? "저장 중..." : "저장"}</Text>
             </Pressable>
+          )}
+        </View>
+
+        {/* 등록 이력 */}
+        <View style={[styles.card, Shadows.sm, { marginTop: Spacing.md }]}>
+          <View style={styles.enrollmentHeader}>
+            <Ionicons name="school-outline" size={18} color={Colors.primary} />
+            <Text style={styles.enrollmentTitle}>등록 이력</Text>
+          </View>
+          {loadingEnrollments ? (
+            <ActivityIndicator style={{ padding: Spacing.md }} size="small" color={Colors.primary} />
+          ) : enrollments.length === 0 ? (
+            <Text style={styles.enrollmentEmpty}>등록 이력이 없습니다.</Text>
+          ) : (
+            enrollments.map((enr) => (
+              <View key={enr.id} style={styles.enrollmentRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.enrollmentAcademy}>학원 ID: {enr.academy_id.slice(0, 8)}...</Text>
+                  <Text style={styles.enrollmentDate}>
+                    등록: {new Date(enr.enrolled_at).toLocaleDateString("ko-KR")}
+                    {enr.withdrawn_at
+                      ? `  |  탈퇴: ${new Date(enr.withdrawn_at).toLocaleDateString("ko-KR")}`
+                      : ""}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.enrollmentBadge,
+                    { backgroundColor: enr.withdrawn_at ? "#F3F4F6" : "#ECFDF5" },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.enrollmentBadgeText,
+                      { color: enr.withdrawn_at ? "#9CA3AF" : "#10B981" },
+                    ]}
+                  >
+                    {enr.withdrawn_at ? "탈퇴" : "재학 중"}
+                  </Text>
+                </View>
+              </View>
+            ))
           )}
         </View>
       </ScrollView>
@@ -224,4 +280,12 @@ const styles = StyleSheet.create({
   fieldInput: { fontSize: Typography.sizes.md, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, padding: Spacing.sm, backgroundColor: Colors.background },
   saveBtn: { margin: Spacing.base, backgroundColor: Colors.primary, borderRadius: Radius.lg, paddingVertical: Spacing.md, alignItems: "center" },
   saveBtnText: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.semibold, color: Colors.textInverse },
+  enrollmentHeader: { flexDirection: "row", alignItems: "center", gap: Spacing.sm, paddingHorizontal: Spacing.base, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
+  enrollmentTitle: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.semibold, color: Colors.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 },
+  enrollmentEmpty: { fontSize: Typography.sizes.sm, color: Colors.textSecondary, textAlign: "center", paddingVertical: Spacing.md },
+  enrollmentRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: Spacing.base, paddingVertical: Spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border },
+  enrollmentAcademy: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.medium, color: Colors.textPrimary },
+  enrollmentDate: { fontSize: Typography.sizes.xs, color: Colors.textSecondary, marginTop: 2 },
+  enrollmentBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.full, marginLeft: Spacing.sm },
+  enrollmentBadgeText: { fontSize: Typography.sizes.xs, fontWeight: Typography.weights.semibold },
 });

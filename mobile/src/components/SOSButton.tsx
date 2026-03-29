@@ -14,7 +14,7 @@ const SOS_TYPES = [
 
 // SOS feature is currently disabled to prevent accidental emergency calls.
 // Set to true to enable when ready for production use.
-const SOS_ENABLED = false;
+const SOS_ENABLED = true;
 
 export default function SOSButton() {
   const { user } = useAuth();

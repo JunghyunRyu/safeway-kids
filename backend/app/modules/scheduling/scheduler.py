@@ -6,6 +6,7 @@ Can be run as:
 """
 
 import logging
+import uuid
 from datetime import date, timedelta
 
 from sqlalchemy import distinct, select
@@ -102,6 +103,30 @@ async def run_daily_pipeline(
     instances = await materialize_daily_schedules(db, target_date)
     result["schedules_created"] = len(instances)
     logger.info("Materialized %d schedule instances for %s", len(instances), target_date)
+
+    # F10: Webhook dispatch for schedule_created events
+    if instances:
+        import asyncio
+        from app.modules.integration.webhook_dispatcher import dispatch_webhook
+
+        # Group by academy and dispatch one webhook per academy
+        academy_instances: dict[str, list[dict]] = {}
+        for inst in instances:
+            aid = str(inst.academy_id)
+            academy_instances.setdefault(aid, []).append({
+                "instance_id": str(inst.id),
+                "student_id": str(inst.student_id),
+                "schedule_date": str(inst.schedule_date),
+                "pickup_time": str(inst.pickup_time),
+            })
+        for aid, schedule_data in academy_instances.items():
+            asyncio.create_task(dispatch_webhook(
+                uuid.UUID(aid), "schedule_created", {
+                    "date": str(target_date),
+                    "schedules": schedule_data,
+                    "count": len(schedule_data),
+                }
+            ))
 
     # Step 2: Auto-assign vehicles if needed
     assignments = await auto_assign_vehicles(db, target_date)
