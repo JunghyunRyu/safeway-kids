@@ -30,6 +30,9 @@ build/
 coverage/
 *.log
 
+# ML model files (too large for GitHub)
+*.onnx
+
 # Uploaded files
 uploads/
 

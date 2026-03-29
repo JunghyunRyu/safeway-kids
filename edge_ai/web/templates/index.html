@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeWay Kids - Edge AI PoC Demo</title>
+    <link rel="stylesheet" href="/static/css/demo.css">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+    <div id="app">
+
+        <!-- ════════════════════════════════════════════
+             Landing Screen (데모 시작 화면)
+             ════════════════════════════════════════════ -->
+        <div id="landing-screen">
+            <div class="landing-content">
+                <div class="landing-badge">PoC DEMO</div>
+                <h1 class="landing-title">SafeWay Kids Edge AI</h1>
+                <p class="landing-subtitle">어린이 통학차량 AI 안전 시스템</p>
+                <p class="landing-desc">규제 샌드박스 기술 검증 데모</p>
+
+                <!-- 4개 도메인 인포그래픽 -->
+                <div class="domain-cards">
+                    <div class="domain-card">
+                        <div class="domain-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                            </svg>
+                        </div>
+                        <div class="domain-label">엣지 컴퓨팅</div>
+                        <div class="domain-sub">Edge Computing</div>
+                    </div>
+                    <div class="domain-card">
+                        <div class="domain-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
+                            </svg>
+                        </div>
+                        <div class="domain-label">CCTV 카메라</div>
+                        <div class="domain-sub">Behavior Analysis</div>
+                    </div>
+                    <div class="domain-card">
+                        <div class="domain-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </div>
+                        <div class="domain-label">안면인식 터미널</div>
+                        <div class="domain-sub">Face Recognition</div>
+                    </div>
+                    <div class="domain-card">
+                        <div class="domain-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+                            </svg>
+                        </div>
+                        <div class="domain-label">사각지대 센서</div>
+                        <div class="domain-sub">LiDAR + Ultrasonic</div>
+                    </div>
+                </div>
+
+                <!-- 시스템 상태 -->
+                <div class="landing-status">
+                    <div class="status-item">
+                        <span class="indicator" id="landing-camera-ind"></span>
+                        <span>카메라 연결</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="indicator" id="landing-model-ind"></span>
+                        <span>모델 로드</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="indicator" id="landing-backend-ind"></span>
+                        <span>백엔드</span>
+                    </div>
+                </div>
+
+                <!-- 데모 시작 버튼 -->
+                <button id="btn-start-demo" class="btn-start" onclick="window.demoApp && window.demoApp.startDemo()">
+                    <span class="btn-start-icon">&#9654;</span> 데모 시작
+                </button>
+
+                <div class="landing-footer">
+                    SafeWay Kids &copy; 2026 &mdash; 규제 샌드박스 기술 검증 데모
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════
+             Main Demo Screen (시나리오 활성 화면)
+             ════════════════════════════════════════════ -->
+        <div id="demo-screen" class="hidden">
+
+            <!-- Header -->
+            <header id="header">
+                <div class="header-left">
+                    <h1 class="header-title">SafeWay Kids Edge AI</h1>
+                    <span class="header-live-badge">LIVE</span>
+                    <span class="header-timer" id="demo-timer">00:00:00</span>
+                    <span class="header-poc-badge">PoC DEMO</span>
+                </div>
+                <div class="header-right">
+                    <div id="connection-status">
+                        <span class="indicator" id="ws-indicator"></span>
+                        <span id="ws-label">Socket.IO</span>
+                        <span class="indicator" id="backend-indicator"></span>
+                        <span id="backend-label">Backend</span>
+                    </div>
+                    <button class="btn-header" id="btn-field-ui" onclick="window.demoApp && window.demoApp.toggleFieldUI()">현장 UI</button>
+                    <button class="btn-header btn-reset" id="btn-reset" onclick="window.demoApp && window.demoApp.resetDemo()">데모 리셋</button>
+                </div>
+            </header>
+
+            <!-- Step Wizard (시나리오 탭) -->
+            <nav id="step-wizard">
+                <button class="wizard-step active" data-scenario="1" onclick="window.demoApp && window.demoApp.switchScenario(1)">
+                    <span class="step-num">&#9312;</span>
+                    <span class="step-title">승하차 안면인식</span>
+                    <span class="step-domain">도메인 3: 안면인식 터미널</span>
+                    <span class="step-indicator"></span>
+                </button>
+                <span class="wizard-arrow">&rarr;</span>
+                <button class="wizard-step" data-scenario="2" onclick="window.demoApp && window.demoApp.switchScenario(2)">
+                    <span class="step-num">&#9313;</span>
+                    <span class="step-title">이상 행동 감지</span>
+                    <span class="step-domain">도메인 2: CCTV 영상분석</span>
+                    <span class="step-indicator"></span>
+                </button>
+                <span class="wizard-arrow">&rarr;</span>
+                <button class="wizard-step" data-scenario="3" onclick="window.demoApp && window.demoApp.switchScenario(3)">
+                    <span class="step-num">&#9314;</span>
+                    <span class="step-title">잔류 인원 감지</span>
+                    <span class="step-domain">도메인 1: 엣지 컴퓨팅</span>
+                    <span class="step-indicator"></span>
+                </button>
+                <span class="wizard-arrow">&rarr;</span>
+                <button class="wizard-step" data-scenario="4" onclick="window.demoApp && window.demoApp.switchScenario(4)">
+                    <span class="step-num">&#9315;</span>
+                    <span class="step-title">사각지대 감지</span>
+                    <span class="step-domain">도메인 4: LiDAR+초음파</span>
+                    <span class="step-indicator"></span>
+                </button>
+            </nav>
+
+            <!-- Main Content Area -->
+            <div id="main-content">
+                <!-- Left: Viewport -->
+                <div id="viewport-area">
+                    <!-- Video Viewport (시나리오 1~3) -->
+                    <div id="video-viewport" class="viewport-panel">
+                        <div class="viewport-header">
+                            <span class="viewport-badge" id="scenario-badge">시나리오 1</span>
+                            <span class="viewport-mode" id="mode-label">대기</span>
+                        </div>
+                        <canvas id="video-canvas" width="800" height="600"></canvas>
+                        <!-- 경고 테두리 오버레이 -->
+                        <div id="alert-border-overlay" class="alert-border"></div>
+                        <!-- 시나리오 전환 오버레이 -->
+                        <div id="transition-overlay" class="transition-overlay hidden">
+                            <div class="transition-text" id="transition-text"></div>
+                        </div>
+                        <!-- 시나리오 3: 시동 제어 -->
+                        <div id="engine-controls" class="engine-controls hidden">
+                            <button class="btn-engine btn-engine-off" id="btn-engine-off" onclick="window.demoApp && window.demoApp.engineOff()">시동 OFF</button>
+                            <button class="btn-engine btn-engine-on" id="btn-engine-on" onclick="window.demoApp && window.demoApp.engineOn()">시동 ON</button>
+                        </div>
+                    </div>
+
+                    <!-- BEV Viewport (시나리오 4) -->
+                    <div id="bev-viewport" class="viewport-panel hidden">
+                        <div class="viewport-header">
+                            <span class="viewport-badge">시나리오 4</span>
+                            <span class="viewport-mode">사각지대 감지</span>
+                        </div>
+                        <canvas id="bev-canvas" width="600" height="600"></canvas>
+                        <div class="bev-controls">
+                            <select id="bev-scenario-select" onchange="window.demoApp && window.demoApp.selectBEVScenario(this.value)">
+                                <option value="0">후방 접근</option>
+                                <option value="1">측면 사각지대</option>
+                                <option value="2">복수 어린이</option>
+                            </select>
+                            <button class="btn-bev" id="btn-bev-play" onclick="window.demoApp && window.demoApp.bevPlay()">&#9654; 재생</button>
+                            <button class="btn-bev" id="btn-bev-pause" onclick="window.demoApp && window.demoApp.bevPause()">&#10074;&#10074; 일시정지</button>
+                            <button class="btn-bev" id="btn-bev-interactive" onclick="window.demoApp && window.demoApp.bevToggleInteractive()">마우스 모드</button>
+                        </div>
+                    </div>
+
+                    <!-- Presenter Guide -->
+                    <div id="presenter-guide">
+                        <div class="guide-header">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                            Presenter Guide
+                        </div>
+                        <p class="guide-text" id="guide-text">
+                            "데모 시작" 버튼을 눌러 시연을 시작하세요.
+                        </p>
+                        <p class="guide-next" id="guide-next">
+                            다음 동작: 시나리오 ① 승하차 안면인식으로 이동합니다.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Right: Side Panel -->
+                <div id="side-panel">
+                    <!-- Edge Device Status -->
+                    <div id="device-panel" class="side-section">
+                        <h3 class="section-title">Edge Device Status</h3>
+                        <div class="device-target">Target: NVIDIA Jetson Orin (Simulated)</div>
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">CPU</div>
+                                <div class="metric-bar-wrap">
+                                    <div class="metric-bar" id="bar-cpu" style="width: 0%"></div>
+                                </div>
+                                <div class="metric-value" id="metric-cpu">0%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Memory</div>
+                                <div class="metric-bar-wrap">
+                                    <div class="metric-bar metric-bar-mem" id="bar-memory" style="width: 0%"></div>
+                                </div>
+                                <div class="metric-value" id="metric-memory">0%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">FPS</div>
+                                <div class="metric-value metric-value-lg" id="metric-fps">0</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Inference</div>
+                                <div class="metric-value metric-value-lg" id="metric-inference">0 ms</div>
+                            </div>
+                        </div>
+                        <div class="metric-model">
+                            <span class="metric-label">Model:</span>
+                            <span id="metric-model">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Controls (시나리오별 변경) -->
+                    <div id="controls-panel" class="side-section">
+                        <h3 class="section-title">Controls</h3>
+
+                        <!-- 시나리오 1: 얼굴 등록 -->
+                        <div id="ctrl-face" class="ctrl-group">
+                            <div class="face-reg-row">
+                                <input type="text" id="face-name-input" class="input-field" placeholder="원생 이름">
+                                <button class="btn-ctrl" id="btn-consent" onclick="window.demoApp && window.demoApp.showConsent()">동의 &amp; 등록</button>
+                            </div>
+                            <div class="face-mode-row">
+                                <button class="btn-ctrl btn-boarding active" id="btn-board" onclick="window.demoApp && window.demoApp.setBoardingMode('board')">승차 모드</button>
+                                <button class="btn-ctrl btn-alighting" id="btn-alight" onclick="window.demoApp && window.demoApp.setBoardingMode('alight')">하차 모드</button>
+                            </div>
+                            <!-- 인식 상태 피드 -->
+                            <div id="recognition-feed" class="recognition-feed">
+                                <div class="reg-header">실시간 인식</div>
+                                <div id="recognition-status" class="recognition-status">대기중...</div>
+                            </div>
+                            <div class="registered-list">
+                                <div class="reg-header-row">
+                                    <span class="reg-header">등록 원생 (<span id="reg-count">0</span>명)</span>
+                                    <button class="btn-clear-all" id="btn-clear-faces" onclick="window.demoApp && window.demoApp.clearAllFaces()">전체 삭제</button>
+                                </div>
+                                <ul id="registered-faces"></ul>
+                            </div>
+                        </div>
+
+                        <!-- 시나리오 2: 이상행동 감지 -->
+                        <div id="ctrl-behavior" class="ctrl-group hidden">
+                            <p class="ctrl-desc">CCTV 영상분석 기반 이상 행동을 실시간 감지합니다.</p>
+                            <div class="ctrl-info-grid">
+                                <div class="ctrl-info-item">
+                                    <span class="ctrl-info-label">감지 대상</span>
+                                    <span class="ctrl-info-value">안전벨트 미착용, 자리이탈, 낙상</span>
+                                </div>
+                                <div class="ctrl-info-item">
+                                    <span class="ctrl-info-label">알림 대상</span>
+                                    <span class="ctrl-info-value">인솔교사 앱 + 운전기사 LED</span>
+                                </div>
+                                <div class="ctrl-info-item">
+                                    <span class="ctrl-info-label">감지 상태</span>
+                                    <span class="ctrl-info-value" id="behavior-status">대기중</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 시나리오 3: 시동 제어 (inline) -->
+                        <div id="ctrl-engine" class="ctrl-group hidden">
+                            <p class="ctrl-desc">"시동 OFF" 버튼을 클릭하여 잔류인원 스캔을 시작합니다.</p>
+                            <div class="ctrl-info-grid">
+                                <div class="ctrl-info-item">
+                                    <span class="ctrl-info-label">스캔 방식</span>
+                                    <span class="ctrl-info-value">3D 열화상 + YOLOv8n</span>
+                                </div>
+                                <div class="ctrl-info-item">
+                                    <span class="ctrl-info-label">시동 상태</span>
+                                    <span class="ctrl-info-value" id="engine-status">ON</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 시나리오 4: BEV 제어 (inline) -->
+                        <div id="ctrl-bev" class="ctrl-group hidden">
+                            <p class="ctrl-desc">시나리오를 선택하고 재생 버튼을 누르세요.</p>
+                            <div class="ctrl-info-grid">
+                                <div class="ctrl-info-item">
+                                    <span class="ctrl-info-label">센서</span>
+                                    <span class="ctrl-info-value">LiDAR + 초음파 8ch</span>
+                                </div>
+                                <div class="ctrl-info-item">
+                                    <span class="ctrl-info-label">경고 단계</span>
+                                    <span class="ctrl-info-value">주의 4m → 경고 2.5m → 위험 1m</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Event Log -->
+                    <div id="event-log-panel" class="side-section">
+                        <h3 class="section-title">Event Log</h3>
+                        <ul id="event-log"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div id="status-bar">
+                <span id="status-text">시스템 준비 완료</span>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════
+             Consent Modal (보호자 동의 화면)
+             ════════════════════════════════════════════ -->
+        <div id="consent-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>SafeWay Kids 안면인식 동의서</h2>
+                    <button class="modal-close" onclick="window.demoApp && window.demoApp.closeConsent()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="consent-section">
+                        <div class="consent-row">
+                            <span class="consent-label">수집 목적</span>
+                            <span class="consent-value">승하차 비접촉 인증</span>
+                        </div>
+                        <div class="consent-row">
+                            <span class="consent-label">수집 항목</span>
+                            <span class="consent-value">안면 특징 벡터 (원본 이미지 미보관)</span>
+                        </div>
+                        <div class="consent-row">
+                            <span class="consent-label">보관 기간</span>
+                            <span class="consent-value">재학 기간 + 30일</span>
+                        </div>
+                        <div class="consent-row">
+                            <span class="consent-label">파기 방법</span>
+                            <span class="consent-value">자동 영구 삭제 (AES-256-GCM 암호화 보관)</span>
+                        </div>
+                        <div class="consent-row">
+                            <span class="consent-label">법적 근거</span>
+                            <span class="consent-value">개인정보보호법 제15조, 제23조</span>
+                        </div>
+                    </div>
+                    <div class="consent-check">
+                        <label>
+                            <input type="checkbox" id="consent-agree">
+                            위 내용을 확인하고 동의합니다
+                        </label>
+                    </div>
+                    <div class="consent-fields">
+                        <div class="consent-field">
+                            <label for="consent-parent-name">보호자 이름</label>
+                            <input type="text" id="consent-parent-name" class="input-field" placeholder="보호자 성명">
+                        </div>
+                        <div class="consent-field">
+                            <label for="consent-child-name">원생 이름</label>
+                            <input type="text" id="consent-child-name" class="input-field" placeholder="원생 성명">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-consent-submit" id="btn-consent-submit" onclick="window.demoApp && window.demoApp.submitConsent()" disabled>동의 후 얼굴 등록 진행</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════
+             Face Registration Modal (얼굴 등록 화면)
+             ════════════════════════════════════════════ -->
+        <div id="face-reg-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>얼굴 촬영</h2>
+                    <button class="modal-close" onclick="window.demoApp && window.demoApp.closeFaceRegModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="face-reg-name-display">
+                        등록 대상: <strong id="face-reg-name"></strong>
+                    </div>
+                    <div class="face-capture-wrap">
+                        <canvas id="face-capture-canvas" width="320" height="280"></canvas>
+                    </div>
+                    <p class="face-capture-hint">카메라를 정면으로 바라보고 가이드 안에 얼굴을 맞춰주세요.</p>
+                    <div class="face-capture-actions">
+                        <button class="btn-ctrl btn-capture" onclick="window.demoApp && window.demoApp.captureFace()">
+                            <span class="capture-icon">&#128247;</span> 촬영 &amp; 등록
+                        </button>
+                        <button class="btn-ctrl" onclick="window.demoApp && window.demoApp.closeFaceRegModal()">취소</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════
+             Field UI Modal (현장 UI 프리뷰)
+             ════════════════════════════════════════════ -->
+        <div id="field-ui-modal" class="modal-overlay hidden">
+            <div class="modal-content modal-field-ui">
+                <div class="modal-header">
+                    <h2>현장 UI 프리뷰</h2>
+                    <div class="field-toggle">
+                        <button class="btn-field-tab active" id="tab-teacher" onclick="window.demoApp && window.demoApp.switchFieldTab('teacher')">인솔교사</button>
+                        <button class="btn-field-tab" id="tab-driver" onclick="window.demoApp && window.demoApp.switchFieldTab('driver')">운전기사</button>
+                    </div>
+                    <button class="modal-close" onclick="window.demoApp && window.demoApp.closeFieldUI()">&times;</button>
+                </div>
+                <div class="modal-body" id="field-ui-body">
+                    <!-- JS에서 동적 렌더링 -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts: 모듈 로드 순서 — video-canvas, dashboard, field-ui, audio, app(오케스트레이터) -->
+    <script src="/static/js/video-canvas.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+    <script src="/static/js/field-ui.js"></script>
+    <script src="/static/js/audio.js"></script>
+    <script src="/static/js/app.js"></script>
+    <!-- Blindspot 모듈은 ES Module (시나리오 4 진입 시 동적 import) -->
+</body>
+</html>

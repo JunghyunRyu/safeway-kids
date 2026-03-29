@@ -1,3 +1,19 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "eslint": {
+      "command": "npx",
+      "args": ["@eslint/mcp@latest"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-filesystem@latest",
+        "C:/jhryu/01_project/safeway_kids"
+      ]
+    }
+  }
 }
