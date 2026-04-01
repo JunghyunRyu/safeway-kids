@@ -108,6 +108,9 @@ export default function ConsentCard({
             idx < items.length - 1 && styles.rowBorder,
           ]}
           onPress={() => onToggle(item.key)}
+          accessibilityRole="checkbox"
+          accessibilityLabel={item.label}
+          accessibilityState={{ checked: !!scope[item.key] }}
         >
           <View
             style={[styles.checkbox, scope[item.key] && styles.checkboxChecked]}

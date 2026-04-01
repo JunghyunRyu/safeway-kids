@@ -69,6 +69,9 @@ export function ToggleAllCard({ allChecked, onPress }: ToggleAllProps) {
     <Pressable
       style={[styles.toggleAllCard, Shadows.sm]}
       onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityLabel="전체 동의"
+      accessibilityState={{ checked: allChecked }}
     >
       <View style={[styles.checkbox, allChecked && styles.checkboxChecked]}>
         {allChecked && (
@@ -108,6 +111,8 @@ export function SubmitButton({ disabled, submitting, onPress }: SubmitButtonProp
       ]}
       onPress={onPress}
       disabled={disabled || submitting}
+      accessibilityRole="button"
+      accessibilityLabel="동의하고 시작하기"
     >
       {submitting ? (
         <ActivityIndicator size="small" color={Colors.textInverse} />
