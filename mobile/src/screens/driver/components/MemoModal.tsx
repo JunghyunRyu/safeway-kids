@@ -33,7 +33,7 @@ export function MemoModal({ visible, text, saving, onChangeText, onSave, onClose
             accessibilityLabel="특이사항 메모 입력"
           />
           <Pressable
-            style={[styles.saveBtn, saving && { opacity: 0.5 }]}
+            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
             onPress={onSave}
             disabled={saving || !text.trim()}
             accessibilityRole="button"
@@ -54,5 +54,6 @@ const styles = StyleSheet.create({
   title: { fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
   input: { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, padding: Spacing.sm, fontSize: Typography.sizes.md, color: Colors.textPrimary, minHeight: 100, textAlignVertical: "top", backgroundColor: Colors.background },
   saveBtn: { backgroundColor: Colors.primary, borderRadius: Radius.lg, paddingVertical: Spacing.md, alignItems: "center", marginTop: Spacing.md },
+  saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { color: Colors.textInverse, fontWeight: Typography.weights.semibold, fontSize: Typography.sizes.md },
 });

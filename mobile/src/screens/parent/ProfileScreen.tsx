@@ -124,7 +124,7 @@ export default function ProfileScreen() {
   if (showChildProfile) {
     const ChildProfileScreen = require("./ChildProfileScreen").default;
     return (
-      <View style={{ flex: 1 }}>
+      <View style={styles.subScreenContainer}>
         <Pressable
           onPress={() => setShowChildProfile(false)}
           style={styles.subScreenBack}
@@ -142,7 +142,7 @@ export default function ProfileScreen() {
   if (showNotifSettings) {
     const NotificationSettingsScreen = require("./NotificationSettingsScreen").default;
     return (
-      <View style={{ flex: 1 }}>
+      <View style={styles.subScreenContainer}>
         <Pressable
           onPress={() => setShowNotifSettings(false)}
           style={styles.subScreenBack}
@@ -266,5 +266,8 @@ const styles = StyleSheet.create({
   subScreenBackText: {
     fontSize: Typography.sizes.md,
     color: Colors.primary,
+  },
+  subScreenContainer: {
+    flex: 1,
   },
 });

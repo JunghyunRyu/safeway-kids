@@ -58,7 +58,7 @@ export function VehicleClearance({
               <Text style={styles.cancelText}>취소</Text>
             </Pressable>
             <Pressable
-              style={[styles.startBtn, { flex: 1 }, !allChecked && styles.disabled]}
+              style={[styles.startBtn, styles.submitBtn, !allChecked && styles.disabled]}
               onPress={onSubmit}
               disabled={!allChecked}
               accessibilityRole="button"
@@ -85,5 +85,6 @@ const styles = StyleSheet.create({
   cancelText: { color: Colors.textSecondary, fontWeight: Typography.weights.semibold, fontSize: 16 },
   startBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: Spacing.sm, backgroundColor: Colors.success, paddingVertical: Spacing.base, borderRadius: Radius.lg, minHeight: 60 },
   startBtnText: { color: Colors.textInverse, fontWeight: Typography.weights.bold, fontSize: 18 },
+  submitBtn: { flex: 1 },
   disabled: { opacity: 0.5 },
 });

@@ -125,7 +125,7 @@ export default function ChildProfileScreen() {
             <View style={[styles.avatar, { backgroundColor: Colors.roleParent }]}>
               <Text style={styles.avatarText}>{selected.name.charAt(0)}</Text>
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.flexOne}>
               <Text style={styles.childName}>{selected.name}</Text>
               <Text style={styles.childSub}>{selected.date_of_birth}</Text>
             </View>
@@ -153,19 +153,19 @@ export default function ChildProfileScreen() {
         </View>
 
         {/* 등록 이력 */}
-        <View style={[styles.card, Shadows.sm, { marginTop: Spacing.md }]}>
+        <View style={[styles.card, Shadows.sm, styles.enrollmentCard]}>
           <View style={styles.enrollmentHeader}>
             <Ionicons name="school-outline" size={18} color={Colors.primary} />
             <Text style={styles.enrollmentTitle}>등록 이력</Text>
           </View>
           {loadingEnrollments ? (
-            <ActivityIndicator style={{ padding: Spacing.md }} size="small" color={Colors.primary} />
+            <ActivityIndicator style={styles.enrollmentLoading} size="small" color={Colors.primary} />
           ) : enrollments.length === 0 ? (
             <Text style={styles.enrollmentEmpty}>등록 이력이 없습니다.</Text>
           ) : (
             enrollments.map((enr) => (
               <View key={enr.id} style={styles.enrollmentRow}>
-                <View style={{ flex: 1 }}>
+                <View style={styles.flexOne}>
                   <Text style={styles.enrollmentAcademy}>학원 ID: {enr.academy_id.slice(0, 8)}...</Text>
                   <Text style={styles.enrollmentDate}>
                     등록: {new Date(enr.enrolled_at).toLocaleDateString("ko-KR")}
@@ -214,7 +214,7 @@ export default function ChildProfileScreen() {
               <View style={[styles.avatarSm, { backgroundColor: Colors.roleParent }]}>
                 <Text style={styles.avatarSmText}>{item.name.charAt(0)}</Text>
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={styles.flexOne}>
                 <Text style={styles.childRowName}>{item.name}</Text>
                 <Text style={styles.childRowSub}>{item.grade ? `${item.grade}학년` : ""} {item.date_of_birth}</Text>
               </View>
@@ -289,4 +289,7 @@ const styles = StyleSheet.create({
   enrollmentDate: { fontSize: Typography.sizes.xs, color: Colors.textSecondary, marginTop: 2 },
   enrollmentBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.full, marginLeft: Spacing.sm },
   enrollmentBadgeText: { fontSize: Typography.sizes.xs, fontWeight: Typography.weights.semibold },
+  flexOne: { flex: 1 },
+  enrollmentCard: { marginTop: Spacing.md },
+  enrollmentLoading: { padding: Spacing.md },
 });
