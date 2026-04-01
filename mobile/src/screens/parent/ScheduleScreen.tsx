@@ -1,18 +1,15 @@
-import React, { memo, useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
   Platform,
-  ScrollView,
+  Pressable,
   StyleSheet,
   Text,
-  Pressable,
   View,
-  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import {
   cancelSchedule,
@@ -26,230 +23,17 @@ import {
   Typography,
   Spacing,
   Radius,
-  Shadows,
-  STATUS_COLORS,
-  STATUS_BG_COLORS,
 } from "../../constants/theme";
-
-// ── Constants ─────────────────────────────────────────────────
-
-type ViewMode = "daily" | "weekly" | "monthly";
-
-const STATUS_LABELS: Record<string, string> = {
-  scheduled: "예정",
-  boarded: "탑승 중",
-  completed: "완료",
-  cancelled: "취소됨",
-  no_show: "미탑승",
-};
-
-const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
-const DAY_NAMES_FULL = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
-
-const timeFmt = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit" });
-
-// ── Date helpers ──────────────────────────────────────────────
-
-function toDateStr(d: Date): string {
-  return d.toISOString().split("T")[0];
-}
-
-function dateStr(offset: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return toDateStr(d);
-}
-
-function fmtTime(t: string): string {
-  return t?.length >= 5 ? t.slice(0, 5) : t;
-}
-
-function fmtDisplayDate(dateIso: string): string {
-  const d = new Date(dateIso + "T00:00:00");
-  return d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
-}
-
-/** Get Monday of the week containing the given date */
-function getMonday(d: Date): Date {
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(d);
-  monday.setDate(diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-/** Get array of 7 dates for the week containing the reference date */
-function getWeekDates(refDate: Date): Date[] {
-  const monday = getMonday(refDate);
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
-}
-
-/** Get first day of month */
-function getMonthStart(year: number, month: number): Date {
-  return new Date(year, month, 1);
-}
-
-/** Get calendar grid (6 weeks x 7 days) for the month */
-function getCalendarGrid(year: number, month: number): Date[][] {
-  const firstDay = getMonthStart(year, month);
-  const startDay = firstDay.getDay(); // 0=Sun
-  const startOffset = startDay === 0 ? -6 : 1 - startDay; // align to Monday
-  const gridStart = new Date(year, month, 1 + startOffset);
-
-  const weeks: Date[][] = [];
-  for (let w = 0; w < 6; w++) {
-    const week: Date[] = [];
-    for (let d = 0; d < 7; d++) {
-      const date = new Date(gridStart);
-      date.setDate(gridStart.getDate() + w * 7 + d);
-      week.push(date);
-    }
-    // Stop if entire week is in next month
-    if (w >= 4 && week[0].getMonth() !== month) break;
-    weeks.push(week);
-  }
-  return weeks;
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-// ── Schedule Card ─────────────────────────────────────────────
-
-interface ScheduleItemProps {
-  id: string;
-  studentName: string;
-  pickupTime: string;
-  status: string;
-  boardedAt: string | null;
-  alightedAt: string | null;
-  academyName: string | null;
-  vehiclePlate: string | null;
-  driverName: string | null;
-  onCancel: (id: string) => void;
-  compact?: boolean;
-}
-
-const ScheduleItem = memo(function ScheduleItem({
-  id, studentName, pickupTime, status, boardedAt, alightedAt,
-  academyName, vehiclePlate, driverName, onCancel, compact,
-}: ScheduleItemProps) {
-  const { t } = useTranslation();
-  const canCancel = status === "scheduled";
-  const statusColor = STATUS_COLORS[status] ?? Colors.neutral;
-  const statusBg = STATUS_BG_COLORS[status] ?? Colors.neutralLight;
-
-  if (compact) {
-    return (
-      <View style={[styles.compactCard, Shadows.sm]}>
-        <View style={styles.compactRow}>
-          <Text style={styles.compactTime}>{fmtTime(pickupTime)}</Text>
-          <Text style={styles.compactName} numberOfLines={1}>{studentName}</Text>
-          <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
-            <Text style={[styles.statusPillText, { color: statusColor }]}>
-              {STATUS_LABELS[status] ?? status}
-            </Text>
-          </View>
-        </View>
-        {(vehiclePlate || driverName) && (
-          <Text style={styles.compactMeta} numberOfLines={1}>
-            {[vehiclePlate, driverName].filter(Boolean).join(" · ")}
-          </Text>
-        )}
-      </View>
-    );
-  }
-
-  return (
-    <View style={[styles.card, Shadows.sm]}>
-      <View style={styles.cardHeader}>
-        <View style={[styles.timeBadge, { backgroundColor: Colors.primaryLight }]}>
-          <Ionicons name="time-outline" size={14} color={Colors.primary} />
-          <Text style={[styles.timeText, { color: Colors.primary }]}>{fmtTime(pickupTime)}</Text>
-        </View>
-        <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
-          <Text style={[styles.statusPillText, { color: statusColor }]}>
-            {STATUS_LABELS[status] ?? status}
-          </Text>
-        </View>
-      </View>
-      <Text style={styles.studentName}>{studentName}</Text>
-      {academyName ? <Text style={styles.metaInfo}>{academyName}</Text> : null}
-      {vehiclePlate || driverName ? (
-        <Text style={styles.metaInfo}>
-          {[vehiclePlate, driverName].filter(Boolean).join(" · ")}
-        </Text>
-      ) : null}
-      {boardedAt ? (
-        <View style={styles.metaRow}>
-          <Ionicons name="enter-outline" size={14} color={Colors.statusBoarded} />
-          <Text style={[styles.metaText, { color: Colors.statusBoarded }]}>
-            탑승 {timeFmt.format(new Date(boardedAt))}
-          </Text>
-        </View>
-      ) : null}
-      {alightedAt ? (
-        <View style={styles.metaRow}>
-          <Ionicons name="exit-outline" size={14} color={Colors.statusCompleted} />
-          <Text style={[styles.metaText, { color: Colors.statusCompleted }]}>
-            하차 {timeFmt.format(new Date(alightedAt))}
-          </Text>
-        </View>
-      ) : null}
-      {canCancel && (
-        <Pressable style={styles.cancelBtn} onPress={() => onCancel(id)} accessibilityRole="button" accessibilityLabel={`${studentName} 스케줄 취소`}>
-          <Ionicons name="close-circle-outline" size={16} color={Colors.danger} />
-          <Text style={styles.cancelText}>{t("schedule.cancelRide")}</Text>
-        </Pressable>
-      )}
-    </View>
-  );
-});
-
-// ── View Mode Tabs ────────────────────────────────────────────
-
-const VIEW_MODES: { key: ViewMode; label: string }[] = [
-  { key: "daily", label: "일간" },
-  { key: "weekly", label: "주간" },
-  { key: "monthly", label: "월간" },
-];
-
-// ── Date Navigation Header ────────────────────────────────────
-
-const DateNavHeader = memo(function DateNavHeader({
-  label,
-  sub,
-  onPrev,
-  onNext,
-  onToday,
-}: {
-  label: string;
-  sub: string;
-  onPrev: () => void;
-  onNext: () => void;
-  onToday?: () => void;
-}) {
-  return (
-    <View style={styles.dateNav}>
-      <Pressable style={styles.dateNavBtn} onPress={onPrev} hitSlop={8} accessibilityRole="button" accessibilityLabel="이전 날짜">
-        <Ionicons name="chevron-back" size={20} color={Colors.textPrimary} />
-      </Pressable>
-      <Pressable style={styles.dateNavCenter} onPress={onToday} accessibilityRole="button" accessibilityLabel="오늘 날짜로 이동">
-        <Text style={styles.dateNavLabel}>{label}</Text>
-        <Text style={styles.dateNavSub}>{sub}</Text>
-      </Pressable>
-      <Pressable style={styles.dateNavBtn} onPress={onNext} hitSlop={8} accessibilityRole="button" accessibilityLabel="다음 날짜">
-        <Ionicons name="chevron-forward" size={20} color={Colors.textPrimary} />
-      </Pressable>
-    </View>
-  );
-});
+import {
+  ViewMode,
+  VIEW_MODES,
+  dateStr,
+  toDateStr,
+  getWeekDates,
+} from "./utils/scheduleHelpers";
+import DailyView from "./components/DailyView";
+import WeeklyView from "./components/WeeklyView";
+import MonthlyView from "./components/MonthlyView";
 
 // ── Main Screen ───────────────────────────────────────────────
 
@@ -274,12 +58,14 @@ export default function ScheduleScreen() {
   const [monthLoading, setMonthLoading] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
-  // ── Daily ───────────────────────────────────────────────
+  // ── Filtered schedules ─────────────────────────────────
 
   const filteredSchedules = useMemo(
     () => selectedStudentId ? schedules.filter((s) => s.student_id === selectedStudentId) : schedules,
     [schedules, selectedStudentId],
   );
+
+  // ── Data loaders ───────────────────────────────────────
 
   const loadDaily = useCallback(async (offset: number) => {
     try {
@@ -293,8 +79,6 @@ export default function ScheduleScreen() {
       showError("스케줄을 불러오는데 실패했습니다");
     }
   }, []);
-
-  // ── Weekly ──────────────────────────────────────────────
 
   const loadWeek = useCallback(async (wOffset: number) => {
     setWeekLoading(true);
@@ -320,22 +104,18 @@ export default function ScheduleScreen() {
     }
   }, []);
 
-  // ── Monthly ─────────────────────────────────────────────
-
   const loadMonth = useCallback(async (year: number, month: number) => {
     setMonthLoading(true);
     try {
       const [studs] = await Promise.all([listStudents()]);
       setStudents(studs);
 
-      // Load all days of the month in batches
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const dates = Array.from({ length: daysInMonth }, (_, i) => {
         const d = new Date(year, month, i + 1);
         return toDateStr(d);
       });
 
-      // Batch in groups of 7 to avoid too many parallel requests
       const counts = new Map<string, number>();
       for (let i = 0; i < dates.length; i += 7) {
         const batch = dates.slice(i, i + 7);
@@ -355,7 +135,7 @@ export default function ScheduleScreen() {
     }
   }, []);
 
-  // ── Focus effect ────────────────────────────────────────
+  // ── Focus effect ───────────────────────────────────────
 
   useFocusEffect(
     useCallback(() => {
@@ -365,7 +145,7 @@ export default function ScheduleScreen() {
     }, [viewMode, dateOffset, weekOffset, monthDate, loadDaily, loadWeek, loadMonth]),
   );
 
-  // ── Navigation handlers ─────────────────────────────────
+  // ── Navigation handlers ────────────────────────────────
 
   const handleDailyPrev = () => { const n = dateOffset - 1; setDateOffset(n); loadDaily(n); };
   const handleDailyNext = () => { const n = dateOffset + 1; setDateOffset(n); loadDaily(n); };
@@ -392,6 +172,11 @@ export default function ScheduleScreen() {
     setMonthDate({ year: now.getFullYear(), month: now.getMonth() });
     loadMonth(now.getFullYear(), now.getMonth());
   };
+  const handleMonthDayPress = (diff: number) => {
+    setDateOffset(diff);
+    setViewMode("daily");
+    loadDaily(diff);
+  };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -401,7 +186,7 @@ export default function ScheduleScreen() {
     setRefreshing(false);
   }, [viewMode, dateOffset, weekOffset, monthDate, loadDaily, loadWeek, loadMonth]);
 
-  // ── Cancel handler ──────────────────────────────────────
+  // ── Cancel handler ─────────────────────────────────────
 
   const handleCancel = useCallback(
     (itemId: string) => {
@@ -427,58 +212,7 @@ export default function ScheduleScreen() {
     [viewMode, dateOffset, weekOffset, loadDaily, loadWeek, t],
   );
 
-  // ── Render helpers ──────────────────────────────────────
-
-  const renderItem = useCallback(
-    ({ item }: { item: DailySchedule }) => {
-      const student = students.find((s) => s.id === item.student_id);
-      return (
-        <ScheduleItem
-          id={item.id}
-          studentName={student?.name ?? item.student_name ?? "학생"}
-          pickupTime={item.pickup_time}
-          status={item.status}
-          boardedAt={item.boarded_at}
-          alightedAt={item.alighted_at}
-          academyName={item.academy_name}
-          vehiclePlate={item.vehicle_license_plate}
-          driverName={item.driver_name}
-          onCancel={handleCancel}
-        />
-      );
-    },
-    [students, handleCancel],
-  );
-
-  // ── Daily nav label ─────────────────────────────────────
-
-  const dailyLabel = dateOffset === 0 ? "오늘" : dateOffset === -1 ? "어제" : dateOffset === 1 ? "내일" : fmtDisplayDate(dateStr(dateOffset));
-
-  // ── Weekly data ─────────────────────────────────────────
-
-  const weekDates = useMemo(() => {
-    const ref = new Date();
-    ref.setDate(ref.getDate() + weekOffset * 7);
-    return getWeekDates(ref);
-  }, [weekOffset]);
-
-  const weekLabel = useMemo(() => {
-    if (weekDates.length === 0) return "";
-    const s = weekDates[0];
-    const e = weekDates[6];
-    return `${s.getMonth() + 1}/${s.getDate()} ~ ${e.getMonth() + 1}/${e.getDate()}`;
-  }, [weekDates]);
-
-  // ── Monthly data ────────────────────────────────────────
-
-  const calendarGrid = useMemo(
-    () => getCalendarGrid(monthDate.year, monthDate.month),
-    [monthDate],
-  );
-  const monthLabel = `${monthDate.year}년 ${monthDate.month + 1}월`;
-  const today = new Date();
-
-  // ── Render ──────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -524,195 +258,47 @@ export default function ScheduleScreen() {
         />
       )}
 
-      {/* ═══════ DAILY VIEW ═══════ */}
+      {/* View content */}
       {viewMode === "daily" && (
-        <>
-          <DateNavHeader label={dailyLabel} sub={dateStr(dateOffset)} onPrev={handleDailyPrev} onNext={handleDailyNext} onToday={handleDailyToday} />
-          {filteredSchedules.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="calendar-outline" size={56} color={Colors.textDisabled} />
-              <Text style={styles.emptyTitle}>이 날에 일정이 없습니다</Text>
-              <Text style={styles.emptyDesc}>화살표로 날짜를 이동하거나 아래로 당겨 새로고침하세요.</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filteredSchedules}
-              keyExtractor={(item) => item.id}
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              renderItem={renderItem}
-              contentContainerStyle={styles.list}
-            />
-          )}
-        </>
+        <DailyView
+          dateOffset={dateOffset}
+          filteredSchedules={filteredSchedules}
+          students={students}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onPrev={handleDailyPrev}
+          onNext={handleDailyNext}
+          onToday={handleDailyToday}
+          onCancel={handleCancel}
+        />
       )}
 
-      {/* ═══════ WEEKLY VIEW ═══════ */}
       {viewMode === "weekly" && (
-        <>
-          <DateNavHeader
-            label={weekOffset === 0 ? "이번 주" : weekLabel}
-            sub={weekLabel}
-            onPrev={handleWeekPrev}
-            onNext={handleWeekNext}
-            onToday={handleWeekToday}
-          />
-          {weekLoading ? (
-            <View style={styles.emptyState}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={styles.weekContainer} refreshControl={
-              <FlatList
-                data={[]}
-                keyExtractor={(_item, index) => index.toString()}
-                renderItem={() => null}
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-              /> as any
-            }>
-              {weekDates.map((date) => {
-                const key = toDateStr(date);
-                const daySchedules = weekSchedules.get(key) ?? [];
-                const filtered = selectedStudentId
-                  ? daySchedules.filter((s) => s.student_id === selectedStudentId)
-                  : daySchedules;
-                const isToday = isSameDay(date, today);
-                const dayOfWeek = date.getDay();
-
-                return (
-                  <View key={key} style={styles.weekDaySection}>
-                    <View style={[styles.weekDayHeader, isToday && styles.weekDayHeaderToday]}>
-                      <Text style={[styles.weekDayName, isToday && styles.weekDayNameToday]}>
-                        {DAY_NAMES[dayOfWeek]}
-                      </Text>
-                      <Text style={[styles.weekDayDate, isToday && styles.weekDayDateToday]}>
-                        {date.getMonth() + 1}/{date.getDate()}
-                      </Text>
-                      <Text style={styles.weekDayCount}>
-                        {filtered.length > 0 ? `${filtered.length}건` : ""}
-                      </Text>
-                    </View>
-                    {filtered.length === 0 ? (
-                      <Text style={styles.weekDayEmpty}>일정 없음</Text>
-                    ) : (
-                      filtered.map((item) => {
-                        const student = students.find((s) => s.id === item.student_id);
-                        return (
-                          <ScheduleItem
-                            key={item.id}
-                            id={item.id}
-                            studentName={student?.name ?? item.student_name ?? "학생"}
-                            pickupTime={item.pickup_time}
-                            status={item.status}
-                            boardedAt={item.boarded_at}
-                            alightedAt={item.alighted_at}
-                            academyName={item.academy_name}
-                            vehiclePlate={item.vehicle_license_plate}
-                            driverName={item.driver_name}
-                            onCancel={handleCancel}
-                            compact
-                          />
-                        );
-                      })
-                    )}
-                  </View>
-                );
-              })}
-            </ScrollView>
-          )}
-        </>
+        <WeeklyView
+          weekOffset={weekOffset}
+          weekSchedules={weekSchedules}
+          students={students}
+          weekLoading={weekLoading}
+          refreshing={refreshing}
+          selectedStudentId={selectedStudentId}
+          onRefresh={onRefresh}
+          onPrev={handleWeekPrev}
+          onNext={handleWeekNext}
+          onToday={handleWeekToday}
+          onCancel={handleCancel}
+        />
       )}
 
-      {/* ═══════ MONTHLY VIEW ═══════ */}
       {viewMode === "monthly" && (
-        <>
-          <DateNavHeader label={monthLabel} sub="" onPrev={handleMonthPrev} onNext={handleMonthNext} onToday={handleMonthToday} />
-          {monthLoading ? (
-            <View style={styles.emptyState}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={styles.monthContainer}>
-              {/* Day name header */}
-              <View style={styles.calendarHeader}>
-                {DAY_NAMES.map((d, i) => (
-                  <Text key={i} style={[styles.calendarHeaderText, i === 0 && { color: Colors.danger }]}>
-                    {d}
-                  </Text>
-                ))}
-              </View>
-
-              {/* Calendar grid */}
-              {calendarGrid.map((week, wi) => (
-                <View key={wi} style={styles.calendarRow}>
-                  {week.map((date, di) => {
-                    const key = toDateStr(date);
-                    const count = monthScheduleCounts.get(key) ?? 0;
-                    const isCurrentMonth = date.getMonth() === monthDate.month;
-                    const isToday2 = isSameDay(date, today);
-                    const isSunday = di === 0;
-
-                    return (
-                      <Pressable
-                        key={di}
-                        style={[styles.calendarCell, isToday2 && styles.calendarCellToday]}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${date.getMonth() + 1}월 ${date.getDate()}일${count > 0 ? ` ${count}건 일정` : ""}`}
-                        onPress={() => {
-                          // Tap a day → switch to daily view for that date
-                          const diff = Math.round((date.getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
-                          setDateOffset(diff);
-                          setViewMode("daily");
-                          loadDaily(diff);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.calendarDay,
-                            !isCurrentMonth && styles.calendarDayOther,
-                            isToday2 && styles.calendarDayToday,
-                            isSunday && isCurrentMonth && { color: Colors.danger },
-                          ]}
-                        >
-                          {date.getDate()}
-                        </Text>
-                        {count > 0 && isCurrentMonth && (
-                          <View style={styles.calendarDots}>
-                            <View style={[styles.calendarDot, count >= 3 && styles.calendarDotMany]} />
-                            {count >= 2 && <View style={[styles.calendarDot, count >= 3 && styles.calendarDotMany]} />}
-                          </View>
-                        )}
-                        {count > 0 && isCurrentMonth && (
-                          <Text style={styles.calendarCount}>{count}</Text>
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ))}
-
-              {/* Monthly summary */}
-              <View style={[styles.monthSummary, Shadows.sm]}>
-                <Text style={styles.monthSummaryTitle}>이번 달 요약</Text>
-                <View style={styles.monthSummaryRow}>
-                  <View style={styles.monthSummaryStat}>
-                    <Text style={styles.monthSummaryNum}>
-                      {Array.from(monthScheduleCounts.values()).reduce((a, b) => a + b, 0)}
-                    </Text>
-                    <Text style={styles.monthSummaryLabel}>총 운행</Text>
-                  </View>
-                  <View style={styles.monthSummaryStat}>
-                    <Text style={styles.monthSummaryNum}>
-                      {monthScheduleCounts.size}
-                    </Text>
-                    <Text style={styles.monthSummaryLabel}>운행일</Text>
-                  </View>
-                </View>
-              </View>
-            </ScrollView>
-          )}
-        </>
+        <MonthlyView
+          monthDate={monthDate}
+          monthScheduleCounts={monthScheduleCounts}
+          monthLoading={monthLoading}
+          onPrev={handleMonthPrev}
+          onNext={handleMonthNext}
+          onToday={handleMonthToday}
+          onDayPress={handleMonthDayPress}
+        />
       )}
     </View>
   );
@@ -769,28 +355,6 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.bold,
   },
 
-  // Date Navigation
-  dateNav: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  dateNavBtn: {
-    width: 36,
-    height: 36,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.surfaceElevated,
-  },
-  dateNavCenter: { flex: 1, alignItems: "center" },
-  dateNavLabel: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
-  dateNavSub: { fontSize: Typography.sizes.xs, color: Colors.textSecondary, marginTop: 2 },
-
   // Filter
   filterRow: { backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
   filterContent: { paddingHorizontal: Spacing.base, paddingVertical: Spacing.sm, gap: Spacing.sm },
@@ -798,68 +362,4 @@ const styles = StyleSheet.create({
   filterTabActive: { backgroundColor: Colors.primary },
   filterTabText: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.medium, color: Colors.textSecondary },
   filterTabTextActive: { color: Colors.surface, fontWeight: Typography.weights.semibold },
-
-  // List
-  list: { padding: Spacing.base, gap: Spacing.sm },
-
-  // Card (daily view)
-  card: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.base },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: Spacing.sm },
-  timeBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.sm },
-  timeText: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.semibold },
-  statusPill: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Radius.full },
-  statusPillText: { fontSize: Typography.sizes.xs, fontWeight: Typography.weights.semibold },
-  studentName: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.semibold, color: Colors.textPrimary, marginBottom: Spacing.xs },
-  metaInfo: { fontSize: Typography.sizes.sm, color: Colors.textSecondary, marginBottom: 2 },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
-  metaText: { fontSize: Typography.sizes.sm },
-  cancelBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: Spacing.xs, marginTop: Spacing.md, paddingVertical: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.danger, backgroundColor: Colors.dangerLight, minHeight: 48 },
-  cancelText: { fontSize: Typography.sizes.base, fontWeight: Typography.weights.semibold, color: Colors.danger },
-
-  // Compact card (weekly view)
-  compactCard: { backgroundColor: Colors.surface, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, marginBottom: Spacing.xs },
-  compactRow: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
-  compactTime: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.bold, color: Colors.primary, width: 42 },
-  compactName: { flex: 1, fontSize: Typography.sizes.sm, fontWeight: Typography.weights.medium, color: Colors.textPrimary },
-  compactMeta: { fontSize: Typography.sizes.xs, color: Colors.textSecondary, marginTop: 2, marginLeft: 42 + Spacing.sm },
-
-  // Weekly view
-  weekContainer: { padding: Spacing.base, paddingBottom: Spacing.xxl },
-  weekDaySection: { marginBottom: Spacing.md },
-  weekDayHeader: { flexDirection: "row", alignItems: "center", gap: Spacing.sm, marginBottom: Spacing.xs, paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm, borderRadius: Radius.sm },
-  weekDayHeaderToday: { backgroundColor: Colors.primaryLight },
-  weekDayName: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.bold, color: Colors.textSecondary, width: 24 },
-  weekDayNameToday: { color: Colors.primary },
-  weekDayDate: { fontSize: Typography.sizes.sm, color: Colors.textSecondary },
-  weekDayDateToday: { color: Colors.primary, fontWeight: Typography.weights.semibold },
-  weekDayCount: { flex: 1, textAlign: "right", fontSize: Typography.sizes.xs, color: Colors.textDisabled },
-  weekDayEmpty: { fontSize: Typography.sizes.xs, color: Colors.textDisabled, paddingLeft: Spacing.sm + 24 + Spacing.sm, paddingVertical: Spacing.xs },
-
-  // Monthly view
-  monthContainer: { padding: Spacing.base, paddingBottom: Spacing.xxl },
-  calendarHeader: { flexDirection: "row", marginBottom: Spacing.xs },
-  calendarHeaderText: { flex: 1, textAlign: "center", fontSize: Typography.sizes.xs, fontWeight: Typography.weights.semibold, color: Colors.textSecondary },
-  calendarRow: { flexDirection: "row" },
-  calendarCell: { flex: 1, alignItems: "center", paddingVertical: Spacing.sm, minHeight: 56, borderRadius: Radius.sm },
-  calendarCellToday: { backgroundColor: Colors.primaryLight },
-  calendarDay: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.medium, color: Colors.textPrimary },
-  calendarDayOther: { color: Colors.textDisabled },
-  calendarDayToday: { color: Colors.primary, fontWeight: Typography.weights.bold },
-  calendarDots: { flexDirection: "row", gap: 2, marginTop: 3 },
-  calendarDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: Colors.primary },
-  calendarDotMany: { backgroundColor: Colors.statusBoarded },
-  calendarCount: { fontSize: 9, color: Colors.textSecondary, marginTop: 1 },
-
-  // Monthly summary
-  monthSummary: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.base, marginTop: Spacing.lg },
-  monthSummaryTitle: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.semibold, color: Colors.textSecondary, marginBottom: Spacing.md },
-  monthSummaryRow: { flexDirection: "row", justifyContent: "space-around" },
-  monthSummaryStat: { alignItems: "center" },
-  monthSummaryNum: { fontSize: Typography.sizes.xl, fontWeight: Typography.weights.bold, color: Colors.primary },
-  monthSummaryLabel: { fontSize: Typography.sizes.xs, color: Colors.textSecondary, marginTop: 2 },
-
-  // Empty State
-  emptyState: { flex: 1, justifyContent: "center", alignItems: "center", gap: Spacing.sm, paddingHorizontal: Spacing.xxl },
-  emptyTitle: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.semibold, color: Colors.textSecondary },
-  emptyDesc: { fontSize: Typography.sizes.sm, color: Colors.textDisabled, textAlign: "center", lineHeight: 20 },
 });
