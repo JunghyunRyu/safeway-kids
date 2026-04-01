@@ -4,7 +4,6 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -69,6 +68,8 @@ const ScheduleCard = memo(function ScheduleCard({
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.card, Shadows.sm, pressed && { opacity: 0.8 }]}
+      accessibilityRole="button"
+      accessibilityLabel={`${studentName} ${STATUS_LABELS[status] ?? status} ${fmtTime(pickupTime)} 일정 카드`}
     >
       <View style={styles.cardHeader}>
         <Text style={styles.studentName}>{studentName}</Text>
@@ -203,23 +204,33 @@ export default function ParentHomeScreen() {
 
       {/* 자녀별 필터 */}
       {students.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          <Pressable
-            style={[styles.filterTab, !selectedStudentId && styles.filterTabActive]}
-            onPress={() => setSelectedStudentId(null)}
-          >
-            <Text style={[styles.filterTabText, !selectedStudentId && styles.filterTabTextActive]}>전체</Text>
-          </Pressable>
-          {students.map((s) => (
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+          data={students}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={
             <Pressable
-              key={s.id}
+              style={[styles.filterTab, !selectedStudentId && styles.filterTabActive]}
+              onPress={() => setSelectedStudentId(null)}
+              accessibilityRole="button"
+              accessibilityLabel="전체 자녀 필터"
+            >
+              <Text style={[styles.filterTabText, !selectedStudentId && styles.filterTabTextActive]}>전체</Text>
+            </Pressable>
+          }
+          renderItem={({ item: s }) => (
+            <Pressable
               style={[styles.filterTab, selectedStudentId === s.id && styles.filterTabActive]}
               onPress={() => setSelectedStudentId(s.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`${s.name} 자녀 필터`}
             >
               <Text style={[styles.filterTabText, selectedStudentId === s.id && styles.filterTabTextActive]}>{s.name}</Text>
             </Pressable>
-          ))}
-        </ScrollView>
+          )}
+        />
       )}
 
       {/* 오늘 일정 */}
@@ -251,6 +262,8 @@ export default function ParentHomeScreen() {
                 <Pressable
                   style={styles.completedToggle}
                   onPress={() => setShowCompleted((v) => !v)}
+                  accessibilityRole="button"
+                  accessibilityLabel={showCompleted ? "완료된 일정 접기" : `완료된 일정 ${completedSchedules.length}건 펼치기`}
                 >
                   <Text style={styles.completedToggleText}>
                     {showCompleted ? "완료된 일정 접기" : `완료된 일정 ${completedSchedules.length}건`}

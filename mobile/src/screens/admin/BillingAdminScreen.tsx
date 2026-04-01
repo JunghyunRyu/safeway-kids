@@ -82,7 +82,8 @@ const InvoiceCard = memo(function InvoiceCard({
         <Pressable
           style={styles.payButton}
           onPress={() => onMarkPaid(invoice.id)}
-
+          accessibilityRole="button"
+          accessibilityLabel="납부 처리"
         >
           <Ionicons name="checkmark" size={16} color={Colors.textInverse} />
           <Text style={styles.payButtonText}>납부 처리</Text>
@@ -213,7 +214,7 @@ export default function AdminBillingScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.title}>청구서 관리</Text>
-        <Pressable style={styles.generateBtn} onPress={handleGenerate}>
+        <Pressable style={styles.generateBtn} onPress={handleGenerate} accessibilityRole="button" accessibilityLabel="청구서 생성">
           <Ionicons name="add-circle-outline" size={18} color={Colors.roleAdmin} />
           <Text style={[styles.generateBtnText, { color: Colors.roleAdmin }]}>생성</Text>
         </Pressable>

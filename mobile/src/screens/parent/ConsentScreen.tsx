@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -220,143 +220,149 @@ export default function ConsentScreen({ onComplete }: Props) {
   // ── Render ─────────────────────────────────────────────────────
 
   return (
-    <ScrollView
+    <FlatList
       style={[styles.container, { paddingTop: insets.top }]}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.xxl }]}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={[styles.iconCircle, { backgroundColor: Colors.primary + "15" }]}>
-          <Ionicons name="shield-checkmark" size={36} color={Colors.primary} />
-        </View>
-        <Text style={styles.title}>이용 동의</Text>
-        <Text style={styles.subtitle}>
-          서비스 이용을 위해 아래 항목에 동의해 주세요.
-        </Text>
-      </View>
-
-      {/* Children list */}
-      <View style={styles.childrenSection}>
-        <Text style={styles.childrenLabel}>동의 대상 자녀</Text>
-        <View style={styles.childrenList}>
-          {unconsentedStudents.map((student) => (
-            <View key={student.id} style={styles.childChip}>
-              <View style={styles.childAvatar}>
-                <Text style={styles.childAvatarText}>
-                  {student.name.charAt(0)}
-                </Text>
-              </View>
-              <Text style={styles.childChipText}>{student.name}</Text>
+      data={unconsentedStudents}
+      keyExtractor={(item) => item.id}
+      ListHeaderComponent={
+        <>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={[styles.iconCircle, { backgroundColor: Colors.primary + "15" }]}>
+              <Ionicons name="shield-checkmark" size={36} color={Colors.primary} />
             </View>
-          ))}
-        </View>
-      </View>
+            <Text style={styles.title}>이용 동의</Text>
+            <Text style={styles.subtitle}>
+              서비스 이용을 위해 아래 항목에 동의해 주세요.
+            </Text>
+          </View>
 
-      {/* Toggle all */}
-      <Pressable
-        style={[styles.toggleAllCard, Shadows.sm]}
-        onPress={toggleAll}
-      >
-        <View style={[styles.checkbox, allChecked && styles.checkboxChecked]}>
-          {allChecked && (
-            <Ionicons name="checkmark" size={16} color={Colors.textInverse} />
-          )}
+          {/* Children list label */}
+          <View style={styles.childrenSection}>
+            <Text style={styles.childrenLabel}>동의 대상 자녀</Text>
+          </View>
+        </>
+      }
+      renderItem={({ item: student }) => (
+        <View style={[styles.childChip, { marginHorizontal: Spacing.base }]}>
+          <View style={styles.childAvatar}>
+            <Text style={styles.childAvatarText}>
+              {student.name.charAt(0)}
+            </Text>
+          </View>
+          <Text style={styles.childChipText}>{student.name}</Text>
         </View>
-        <Text style={styles.toggleAllText}>전체 동의</Text>
-      </Pressable>
-
-      {/* Required section */}
-      <View style={[styles.card, Shadows.sm]}>
-        <Text style={styles.sectionTitle}>[필수] 항목</Text>
-        {REQUIRED_ITEMS.map((item, idx) => (
+      )}
+      ListFooterComponent={
+        <>
+          {/* Toggle all */}
           <Pressable
-            key={item.key}
-            style={[
-              styles.row,
-              idx < REQUIRED_ITEMS.length - 1 && styles.rowBorder,
-            ]}
-            onPress={() => toggleItem(item.key)}
+            style={[styles.toggleAllCard, Shadows.sm]}
+            onPress={toggleAll}
           >
-            <View
-              style={[styles.checkbox, scope[item.key] && styles.checkboxChecked]}
-            >
-              {scope[item.key] && (
-                <Ionicons
-                  name="checkmark"
-                  size={16}
-                  color={Colors.textInverse}
-                />
+            <View style={[styles.checkbox, allChecked && styles.checkboxChecked]}>
+              {allChecked && (
+                <Ionicons name="checkmark" size={16} color={Colors.textInverse} />
               )}
             </View>
-            <View style={styles.rowContent}>
-              <View style={styles.rowLabelRow}>
-                <Text style={styles.rowLabel}>{item.label}</Text>
-                <Text style={styles.requiredMark}>*</Text>
-              </View>
-              <Text style={styles.rowDesc}>{item.desc}</Text>
-            </View>
+            <Text style={styles.toggleAllText}>전체 동의</Text>
           </Pressable>
-        ))}
-      </View>
 
-      {/* Optional section */}
-      <View style={[styles.card, Shadows.sm]}>
-        <Text style={styles.sectionTitle}>[선택] 항목</Text>
-        {OPTIONAL_ITEMS.map((item, idx) => (
+          {/* Required section */}
+          <View style={[styles.card, Shadows.sm]}>
+            <Text style={styles.sectionTitle}>[필수] 항목</Text>
+            {REQUIRED_ITEMS.map((item, idx) => (
+              <Pressable
+                key={item.key}
+                style={[
+                  styles.row,
+                  idx < REQUIRED_ITEMS.length - 1 && styles.rowBorder,
+                ]}
+                onPress={() => toggleItem(item.key)}
+              >
+                <View
+                  style={[styles.checkbox, scope[item.key] && styles.checkboxChecked]}
+                >
+                  {scope[item.key] && (
+                    <Ionicons
+                      name="checkmark"
+                      size={16}
+                      color={Colors.textInverse}
+                    />
+                  )}
+                </View>
+                <View style={styles.rowContent}>
+                  <View style={styles.rowLabelRow}>
+                    <Text style={styles.rowLabel}>{item.label}</Text>
+                    <Text style={styles.requiredMark}>*</Text>
+                  </View>
+                  <Text style={styles.rowDesc}>{item.desc}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Optional section */}
+          <View style={[styles.card, Shadows.sm]}>
+            <Text style={styles.sectionTitle}>[선택] 항목</Text>
+            {OPTIONAL_ITEMS.map((item, idx) => (
+              <Pressable
+                key={item.key}
+                style={[
+                  styles.row,
+                  idx < OPTIONAL_ITEMS.length - 1 && styles.rowBorder,
+                ]}
+                onPress={() => toggleItem(item.key)}
+              >
+                <View
+                  style={[styles.checkbox, scope[item.key] && styles.checkboxChecked]}
+                >
+                  {scope[item.key] && (
+                    <Ionicons
+                      name="checkmark"
+                      size={16}
+                      color={Colors.textInverse}
+                    />
+                  )}
+                </View>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowLabel}>
+                    {item.label}
+                    {item.key === "location_tracking" && (
+                      <Text style={styles.recommendedBadge}> (권장)</Text>
+                    )}
+                  </Text>
+                  <Text style={styles.rowDesc}>{item.desc}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Note */}
+          <Text style={styles.note}>
+            필수 항목에 동의하지 않으면 서비스를 이용할 수 없습니다.{"\n"}
+            선택 항목은 동의하지 않아도 서비스 이용이 가능합니다.
+          </Text>
+
+          {/* Submit button */}
           <Pressable
-            key={item.key}
             style={[
-              styles.row,
-              idx < OPTIONAL_ITEMS.length - 1 && styles.rowBorder,
+              styles.submitBtn,
+              !allRequired && styles.submitBtnDisabled,
             ]}
-            onPress={() => toggleItem(item.key)}
+            onPress={handleSubmit}
+            disabled={!allRequired || submitting}
           >
-            <View
-              style={[styles.checkbox, scope[item.key] && styles.checkboxChecked]}
-            >
-              {scope[item.key] && (
-                <Ionicons
-                  name="checkmark"
-                  size={16}
-                  color={Colors.textInverse}
-                />
-              )}
-            </View>
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel}>
-                {item.label}
-                {item.key === "location_tracking" && (
-                  <Text style={styles.recommendedBadge}> (권장)</Text>
-                )}
-              </Text>
-              <Text style={styles.rowDesc}>{item.desc}</Text>
-            </View>
+            {submitting ? (
+              <ActivityIndicator size="small" color={Colors.textInverse} />
+            ) : (
+              <Text style={styles.submitBtnText}>동의하고 시작하기</Text>
+            )}
           </Pressable>
-        ))}
-      </View>
-
-      {/* Note */}
-      <Text style={styles.note}>
-        필수 항목에 동의하지 않으면 서비스를 이용할 수 없습니다.{"\n"}
-        선택 항목은 동의하지 않아도 서비스 이용이 가능합니다.
-      </Text>
-
-      {/* Submit button */}
-      <Pressable
-        style={[
-          styles.submitBtn,
-          !allRequired && styles.submitBtnDisabled,
-        ]}
-        onPress={handleSubmit}
-        disabled={!allRequired || submitting}
-      >
-        {submitting ? (
-          <ActivityIndicator size="small" color={Colors.textInverse} />
-        ) : (
-          <Text style={styles.submitBtnText}>동의하고 시작하기</Text>
-        )}
-      </Pressable>
-    </ScrollView>
+        </>
+      }
+    />
   );
 }
 

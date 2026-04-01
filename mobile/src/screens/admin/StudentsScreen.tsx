@@ -115,6 +115,7 @@ export default function AdminStudentsScreen() {
             onChangeText={setSearch}
             autoCorrect={false}
             clearButtonMode="while-editing"
+            accessibilityLabel="학생 이름 검색"
           />
           {search.length > 0 && (
             <Ionicons

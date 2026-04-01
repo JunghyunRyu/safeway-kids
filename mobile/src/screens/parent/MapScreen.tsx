@@ -234,6 +234,8 @@ export default function MapScreen() {
           <Pressable
             style={styles.retryBtn}
             onPress={() => { setDataLoading(true); setDataError(false); }}
+            accessibilityRole="button"
+            accessibilityLabel="데이터 다시 불러오기"
           >
             <Text style={styles.retryText}>다시 시도</Text>
           </Pressable>

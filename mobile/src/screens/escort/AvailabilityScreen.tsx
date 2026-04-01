@@ -136,7 +136,8 @@ export default function AvailabilityScreen() {
             styles.addBtn,
             { backgroundColor: showForm ? Colors.neutral : Colors.roleEscort },
           ]}
-         
+          accessibilityRole="button"
+          accessibilityLabel={showForm ? "등록 폼 닫기" : "가용시간 등록"}
         >
           <Ionicons
             name={showForm ? "close" : "add"}
@@ -158,6 +159,7 @@ export default function AvailabilityScreen() {
             placeholderTextColor={Colors.textDisabled}
             keyboardType="numbers-and-punctuation"
             maxLength={10}
+            accessibilityLabel="가용 날짜 입력"
           />
           <Text style={styles.formatHint}>형식: YYYY-MM-DD</Text>
           <Text style={styles.formLabel}>시간</Text>
@@ -168,6 +170,7 @@ export default function AvailabilityScreen() {
               value={startTime}
               onChangeText={setStartTime}
               placeholderTextColor={Colors.textDisabled}
+              accessibilityLabel="시작 시간 입력"
             />
             <Text style={styles.tilde}>~</Text>
             <TextInput
@@ -176,13 +179,15 @@ export default function AvailabilityScreen() {
               value={endTime}
               onChangeText={setEndTime}
               placeholderTextColor={Colors.textDisabled}
+              accessibilityLabel="종료 시간 입력"
             />
           </View>
           <Text style={styles.formatHint}>형식: HH:MM (예: 07:00 ~ 09:00)</Text>
           <Pressable
             style={styles.submitBtn}
             onPress={handleRegister}
-           
+            accessibilityRole="button"
+            accessibilityLabel="가용시간 등록하기"
           >
             <Text style={styles.submitText}>등록하기</Text>
           </Pressable>

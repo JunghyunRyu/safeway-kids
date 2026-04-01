@@ -115,7 +115,7 @@ export default function ChildProfileScreen() {
         style={[styles.container, { paddingTop: insets.top }]}
         contentContainerStyle={styles.content}
       >
-        <Pressable onPress={() => setSelected(null)} style={styles.backBtn}>
+        <Pressable onPress={() => setSelected(null)} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="자녀 목록으로 돌아가기">
           <Ionicons name="arrow-back" size={20} color={Colors.primary} />
           <Text style={styles.backText}>목록으로</Text>
         </Pressable>
@@ -129,7 +129,7 @@ export default function ChildProfileScreen() {
               <Text style={styles.childName}>{selected.name}</Text>
               <Text style={styles.childSub}>{selected.date_of_birth}</Text>
             </View>
-            <Pressable onPress={() => setEditing(!editing)} style={styles.editBtn}>
+            <Pressable onPress={() => setEditing(!editing)} style={styles.editBtn} accessibilityRole="button" accessibilityLabel={editing ? "편집 취소" : "자녀 정보 편집"}>
               <Ionicons name={editing ? "close" : "create-outline"} size={20} color={Colors.primary} />
             </Pressable>
           </View>
@@ -146,7 +146,7 @@ export default function ChildProfileScreen() {
             onChange={(v) => setForm({ ...form, allergies: v })} multiline />
 
           {editing && (
-            <Pressable style={styles.saveBtn} onPress={handleSave} disabled={saving}>
+            <Pressable style={styles.saveBtn} onPress={handleSave} disabled={saving} accessibilityRole="button" accessibilityLabel="자녀 정보 저장">
               <Text style={styles.saveBtnText}>{saving ? "저장 중..." : "저장"}</Text>
             </Pressable>
           )}
@@ -210,7 +210,7 @@ export default function ChildProfileScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
-            <Pressable style={[styles.childRow, Shadows.sm]} onPress={() => selectChild(item)}>
+            <Pressable style={[styles.childRow, Shadows.sm]} onPress={() => selectChild(item)} accessibilityRole="button" accessibilityLabel={`${item.name} 자녀 프로필 보기`}>
               <View style={[styles.avatarSm, { backgroundColor: Colors.roleParent }]}>
                 <Text style={styles.avatarSmText}>{item.name.charAt(0)}</Text>
               </View>
@@ -245,6 +245,7 @@ function Field({
           multiline={multiline}
           keyboardType={keyboardType as any}
           placeholder={`${label} 입력`}
+          accessibilityLabel={`${label} 입력`}
         />
       ) : (
         <Text style={styles.fieldValue}>{value || "-"}</Text>

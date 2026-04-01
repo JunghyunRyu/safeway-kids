@@ -123,7 +123,8 @@ export default function DriverProfileScreen() {
       <Pressable
         style={styles.logoutBtn}
         onPress={handleLogout}
-       
+        accessibilityRole="button"
+        accessibilityLabel="로그아웃"
       >
         <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
         <Text style={styles.logoutText}>{t("auth.logout")}</Text>

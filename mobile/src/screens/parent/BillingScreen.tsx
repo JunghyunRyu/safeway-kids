@@ -90,7 +90,8 @@ const InvoiceCard = memo(function InvoiceCard({
   return (
     <Pressable
       style={[styles.card, Shadows.sm]}
-     
+      accessibilityRole="button"
+      accessibilityLabel={`${invoice.billing_month} 청구서 ${STATUS_LABELS[invoice.status] ?? invoice.status}${expanded ? " 접기" : " 펼치기"}`}
       onPress={() => setExpanded((v) => !v)}
     >
       {/* Collapsed header — always visible */}
@@ -168,6 +169,8 @@ const InvoiceCard = memo(function InvoiceCard({
                 ]}
                 onPress={() => !paying && onPayPress(invoice)}
                 disabled={paying}
+                accessibilityRole="button"
+                accessibilityLabel={`${invoice.billing_month} 청구서 결제하기`}
               >
                 {paying ? (
                   <ActivityIndicator size="small" color={Colors.surface} />

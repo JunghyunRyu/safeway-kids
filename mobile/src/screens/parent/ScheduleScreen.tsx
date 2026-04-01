@@ -203,7 +203,7 @@ const ScheduleItem = memo(function ScheduleItem({
         </View>
       ) : null}
       {canCancel && (
-        <Pressable style={styles.cancelBtn} onPress={() => onCancel(id)}>
+        <Pressable style={styles.cancelBtn} onPress={() => onCancel(id)} accessibilityRole="button" accessibilityLabel={`${studentName} 스케줄 취소`}>
           <Ionicons name="close-circle-outline" size={16} color={Colors.danger} />
           <Text style={styles.cancelText}>{t("schedule.cancelRide")}</Text>
         </Pressable>
@@ -237,14 +237,14 @@ const DateNavHeader = memo(function DateNavHeader({
 }) {
   return (
     <View style={styles.dateNav}>
-      <Pressable style={styles.dateNavBtn} onPress={onPrev} hitSlop={8}>
+      <Pressable style={styles.dateNavBtn} onPress={onPrev} hitSlop={8} accessibilityRole="button" accessibilityLabel="이전 날짜">
         <Ionicons name="chevron-back" size={20} color={Colors.textPrimary} />
       </Pressable>
-      <Pressable style={styles.dateNavCenter} onPress={onToday}>
+      <Pressable style={styles.dateNavCenter} onPress={onToday} accessibilityRole="button" accessibilityLabel="오늘 날짜로 이동">
         <Text style={styles.dateNavLabel}>{label}</Text>
         <Text style={styles.dateNavSub}>{sub}</Text>
       </Pressable>
-      <Pressable style={styles.dateNavBtn} onPress={onNext} hitSlop={8}>
+      <Pressable style={styles.dateNavBtn} onPress={onNext} hitSlop={8} accessibilityRole="button" accessibilityLabel="다음 날짜">
         <Ionicons name="chevron-forward" size={20} color={Colors.textPrimary} />
       </Pressable>
     </View>
@@ -491,6 +491,8 @@ export default function ScheduleScreen() {
               key={m.key}
               style={[styles.viewModeTab, viewMode === m.key && styles.viewModeTabActive]}
               onPress={() => setViewMode(m.key)}
+              accessibilityRole="button"
+              accessibilityLabel={`${m.label} 보기 모드`}
             >
               <Text style={[styles.viewModeText, viewMode === m.key && styles.viewModeTextActive]}>
                 {m.label}
@@ -502,16 +504,24 @@ export default function ScheduleScreen() {
 
       {/* Student Filter */}
       {students.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterContent}>
-          <Pressable style={[styles.filterTab, !selectedStudentId && styles.filterTabActive]} onPress={() => setSelectedStudentId(null)}>
-            <Text style={[styles.filterTabText, !selectedStudentId && styles.filterTabTextActive]}>전체</Text>
-          </Pressable>
-          {students.map((s) => (
-            <Pressable key={s.id} style={[styles.filterTab, selectedStudentId === s.id && styles.filterTabActive]} onPress={() => setSelectedStudentId(s.id)}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterRow}
+          contentContainerStyle={styles.filterContent}
+          data={students}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={
+            <Pressable style={[styles.filterTab, !selectedStudentId && styles.filterTabActive]} onPress={() => setSelectedStudentId(null)} accessibilityRole="button" accessibilityLabel="전체 자녀 필터">
+              <Text style={[styles.filterTabText, !selectedStudentId && styles.filterTabTextActive]}>전체</Text>
+            </Pressable>
+          }
+          renderItem={({ item: s }) => (
+            <Pressable style={[styles.filterTab, selectedStudentId === s.id && styles.filterTabActive]} onPress={() => setSelectedStudentId(s.id)} accessibilityRole="button" accessibilityLabel={`${s.name} 자녀 필터`}>
               <Text style={[styles.filterTabText, selectedStudentId === s.id && styles.filterTabTextActive]}>{s.name}</Text>
             </Pressable>
-          ))}
-        </ScrollView>
+          )}
+        />
       )}
 
       {/* ═══════ DAILY VIEW ═══════ */}
@@ -555,6 +565,7 @@ export default function ScheduleScreen() {
             <ScrollView contentContainerStyle={styles.weekContainer} refreshControl={
               <FlatList
                 data={[]}
+                keyExtractor={(_item, index) => index.toString()}
                 renderItem={() => null}
                 refreshing={refreshing}
                 onRefresh={onRefresh}
@@ -646,6 +657,8 @@ export default function ScheduleScreen() {
                       <Pressable
                         key={di}
                         style={[styles.calendarCell, isToday2 && styles.calendarCellToday]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${date.getMonth() + 1}월 ${date.getDate()}일${count > 0 ? ` ${count}건 일정` : ""}`}
                         onPress={() => {
                           // Tap a day → switch to daily view for that date
                           const diff = Math.round((date.getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);

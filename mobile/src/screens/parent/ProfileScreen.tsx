@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   Alert,
+  FlatList,
   Modal,
   Platform,
   ScrollView,
@@ -165,6 +166,8 @@ export default function ProfileScreen() {
         <Pressable
           onPress={() => setShowChildProfile(false)}
           style={styles.subScreenBack}
+          accessibilityRole="button"
+          accessibilityLabel="프로필로 돌아가기"
         >
           <Ionicons name="arrow-back" size={20} color={Colors.primary} />
           <Text style={styles.subScreenBackText}>프로필로 돌아가기</Text>
@@ -181,6 +184,8 @@ export default function ProfileScreen() {
         <Pressable
           onPress={() => setShowNotifSettings(false)}
           style={styles.subScreenBack}
+          accessibilityRole="button"
+          accessibilityLabel="프로필로 돌아가기"
         >
           <Ionicons name="arrow-back" size={20} color={Colors.primary} />
           <Text style={styles.subScreenBackText}>프로필로 돌아가기</Text>
@@ -233,23 +238,23 @@ export default function ProfileScreen() {
         <View style={[styles.infoCard, Shadows.sm]}>
           <Text style={styles.infoCardTitle}>설정</Text>
           {user.role === "parent" && (
-            <Pressable style={styles.menuRow} onPress={() => setShowChildProfile(true)}>
+            <Pressable style={styles.menuRow} onPress={() => setShowChildProfile(true)} accessibilityRole="button" accessibilityLabel="자녀 관리">
               <Ionicons name="people-outline" size={20} color={Colors.primary} />
               <Text style={styles.menuText}>자녀 관리</Text>
               <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
             </Pressable>
           )}
-          <Pressable style={styles.menuRow} onPress={() => setShowNotifSettings(true)}>
+          <Pressable style={styles.menuRow} onPress={() => setShowNotifSettings(true)} accessibilityRole="button" accessibilityLabel="알림 설정">
             <Ionicons name="notifications-outline" size={20} color={Colors.primary} />
             <Text style={styles.menuText}>알림 설정</Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
           </Pressable>
-          <Pressable style={styles.menuRow} onPress={() => setShowSupportModal(true)}>
+          <Pressable style={styles.menuRow} onPress={() => setShowSupportModal(true)} accessibilityRole="button" accessibilityLabel="문의하기">
             <Ionicons name="chatbubble-ellipses-outline" size={20} color={Colors.primary} />
             <Text style={styles.menuText}>문의하기</Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
           </Pressable>
-          <Pressable style={styles.menuRow} onPress={handleShowTickets}>
+          <Pressable style={styles.menuRow} onPress={handleShowTickets} accessibilityRole="button" accessibilityLabel="내 문의 내역 보기">
             <Ionicons name="document-text-outline" size={20} color={Colors.primary} />
             <Text style={styles.menuText}>내 문의 내역</Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
@@ -258,6 +263,8 @@ export default function ProfileScreen() {
             style={styles.menuRow}
             onPress={handleWithdrawConsent}
             disabled={withdrawingConsent}
+            accessibilityRole="button"
+            accessibilityLabel="개인정보 동의 철회"
           >
             <Ionicons name="shield-outline" size={20} color={Colors.danger} />
             <Text style={[styles.menuText, { color: Colors.danger }]}>
@@ -279,7 +286,8 @@ export default function ProfileScreen() {
       <Pressable
         style={styles.logoutBtn}
         onPress={handleLogout}
-
+        accessibilityRole="button"
+        accessibilityLabel="로그아웃"
       >
         <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
         <Text style={styles.logoutText}>{t("auth.logout")}</Text>
@@ -291,7 +299,7 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>내 문의 내역</Text>
-              <Pressable onPress={() => setShowTicketsModal(false)}>
+              <Pressable onPress={() => setShowTicketsModal(false)} accessibilityRole="button" accessibilityLabel="내 문의 내역 닫기">
                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
               </Pressable>
             </View>
@@ -304,9 +312,12 @@ export default function ProfileScreen() {
                 문의 내역이 없습니다.
               </Text>
             ) : (
-              <ScrollView style={{ maxHeight: 400 }}>
-                {tickets.map((ticket) => (
-                  <View key={ticket.id} style={styles.ticketRow}>
+              <FlatList
+                data={tickets}
+                keyExtractor={(item) => item.id.toString()}
+                style={{ maxHeight: 400 }}
+                renderItem={({ item: ticket }) => (
+                  <View style={styles.ticketRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.ticketSubject}>{ticket.subject}</Text>
                       <Text style={styles.ticketDate}>
@@ -319,8 +330,8 @@ export default function ProfileScreen() {
                       </Text>
                     </View>
                   </View>
-                ))}
-              </ScrollView>
+                )}
+              />
             )}
           </View>
         </View>
@@ -332,7 +343,7 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>문의하기</Text>
-              <Pressable onPress={() => setShowSupportModal(false)}>
+              <Pressable onPress={() => setShowSupportModal(false)} accessibilityRole="button" accessibilityLabel="문의하기 닫기">
                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
               </Pressable>
             </View>
@@ -346,6 +357,8 @@ export default function ProfileScreen() {
                     supportForm.category === cat && styles.categoryBtnActive,
                   ]}
                   onPress={() => setSupportForm({ ...supportForm, category: cat })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${cat} 카테고리 선택`}
                 >
                   <Text
                     style={[
@@ -364,6 +377,7 @@ export default function ProfileScreen() {
               value={supportForm.subject}
               onChangeText={(v) => setSupportForm({ ...supportForm, subject: v })}
               placeholder="문의 제목을 입력하세요"
+              accessibilityLabel="문의 제목 입력"
             />
             <Text style={styles.modalLabel}>내용</Text>
             <TextInput
@@ -372,11 +386,14 @@ export default function ProfileScreen() {
               onChangeText={(v) => setSupportForm({ ...supportForm, description: v })}
               placeholder="문의 내용을 입력하세요"
               multiline
+              accessibilityLabel="문의 내용 입력"
             />
             <Pressable
               style={[styles.submitBtn, submitting && { opacity: 0.5 }]}
               onPress={handleSupportSubmit}
               disabled={submitting}
+              accessibilityRole="button"
+              accessibilityLabel="문의 접수"
             >
               <Text style={styles.submitBtnText}>
                 {submitting ? "접수 중..." : "문의 접수"}

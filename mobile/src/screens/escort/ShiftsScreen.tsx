@@ -93,7 +93,8 @@ const ShiftCard = memo(function ShiftCard({
           <Pressable
             style={[styles.actionBtn, { backgroundColor: Colors.info }]}
             onPress={handleCheckIn}
-           
+            accessibilityRole="button"
+            accessibilityLabel="출근 처리"
           >
             <Ionicons name="enter-outline" size={16} color={Colors.textInverse} />
             <Text style={styles.actionBtnText}>출근</Text>
@@ -103,7 +104,8 @@ const ShiftCard = memo(function ShiftCard({
           <Pressable
             style={[styles.actionBtn, { backgroundColor: Colors.success }]}
             onPress={handleCheckOut}
-           
+            accessibilityRole="button"
+            accessibilityLabel="퇴근 처리"
           >
             <Ionicons name="exit-outline" size={16} color={Colors.textInverse} />
             <Text style={styles.actionBtnText}>퇴근</Text>

@@ -85,7 +85,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
-        <Pressable onPress={handleSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Pressable onPress={handleSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="온보딩 건너뛰기">
           <Text style={styles.skipText}>건너뛰기</Text>
         </Pressable>
       </View>

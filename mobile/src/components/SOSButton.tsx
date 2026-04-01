@@ -92,6 +92,8 @@ export default function SOSButton() {
     <Pressable
       style={[styles.fab, !SOS_ENABLED && styles.fabDisabled]}
       onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel="긴급 SOS 호출"
     >
       <View style={styles.inner}>
         <Ionicons name="warning" size={22} color={SOS_ENABLED ? "#fff" : "rgba(255,255,255,0.5)"} />

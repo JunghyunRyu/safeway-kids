@@ -166,7 +166,7 @@ function ProductionLoginScreen() {
               {loading ? t("common.loading") : t("auth.login")}
             </Text>
           </Pressable>
-          <Pressable onPress={() => { setStep("phone"); setOtpCode(""); setError(""); }}>
+          <Pressable onPress={() => { setStep("phone"); setOtpCode(""); setError(""); }} accessibilityRole="button" accessibilityLabel="전화번호 다시 입력">
             <Text style={styles.hint}>전화번호 다시 입력</Text>
           </Pressable>
         </>

@@ -188,7 +188,7 @@ const StopCard = memo(function StopCard({
     >
       {/* Student Photo or Index */}
       {studentPhotoUrl ? (
-        <Image source={{ uri: studentPhotoUrl }} style={styles.studentPhoto} />
+        <Image source={{ uri: studentPhotoUrl }} style={styles.studentPhoto} accessibilityLabel={`${studentName} 학생 사진`} />
       ) : (
         <View style={[styles.indexCircle, { backgroundColor: indexBgColor }]}>
           {isCompleted ? (
@@ -220,7 +220,7 @@ const StopCard = memo(function StopCard({
           </View>
         ) : null}
         {guardianPhoneMasked ? (
-          <Pressable style={styles.phoneRow} onPress={handleCallGuardian}>
+          <Pressable style={styles.phoneRow} onPress={handleCallGuardian} accessibilityRole="button" accessibilityLabel="보호자 전화 연결">
             <Ionicons name="call-outline" size={14} color={Colors.info} />
             <Text style={styles.phoneText}>{guardianPhoneMasked}</Text>
           </Pressable>
@@ -228,7 +228,7 @@ const StopCard = memo(function StopCard({
 
         {/* P2-49: Memo button */}
         <View style={styles.cardToolRow}>
-          <Pressable style={styles.memoBtn} onPress={() => onMemo(id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Pressable style={styles.memoBtn} onPress={() => onMemo(id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={`${studentName} 메모 작성`}>
             <Ionicons name="create-outline" size={14} color={Colors.info} />
             <Text style={styles.memoBtnText}>메모</Text>
           </Pressable>
@@ -240,6 +240,8 @@ const StopCard = memo(function StopCard({
                 onPress={onMoveUp}
                 disabled={!canMoveUp}
                 hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                accessibilityRole="button"
+                accessibilityLabel="순서 위로 이동"
               >
                 <Ionicons name="chevron-up" size={16} color={canMoveUp ? Colors.info : Colors.textDisabled} />
               </Pressable>
@@ -248,6 +250,8 @@ const StopCard = memo(function StopCard({
                 onPress={onMoveDown}
                 disabled={!canMoveDown}
                 hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                accessibilityRole="button"
+                accessibilityLabel="순서 아래로 이동"
               >
                 <Ionicons name="chevron-down" size={16} color={canMoveDown ? Colors.info : Colors.textDisabled} />
               </Pressable>
@@ -283,6 +287,8 @@ const StopCard = memo(function StopCard({
                 style={[styles.arrivalBtn]}
                 onPress={handleArrivalConfirm}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`${studentName} 도착 확인`}
               >
                 <Ionicons name="location" size={14} color={Colors.textInverse} />
                 <Text style={styles.arrivalBtnText}>도착 확인</Text>
@@ -294,7 +300,7 @@ const StopCard = memo(function StopCard({
               </View>
             )}
             {canUndo(alightedAt) && (
-              <Pressable style={styles.undoBtn} onPress={handleUndoAlight} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Pressable style={styles.undoBtn} onPress={handleUndoAlight} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="하차 되돌리기">
                 <Text style={styles.undoText}>하차 되돌리기</Text>
               </Pressable>
             )}
@@ -307,6 +313,8 @@ const StopCard = memo(function StopCard({
                   style={[styles.actionBtn, { backgroundColor: Colors.info }]}
                   onPress={handleBoard}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${studentName} 탑승 처리`}
                 >
                   <Ionicons name="enter-outline" size={16} color={Colors.textInverse} />
                   <Text style={styles.btnText}>{t("driver.markBoarded")}</Text>
@@ -315,6 +323,8 @@ const StopCard = memo(function StopCard({
                   style={[styles.actionBtn, { backgroundColor: Colors.neutral }]}
                   onPress={handleNoShow}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${studentName} 미탑승 처리`}
                 >
                   <Ionicons name="close-circle-outline" size={16} color={Colors.textInverse} />
                   <Text style={styles.btnText}>미탑승</Text>
@@ -323,6 +333,8 @@ const StopCard = memo(function StopCard({
                   style={[styles.navBtn]}
                   onPress={handleNavigate}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${studentName} 픽업 장소 길안내`}
                 >
                   <Ionicons name="navigate-outline" size={16} color={Colors.info} />
                   <Text style={styles.navBtnText}>길안내</Text>
@@ -334,12 +346,14 @@ const StopCard = memo(function StopCard({
                   style={[styles.actionBtn, { backgroundColor: Colors.warning }]}
                   onPress={handleAlight}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${studentName} 하차 처리`}
                 >
                   <Ionicons name="exit-outline" size={16} color={Colors.textInverse} />
                   <Text style={styles.btnText}>{t("driver.markAlighted")}</Text>
                 </Pressable>
                 {canUndo(boardedAt) && (
-                  <Pressable style={styles.undoBtn} onPress={handleUndoBoard} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Pressable style={styles.undoBtn} onPress={handleUndoBoard} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="탑승 되돌리기">
                     <Text style={styles.undoText}>탑승 되돌리기</Text>
                   </Pressable>
                 )}
@@ -782,6 +796,8 @@ export default function DriverRouteScreen() {
             style={[styles.routeToggleBtn, { backgroundColor: tts.enabled ? Colors.info : Colors.neutral }]}
             onPress={tts.toggle}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={tts.enabled ? "음성 안내 끄기" : "음성 안내 켜기"}
           >
             <Ionicons name={tts.enabled ? "volume-high" : "volume-mute"} size={16} color={Colors.textInverse} />
           </Pressable>
@@ -790,6 +806,8 @@ export default function DriverRouteScreen() {
               style={[styles.routeToggleBtn, { backgroundColor: routeActive ? Colors.danger : Colors.success }]}
               onPress={handleRouteToggle}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={routeActive ? "운행 종료" : "운행 시작"}
             >
               <Ionicons name={routeActive ? "stop-circle" : "play-circle"} size={16} color={Colors.textInverse} />
               <Text style={styles.routeToggleText}>{routeActive ? "운행 종료" : "운행 시작"}</Text>
@@ -823,6 +841,8 @@ export default function DriverRouteScreen() {
               key={address}
               style={styles.batchBtn}
               onPress={() => handleBatchBoard(address)}
+              accessibilityRole="button"
+              accessibilityLabel={`${address} ${count}명 일괄 탑승`}
             >
               <Ionicons name="people" size={16} color={Colors.textInverse} />
               <Text style={styles.batchBtnText}>
@@ -857,7 +877,7 @@ export default function DriverRouteScreen() {
           {totalActive > 0 && completedCount + schedules.filter(s => s.status === "no_show").length >= totalActive && (
             <View style={styles.clearanceContainer}>
               {!showClearance ? (
-                <Pressable style={styles.clearanceBtn} onPress={() => { setClearanceChecks({}); setShowClearance(true); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Pressable style={styles.clearanceBtn} onPress={() => { setClearanceChecks({}); setShowClearance(true); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="잔류 확인 시작">
                   <Ionicons name="shield-checkmark-outline" size={20} color={Colors.textInverse} />
                   <Text style={styles.clearanceBtnText}>잔류 확인 시작</Text>
                 </Pressable>
@@ -869,6 +889,8 @@ export default function DriverRouteScreen() {
                       key={item.key}
                       style={styles.checklistRow}
                       onPress={() => setClearanceChecks((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${item.label} ${clearanceChecks[item.key] ? '체크 해제' : '체크'}`}
                     >
                       <Ionicons
                         name={clearanceChecks[item.key] ? "checkbox" : "square-outline"}
@@ -881,13 +903,15 @@ export default function DriverRouteScreen() {
                     </Pressable>
                   ))}
                   <View style={styles.clearanceBtnRow}>
-                    <Pressable style={styles.clearanceCancelBtn} onPress={() => setShowClearance(false)}>
+                    <Pressable style={styles.clearanceCancelBtn} onPress={() => setShowClearance(false)} accessibilityRole="button" accessibilityLabel="잔류 확인 취소">
                       <Text style={styles.clearanceCancelText}>취소</Text>
                     </Pressable>
                     <Pressable
                       style={[styles.clearanceBtn, { flex: 1 }, !allClearanceChecked && styles.disabled]}
                       onPress={handleVehicleClearance}
                       disabled={!allClearanceChecked}
+                      accessibilityRole="button"
+                      accessibilityLabel="점검 완료 제출"
                     >
                       <Ionicons name="shield-checkmark-outline" size={20} color={Colors.textInverse} />
                       <Text style={styles.clearanceBtnText}>점검 완료 제출</Text>
@@ -931,7 +955,7 @@ export default function DriverRouteScreen() {
           <View style={styles.memoContent}>
             <View style={styles.memoHeader}>
               <Text style={styles.memoTitle}>특이사항 메모</Text>
-              <Pressable onPress={() => setMemoModalId(null)}>
+              <Pressable onPress={() => setMemoModalId(null)} accessibilityRole="button" accessibilityLabel="메모 닫기">
                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
               </Pressable>
             </View>
@@ -942,11 +966,14 @@ export default function DriverRouteScreen() {
               placeholder="특이사항을 입력하세요 (예: 차멀미 호소)"
               multiline
               autoFocus
+              accessibilityLabel="특이사항 메모 입력"
             />
             <Pressable
               style={[styles.memoSaveBtn, memoSaving && { opacity: 0.5 }]}
               onPress={handleMemoSave}
               disabled={memoSaving || !memoText.trim()}
+              accessibilityRole="button"
+              accessibilityLabel="메모 저장"
             >
               <Text style={styles.memoSaveBtnText}>
                 {memoSaving ? "저장 중..." : "저장"}

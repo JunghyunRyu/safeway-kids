@@ -70,7 +70,7 @@ export default function SafetyQuizScreen() {
               ? "잘했어요! 조금만 더 공부해요!"
               : "다시 도전해 봐요!"}
           </Text>
-          <Pressable style={styles.restartBtn} onPress={handleRestart}>
+          <Pressable style={styles.restartBtn} onPress={handleRestart} accessibilityRole="button" accessibilityLabel="퀴즈 다시 풀기">
             <Text style={styles.restartBtnText}>다시 풀기</Text>
           </Pressable>
         </View>
@@ -150,7 +150,7 @@ export default function SafetyQuizScreen() {
               </Text>
             </View>
             <Text style={styles.explanation}>{question.explanation}</Text>
-            <Pressable style={styles.nextBtn} onPress={handleNext}>
+            <Pressable style={styles.nextBtn} onPress={handleNext} accessibilityRole="button" accessibilityLabel="다음 문제로 이동">
               <Text style={styles.nextBtnText}>
                 {currentIndex + 1 >= SAFETY_QUIZ_DATA.length ? "결과 보기" : "다음 문제"}
               </Text>

@@ -88,7 +88,7 @@ export default function AdminProfileScreen() {
       {/* 학원 관리 바로가기 */}
       <View style={[styles.infoCard, Shadows.sm]}>
         <Text style={styles.infoCardTitle}>학원 관리</Text>
-        <Pressable style={styles.menuItem} onPress={openWebDashboard}>
+        <Pressable style={styles.menuItem} onPress={openWebDashboard} accessibilityRole="button" accessibilityLabel="웹 대시보드 열기">
           <Ionicons name="desktop-outline" size={20} color={Colors.primary} />
           <Text style={styles.menuText}>웹 대시보드 열기</Text>
           <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
@@ -103,7 +103,7 @@ export default function AdminProfileScreen() {
       </View>
 
       {/* 로그아웃 */}
-      <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+      <Pressable style={styles.logoutBtn} onPress={handleLogout} accessibilityRole="button" accessibilityLabel="로그아웃">
         <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
         <Text style={styles.logoutText}>{t("auth.logout")}</Text>
       </Pressable>
