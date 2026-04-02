@@ -33,9 +33,7 @@ yarn-error.*
 # local env files
 .env*.local
 
-# Firebase
-google-services.json
-GoogleService-Info.plist
+# Firebase (클라이언트 설정 — EAS Build에 필요하므로 커밋 허용)
 
 # typescript
 *.tsbuildinfo
