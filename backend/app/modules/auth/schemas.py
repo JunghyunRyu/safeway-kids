@@ -20,6 +20,7 @@ class OtpVerifyRequest(BaseModel):
     code: str = Field(..., min_length=6, max_length=6, description="인증번호 6자리")
     name: str = Field(..., min_length=1, max_length=100, description="사용자 이름")
     role: UserRole = Field(default=UserRole.PARENT, description="사용자 역할")
+    app_context: str | None = Field(default=None, description="앱 컨텍스트 (미지정시 역할에서 자동 추론)")
 
 
 class TokenUserInfo(BaseModel):

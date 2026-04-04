@@ -61,8 +61,11 @@ async def verify_otp(
         from app.common.exceptions import UnauthorizedError
         raise UnauthorizedError(detail="인증번호가 올바르지 않습니다")
 
+    from app.modules.auth.models import ROLE_APP_MAP
+    app_context = body.app_context or ROLE_APP_MAP.get(body.role, "safeway_kids")
+
     user, _is_new = await service.otp_login_or_register(
-        db, body.phone, body.name, body.role
+        db, body.phone, body.name, body.role, app_context=app_context
     )
     return service.create_token_response(user)
 
@@ -127,8 +130,12 @@ async def dev_login(
         if dev_secret != _settings.dev_login_secret:
             raise UnauthorizedError(detail="Invalid dev secret")
 
+    # 명시적 app_context 우선, 없으면 역할에서 자동 추론
+    from app.modules.auth.models import ROLE_APP_MAP
+    app_context = body.app_context or ROLE_APP_MAP.get(body.role, "safeway_kids")
+
     user, _is_new = await service.otp_login_or_register(
-        db, body.phone, body.name, body.role
+        db, body.phone, body.name, body.role, app_context=app_context
     )
     return service.create_token_response(user)
 
