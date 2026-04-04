@@ -1,46 +1,25 @@
-import React from "react";
+import React, { useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
-import { View, Text, StyleSheet } from "react-native";
-import { Colors } from "./src/constants/theme";
+
+import ParentTabNavigator from "./src/navigation/ParentTabNavigator";
+import CaregiverTabNavigator from "./src/navigation/CaregiverTabNavigator";
 
 /**
  * CareConnect App — Entry Point
- * TODO: Replace placeholder with createRootNavigator in M4
+ *
+ * Role determined by auth (JWT app_context=careconnect + role=parent/caregiver).
  */
 export default function App() {
+  const [role] = useState<"parent" | "caregiver">("parent");
+
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <View style={styles.container}>
-        <Text style={styles.title}>👶 돌봄커넥트</Text>
-        <Text style={styles.subtitle}>검증된 돌봄 매칭 플랫폼</Text>
-        <Text style={styles.status}>앱 준비 중...</Text>
-      </View>
+      <NavigationContainer>
+        {role === "caregiver" ? <CaregiverTabNavigator /> : <ParentTabNavigator />}
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: Colors.primary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginBottom: 24,
-  },
-  status: {
-    fontSize: 14,
-    color: Colors.textDisabled,
-  },
-});
