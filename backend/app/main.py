@@ -327,6 +327,10 @@ def create_app() -> FastAPI:
     application.include_router(messaging_router, prefix="/api/v1/messages", tags=["messages"])
     application.include_router(edge_router, prefix="/api/v1/edge", tags=["edge-ai"])
 
+    # ── Multi-app routers ────────────────────────────────────────
+    from app.apps.pettracker.router import router as pt_router
+    application.include_router(pt_router, prefix="/api/v1", tags=["pettracker"])
+
     @application.get("/health")
     async def health_check() -> dict:
         """서비스 상태 확인"""

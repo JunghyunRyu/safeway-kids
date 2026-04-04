@@ -1,0 +1,23 @@
+{
+  "name": "safeway-platform",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*/mobile",
+    "mobile"
+  ],
+  "scripts": {
+    "pt:start": "cd apps/pettracker/mobile && npx expo start",
+    "cc:start": "cd apps/careconnect/mobile && npx expo start",
+    "sk:start": "cd mobile && npx expo start",
+    "test:backend": "cd backend && .venv/Scripts/python -m pytest tests/unit/ -q",
+    "test:mobile": "cd mobile && npx jest",
+    "test:pt": "cd apps/pettracker/mobile && npx jest",
+    "test:cc": "cd apps/careconnect/mobile && npx jest",
+    "test:all": "npm run test:backend && npm run test:mobile"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  }
+}

@@ -277,21 +277,25 @@ async def toss_webhook(
 
     body_bytes = await request.body()
 
-    # Verify webhook signature if secret is configured
+    # Verify webhook signature — MANDATORY (S-06: fail-closed)
     webhook_secret = settings.toss_payments_webhook_secret
-    if webhook_secret:
-        sig_header = request.headers.get("Toss-Signature") or request.headers.get("toss-signature")
-        if not sig_header:
-            logger.warning("Toss webhook missing signature header")
-            from app.common.exceptions import ForbiddenError
-            raise ForbiddenError(detail="Missing webhook signature")
-        expected = hmac.new(
-            webhook_secret.encode(), body_bytes, hashlib.sha256
-        ).hexdigest()
-        if not hmac.compare_digest(sig_header, expected):
-            logger.warning("Toss webhook signature mismatch")
-            from app.common.exceptions import ForbiddenError
-            raise ForbiddenError(detail="Invalid webhook signature")
+    if not webhook_secret:
+        logger.error("Toss webhook secret not configured — rejecting webhook")
+        from app.common.exceptions import ForbiddenError
+        raise ForbiddenError(detail="Webhook verification not configured")
+
+    sig_header = request.headers.get("Toss-Signature") or request.headers.get("toss-signature")
+    if not sig_header:
+        logger.warning("Toss webhook missing signature header")
+        from app.common.exceptions import ForbiddenError
+        raise ForbiddenError(detail="Missing webhook signature")
+    expected = hmac.new(
+        webhook_secret.encode(), body_bytes, hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(sig_header, expected):
+        logger.warning("Toss webhook signature mismatch")
+        from app.common.exceptions import ForbiddenError
+        raise ForbiddenError(detail="Invalid webhook signature")
 
     import json
     payload_data = json.loads(body_bytes)

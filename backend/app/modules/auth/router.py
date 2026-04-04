@@ -41,7 +41,7 @@ async def kakao_login(
 
 
 @router.post("/otp/send")
-@limiter.limit(settings.rate_limit_auth)
+@limiter.limit(settings.rate_limit_otp)
 async def send_otp(request: Request, body: OtpSendRequest) -> dict[str, str]:
     """인증번호 발송"""
     await service.send_otp(body.phone, ip_address=request.client.host if request.client else None)
@@ -49,7 +49,7 @@ async def send_otp(request: Request, body: OtpSendRequest) -> dict[str, str]:
 
 
 @router.post("/otp/verify", response_model=TokenResponse)
-@limiter.limit(settings.rate_limit_auth)
+@limiter.limit(settings.rate_limit_otp)
 async def verify_otp(
     request: Request,
     body: OtpVerifyRequest,

@@ -17,17 +17,37 @@ class TestJWT:
     def test_create_access_token(self) -> None:
         user_id = uuid.uuid4()
         token = create_access_token(user_id, UserRole.PARENT)
-        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm],
+            options={"verify_aud": False},
+        )
         assert payload["sub"] == str(user_id)
         assert payload["role"] == "parent"
         assert payload["type"] == "access"
+        assert payload["app_context"] == "safeway_kids"
+        assert payload["aud"] == "safeway_kids"
+
+    def test_create_access_token_with_app_context(self) -> None:
+        user_id = uuid.uuid4()
+        token = create_access_token(user_id, UserRole.PET_OWNER, app_context="pettracker")
+        payload = jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm],
+            options={"verify_aud": False},
+        )
+        assert payload["app_context"] == "pettracker"
+        assert payload["aud"] == "pettracker"
+        assert payload["role"] == "pet_owner"
 
     def test_create_refresh_token(self) -> None:
         user_id = uuid.uuid4()
         token = create_refresh_token(user_id)
-        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm],
+            options={"verify_aud": False},
+        )
         assert payload["sub"] == str(user_id)
         assert payload["type"] == "refresh"
+        assert payload["app_context"] == "safeway_kids"
 
     def test_decode_valid_token(self) -> None:
         user_id = uuid.uuid4()
@@ -35,6 +55,7 @@ class TestJWT:
         payload = decode_token(token)
         assert payload["sub"] == str(user_id)
         assert payload["role"] == "driver"
+        assert payload["app_context"] == "safeway_kids"
 
     def test_decode_invalid_token(self) -> None:
         from app.common.exceptions import UnauthorizedError

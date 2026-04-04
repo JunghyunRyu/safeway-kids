@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "23469923151",
+    "project_id": "safeway-kids",
+    "storage_bucket": "safeway-kids.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:23469923151:android:4fe462f9a7da1efd96433a",
+        "android_client_info": {
+          "package_name": "com.safewaykids.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2pVrNM8YQDLJAViXIIFalruaBXqkeIdo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

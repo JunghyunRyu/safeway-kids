@@ -30,6 +30,22 @@ from app.modules.vehicle_telemetry.models import (  # noqa: F401
     VehicleAssignment,
 )
 from app.modules.edge_gateway.models import EdgeEvent  # noqa: F401
+from app.core.models import (  # noqa: F401
+    WalletTransaction,
+    CommissionRecord,
+    LocationConsent,
+    Subscription,
+)
+from app.apps.pettracker.models import (  # noqa: F401
+    Pet,
+    WalkerQualification,
+    WalkerAvailability,
+    PtBooking,
+    WalkSession,
+    WalkGpsHistory,
+    WalkerWallet,
+    WalkerReview,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url_sync)

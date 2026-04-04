@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "패트래커",
+    "slug": "pettracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF8F0"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.safeway.pettracker",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "산책 도우미의 실시간 위치를 추적하기 위해 위치 권한이 필요합니다.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "산책 중 GPS 위치를 전송하기 위해 위치 권한이 필요합니다."
+      }
+    },
+    "android": {
+      "package": "com.safeway.pettracker",
+      "adaptiveIcon": {
+        "backgroundColor": "#F4A22D"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "extra": {
+      "appContext": "pettracker",
+      "apiBaseUrl": "http://localhost:8000/api/v1",
+      "eas": {
+        "projectId": ""
+      }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "반려동물 산책 경로를 추적하기 위해 위치 권한이 필요합니다."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#F4A22D"
+        }
+      ],
+      "expo-secure-store",
+      "expo-font"
+    ],
+    "owner": "patrickryu"
+  }
+}

@@ -208,6 +208,32 @@ async def create_contract(db: AsyncSession, request: ContractCreateRequest) -> C
 # --- Compliance Document services ---
 
 
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".webp"}
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
+
+# Magic bytes for file type verification
+MAGIC_BYTES = {
+    b"%PDF": "application/pdf",
+    b"\xff\xd8\xff": "image/jpeg",
+    b"\x89PNG": "image/png",
+    b"RIFF": "image/webp",  # WebP starts with RIFF
+}
+
+
+def _validate_magic_bytes(content: bytes, claimed_mime: str | None) -> bool:
+    """Verify file content matches claimed MIME type via magic bytes."""
+    for magic, mime in MAGIC_BYTES.items():
+        if content[:len(magic)] == magic:
+            return True
+    return False
+
+
 async def upload_document(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -215,25 +241,53 @@ async def upload_document(
     file: UploadFile,
 ) -> ComplianceDocument:
     """Save file to local storage and create DB record."""
+    from app.common.exceptions import ValidationError
+
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    # === Security: File validation (S-04) ===
+    # 1. Check file extension
+    ext = Path(file.filename).suffix.lower() if file.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        raise ValidationError(
+            detail=f"허용되지 않는 파일 형식입니다. 허용: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+
+    # 2. Check MIME type
+    if file.content_type and file.content_type not in ALLOWED_MIME_TYPES:
+        raise ValidationError(
+            detail=f"허용되지 않는 파일 유형입니다. 허용: PDF, JPG, PNG, WebP"
+        )
+
+    # 3. Read content and check size
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE_BYTES:
+        raise ValidationError(
+            detail=f"파일 크기가 {MAX_FILE_SIZE_BYTES // (1024*1024)}MB를 초과합니다"
+        )
+
+    if len(content) == 0:
+        raise ValidationError(detail="빈 파일은 업로드할 수 없습니다")
+
+    # 4. Verify magic bytes match claimed type
+    if not _validate_magic_bytes(content, file.content_type):
+        raise ValidationError(
+            detail="파일 내용이 선언된 파일 형식과 일치하지 않습니다"
+        )
 
     # Validate document_type
     try:
         doc_type = DocumentType(metadata.document_type)
     except ValueError as err:
-        from app.common.exceptions import ValidationError
-
         raise ValidationError(
             detail=f"유효하지 않은 문서 유형입니다: {metadata.document_type}"
         ) from err
 
     # Generate unique filename to avoid collisions
-    ext = Path(file.filename).suffix if file.filename else ""
     stored_name = f"{uuid.uuid4().hex}{ext}"
     stored_path = UPLOAD_DIR / stored_name
 
     async with aiofiles.open(stored_path, "wb") as f:
-        content = await file.read()
         await f.write(content)
 
     document = ComplianceDocument(

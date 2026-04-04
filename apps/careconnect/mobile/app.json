@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "돌봄커넥트",
+    "slug": "careconnect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E8F4F4"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.safeway.careconnect",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "돌봄자의 방문 체크인을 위해 위치 권한이 필요합니다.",
+        "NSCameraUsageDescription": "활동 사진을 촬영하기 위해 카메라 접근이 필요합니다."
+      }
+    },
+    "android": {
+      "package": "com.safeway.careconnect",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F7A7A"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
+      ]
+    },
+    "extra": {
+      "appContext": "careconnect",
+      "apiBaseUrl": "http://localhost:8000/api/v1",
+      "eas": {
+        "projectId": ""
+      }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "돌봄자 방문 체크인 인증을 위해 위치 권한이 필요합니다."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0F7A7A"
+        }
+      ],
+      "expo-secure-store",
+      "expo-font"
+    ],
+    "owner": "patrickryu"
+  }
+}

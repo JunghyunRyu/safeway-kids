@@ -36,4 +36,12 @@ async def get_current_user(
     if not user:
         raise UnauthorizedError(detail="사용자를 찾을 수 없습니다")
 
+    # Verify app_context from JWT matches user's stored app_context
+    jwt_app_context = payload.get("app_context")
+    if jwt_app_context and user.app_context != jwt_app_context:
+        raise UnauthorizedError(detail="앱 컨텍스트가 일치하지 않습니다")
+
+    # Store JWT app_context on user for downstream RBAC checks
+    user._jwt_app_context = jwt_app_context  # type: ignore[attr-defined]
+
     return user

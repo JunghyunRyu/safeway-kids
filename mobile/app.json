@@ -18,7 +18,10 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "차량 실시간 위치 추적 및 SOS 긴급 호출 시 현재 위치 전송에 사용됩니다.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "셔틀버스 GPS 위치를 전송하기 위해 위치 권한이 필요합니다.",
-        "LSApplicationQueriesSchemes": ["kakaomap", "tmap"]
+        "LSApplicationQueriesSchemes": [
+          "kakaomap",
+          "tmap"
+        ]
       }
     },
     "android": {
@@ -64,7 +67,8 @@
           "color": "#2196F3"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ],
     "owner": "patrickryu"
   }

@@ -62,7 +62,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://192.168.44.128:5173", "http://192.168.44.128:5174"]
 
     # Rate limiting
-    rate_limit_auth: str = "1000/minute"
+    rate_limit_auth: str = "30/minute"
+    rate_limit_otp: str = "5/minute"
 
     # Database pool
     db_pool_size: int = 20

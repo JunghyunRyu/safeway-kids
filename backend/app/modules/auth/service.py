@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.exceptions import UnauthorizedError
 from app.config import settings
-from app.modules.auth.models import User, UserRole
+from app.modules.auth.models import APP_SAFEWAY_KIDS, VALID_APP_CONTEXTS, User, UserRole
 from app.redis import redis_client
 
 logger = logging.getLogger(__name__)
@@ -48,16 +48,24 @@ async def get_kakao_user_info(code: str, redirect_uri: str | None = None) -> dic
 
 
 async def kakao_login(
-    db: AsyncSession, code: str, redirect_uri: str | None = None
+    db: AsyncSession, code: str, redirect_uri: str | None = None,
+    app_context: str = APP_SAFEWAY_KIDS, role: UserRole = UserRole.PARENT,
 ) -> tuple[User, bool]:
     """Login or register via Kakao. Returns (user, is_new)."""
+    if app_context not in VALID_APP_CONTEXTS:
+        raise UnauthorizedError(detail=f"유효하지 않은 앱 컨텍스트: {app_context}")
+
     kakao_info = await get_kakao_user_info(code, redirect_uri)
     kakao_id = str(kakao_info["id"])
     kakao_account = kakao_info.get("kakao_account", {})
     profile = kakao_account.get("profile", {})
 
-    # Check if user exists
-    stmt = select(User).where(User.kakao_id == kakao_id, User.deleted_at.is_(None))
+    # Check if user exists in this app_context
+    stmt = select(User).where(
+        User.kakao_id == kakao_id,
+        User.app_context == app_context,
+        User.deleted_at.is_(None),
+    )
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
@@ -66,11 +74,12 @@ async def kakao_login(
 
     # Create new user (phone will be linked via OTP later)
     user = User(
-        role=UserRole.PARENT,
+        role=role,
         phone=f"kakao_{kakao_id}",  # placeholder until phone OTP verification
         name=profile.get("nickname", "사용자"),
         kakao_id=kakao_id,
         email=kakao_account.get("email"),
+        app_context=app_context,
     )
     db.add(user)
     await db.flush()
@@ -153,10 +162,18 @@ async def verify_otp(phone: str, code: str, ip_address: str | None = None) -> bo
 
 
 async def otp_login_or_register(
-    db: AsyncSession, phone: str, name: str, role: UserRole
+    db: AsyncSession, phone: str, name: str, role: UserRole,
+    app_context: str = APP_SAFEWAY_KIDS,
 ) -> tuple[User, bool]:
     """Login or register via Phone OTP. Returns (user, is_new)."""
-    stmt = select(User).where(User.phone == phone, User.deleted_at.is_(None))
+    if app_context not in VALID_APP_CONTEXTS:
+        raise UnauthorizedError(detail=f"유효하지 않은 앱 컨텍스트: {app_context}")
+
+    stmt = select(User).where(
+        User.phone == phone,
+        User.app_context == app_context,
+        User.deleted_at.is_(None),
+    )
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
@@ -167,31 +184,38 @@ async def otp_login_or_register(
             await db.flush()
         return user, False
 
-    user = User(role=role, phone=phone, name=name)
+    user = User(role=role, phone=phone, name=name, app_context=app_context)
     db.add(user)
     await db.flush()
     return user, True
 
 
-def create_access_token(user_id: uuid.UUID, role: UserRole) -> str:
+def create_access_token(
+    user_id: uuid.UUID, role: UserRole, app_context: str = APP_SAFEWAY_KIDS,
+) -> str:
     expire = datetime.now(UTC) + timedelta(
         minutes=settings.jwt_access_token_expire_minutes
     )
     payload = {
         "sub": str(user_id),
         "role": role.value,
+        "app_context": app_context,
+        "aud": app_context,
         "exp": expire,
         "type": "access",
     }
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
-def create_refresh_token(user_id: uuid.UUID) -> str:
+def create_refresh_token(
+    user_id: uuid.UUID, app_context: str = APP_SAFEWAY_KIDS,
+) -> str:
     expire = datetime.now(UTC) + timedelta(
         days=settings.jwt_refresh_token_expire_days
     )
     payload = {
         "sub": str(user_id),
+        "app_context": app_context,
         "exp": expire,
         "type": "refresh",
     }
@@ -201,7 +225,8 @@ def create_refresh_token(user_id: uuid.UUID) -> str:
 def decode_token(token: str) -> dict:
     try:
         payload = jwt.decode(
-            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm],
+            options={"verify_aud": False},  # aud is validated at app level, not jwt lib
         )
         return payload
     except JWTError as e:
@@ -237,13 +262,16 @@ async def list_users(
 
 
 async def create_user(
-    db: AsyncSession, phone: str, name: str, role: UserRole
+    db: AsyncSession, phone: str, name: str, role: UserRole,
+    app_context: str = APP_SAFEWAY_KIDS,
 ) -> User:
     """Create a new user. Uses phone as the default password (bcrypt-hashed)."""
     import bcrypt as _bcrypt
 
-    # Check for duplicate phone
-    stmt = select(User).where(User.phone == phone, User.deleted_at.is_(None))
+    # Check for duplicate phone in this app_context
+    stmt = select(User).where(
+        User.phone == phone, User.app_context == app_context, User.deleted_at.is_(None),
+    )
     result = await db.execute(stmt)
     existing = result.scalar_one_or_none()
     if existing:
@@ -254,7 +282,7 @@ async def create_user(
     # kept for potential password-based admin login in the future).
     _hashed_pw = _bcrypt.hashpw(phone.encode(), _bcrypt.gensalt()).decode()
 
-    user = User(role=role, phone=phone, name=name)
+    user = User(role=role, phone=phone, name=name, app_context=app_context)
     db.add(user)
     await db.flush()
     return user
@@ -303,8 +331,9 @@ async def deactivate_user(db: AsyncSession, user_id: uuid.UUID) -> User:
 
 
 def create_token_response(user: User) -> dict:
-    access_token = create_access_token(user.id, user.role)
-    refresh_token = create_refresh_token(user.id)
+    app_ctx = getattr(user, "app_context", APP_SAFEWAY_KIDS) or APP_SAFEWAY_KIDS
+    access_token = create_access_token(user.id, user.role, app_ctx)
+    refresh_token = create_refresh_token(user.id, app_ctx)
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -315,6 +344,7 @@ def create_token_response(user: User) -> dict:
             "phone": user.phone,
             "name": user.name,
             "role": user.role.value if hasattr(user.role, 'value') else user.role,
+            "app_context": app_ctx,
             "is_active": user.is_active,
         },
     }
