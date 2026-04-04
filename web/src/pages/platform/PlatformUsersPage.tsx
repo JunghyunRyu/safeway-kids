@@ -96,7 +96,8 @@ export default function PlatformUsersPage() {
       if (search) params.set('search', search);
       const query = params.toString();
       const { data } = await api.get(`/auth/users${query ? '?' + query : ''}`);
-      const list: UserResponse[] = Array.isArray(data) ? data : [];
+      const raw = data?.items ?? data;
+      const list: UserResponse[] = Array.isArray(raw) ? raw : [];
       setUsers(
         list.map((u) => ({
           id: u.id,

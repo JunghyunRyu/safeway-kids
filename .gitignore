@@ -47,4 +47,4 @@ vmware_ubuntu.key.pub
 
 # Firebase Admin SDK key (서버 전용 — 절대 커밋 금지)
 safeway-kids-firebase-adminsdk-fbsvc-0e13eee2eb.json
-# google-services.json, GoogleService-Info.plist는 클라이언트 설정으로 커밋 가능
+# google-services.json, GoogleService-Info.plist는 클라이언트 설정으로 커밋 가능.playwright-mcp/

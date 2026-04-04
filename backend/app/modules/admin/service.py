@@ -8,7 +8,8 @@ Audit logging: Records key operations for compliance and traceability.
 
 import json
 import random
-from datetime import date, time
+import uuid
+from datetime import date, datetime, time, timedelta, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,15 +19,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.academy_management.models import Academy
 from app.modules.auth.models import User, UserRole
-from app.modules.billing.models import BillingPlan
-from app.modules.scheduling.models import ScheduleTemplate
+from app.modules.billing.models import BillingPlan, Invoice
+from app.modules.compliance.models import GuardianConsent
+from app.modules.scheduling.models import DailyScheduleInstance, ScheduleTemplate
 from app.modules.student_management.models import Enrollment, Student
-from app.modules.vehicle_telemetry.models import Vehicle
+from app.modules.vehicle_telemetry.models import Vehicle, VehicleAssignment
+
+UTC = timezone.utc
 
 # Seed phone number used to check idempotency
 SEED_CHECK_PHONE = "01090000001"
 
-# Academy data
+# Academy data — 5개 학원 (다양한 지역)
 ACADEMY_DATA = [
     {
         "name": "서울 강남 수학학원",
@@ -49,49 +53,75 @@ ACADEMY_DATA = [
         "longitude": 127.1050,
         "phone": "02-555-0003",
     },
+    {
+        "name": "서울 마포 코딩학원",
+        "address": "서울특별시 마포구 양화로 45",
+        "latitude": 37.5565,
+        "longitude": 126.9220,
+        "phone": "02-555-0004",
+    },
+    {
+        "name": "서울 용산 미술학원",
+        "address": "서울특별시 용산구 이태원로 200",
+        "latitude": 37.5340,
+        "longitude": 126.9870,
+        "phone": "02-555-0005",
+    },
 ]
 
-# Academy admin phones
-ACADEMY_ADMIN_PHONES = ["01080000001", "01080000002", "01080000003"]
-ACADEMY_ADMIN_NAMES = ["강남학원관리자", "서초학원관리자", "송파학원관리자"]
+# Academy admin phones — 5명
+ACADEMY_ADMIN_PHONES = ["01080000001", "01080000002", "01080000003", "01080000004", "01080000005"]
+ACADEMY_ADMIN_NAMES = ["강남학원 김원장", "서초학원 이원장", "송파학원 박원장", "마포학원 최원장", "용산학원 정원장"]
 
-# Driver data
+# Driver data — 8명 (다양한 이름)
 DRIVER_PHONES = [
-    "01070000001",
-    "01070000002",
-    "01070000003",
-    "01070000004",
-    "01070000005",
+    "01070000001", "01070000002", "01070000003", "01070000004",
+    "01070000005", "01070000006", "01070000007", "01070000008",
 ]
-DRIVER_NAMES = ["김운전", "이기사", "박드라이버", "최운수", "정기사"]
+DRIVER_NAMES = ["김안전", "이기사", "박운전", "최기사", "정드라이버", "한운수", "오기사", "장운전"]
 
-# Safety escort data
-ESCORT_PHONES = ["01060000001", "01060000002", "01060000003"]
-ESCORT_NAMES = ["안전도우미1", "안전도우미2", "안전도우미3"]
+# Safety escort data — 5명
+ESCORT_PHONES = ["01060000001", "01060000002", "01060000003", "01060000004", "01060000005"]
+ESCORT_NAMES = ["안전도우미 김", "안전도우미 이", "안전도우미 박", "안전도우미 최", "안전도우미 정"]
 
-# Parent data: phones 01090000001 ~ 01090000010
-PARENT_PHONES = [f"0109000000{i}" if i < 10 else f"010900000{i}" for i in range(1, 11)]
+# Parent data: 15명 (실감 있는 이름)
+PARENT_PHONES = [f"0109000000{i}" if i < 10 else f"010900000{i}" for i in range(1, 16)]
 PARENT_NAMES = [
-    "학부모일", "학부모이", "학부모삼", "학부모사", "학부모오",
-    "학부모육", "학부모칠", "학부모팔", "학부모구", "학부모십",
+    "김민지맘", "이서윤맘", "박하준맘", "최지우맘", "정수아맘",
+    "한도윤맘", "오시우맘", "장예준맘", "윤하은맘", "임지호맘",
+    "강서준맘", "조은서맘", "신유나맘", "권지민맘", "황준서맘",
 ]
 
-# Student names (2 per parent = 20 total)
+# Student names (2 per parent = 30명, 실감 있는 이름)
 STUDENT_NAMES = [
-    ("아이일A", "아이일B"),
-    ("아이이A", "아이이B"),
-    ("아이삼A", "아이삼B"),
-    ("아이사A", "아이사B"),
-    ("아이오A", "아이오B"),
-    ("아이육A", "아이육B"),
-    ("아이칠A", "아이칠B"),
-    ("아이팔A", "아이팔B"),
-    ("아이구A", "아이구B"),
-    ("아이십A", "아이십B"),
+    ("김민준", "김서연"),
+    ("이서윤", "이도현"),
+    ("박하준", "박지유"),
+    ("최지우", "최시우"),
+    ("정수아", "정예준"),
+    ("한도윤", "한하은"),
+    ("오시우", "오지호"),
+    ("장예준", "장은서"),
+    ("윤하은", "윤서준"),
+    ("임지호", "임유나"),
+    ("강서준", "강수빈"),
+    ("조은서", "조민재"),
+    ("신유나", "신태윤"),
+    ("권지민", "권서현"),
+    ("황준서", "황예린"),
 ]
 
-# Vehicle data
-VEHICLE_PLATES = ["11가1001", "22나2002", "33다3003", "44라4004", "55마5005"]
+# Vehicle data — 8대 (다양한 정원)
+VEHICLE_DATA = [
+    ("11가1001", 15, "현대유니버스", "안전운수(주)"),
+    ("22나2002", 15, "현대카운티", "안전운수(주)"),
+    ("33다3003", 25, "기아그랜버드", "강남교통(주)"),
+    ("44라4004", 15, "현대카운티", "강남교통(주)"),
+    ("55마5005", 25, "현대유니버스", "서초운수(주)"),
+    ("66바6006", 15, "현대카운티", "서초운수(주)"),
+    ("77사7007", 15, "기아봉고III", "송파교통(주)"),
+    ("88아8008", 25, "현대유니버스", "마포운수(주)"),
+]
 
 # Gangnam-area pickup coordinates for schedule templates
 PICKUP_LOCATIONS = [
@@ -100,6 +130,9 @@ PICKUP_LOCATIONS = [
     (37.4985, 127.0320, "강남구 대치동 23-5"),
     (37.5080, 127.0200, "강남구 논현동 78-2"),
     (37.4920, 127.0380, "강남구 대치동 67-9"),
+    (37.5565, 126.9220, "마포구 합정동 33-7"),
+    (37.5340, 126.9870, "용산구 한남동 15-2"),
+    (37.5130, 127.1020, "송파구 잠실동 42-8"),
 ]
 
 
@@ -208,23 +241,76 @@ async def seed_data(db: AsyncSession) -> dict:
     await db.flush()
     counts["enrollments"] = enrollment_count
 
-    # --- Vehicles (assigned to random academies conceptually) ---
+    # --- 1명 비활성 사용자 (탈퇴 사용자 시뮬레이션) ---
+    inactive_user = User(
+        role=UserRole.PARENT,
+        phone="01099990099",
+        name="탈퇴한학부모",
+        is_active=False,
+    )
+    db.add(inactive_user)
+    await db.flush()
+
+    # --- Vehicles ---
     vehicles: list[Vehicle] = []
-    for plate in VEHICLE_PLATES:
+    for plate, cap, vtype, operator in VEHICLE_DATA:
         vehicle = Vehicle(
             license_plate=plate,
-            capacity=15,
-            operator_name="안전운수(주)",
+            capacity=cap,
+            vehicle_type=vtype,
+            operator_name=operator,
+            is_yellow_painted=random.choice([True, False]),
+            has_cctv=random.choice([True, True, False]),
+            has_stop_sign=True,
+            manufacture_year=random.randint(2020, 2025),
+            insurance_expiry=date.today() + timedelta(days=random.randint(30, 365)),
+            last_inspection_date=date.today() - timedelta(days=random.randint(10, 90)),
         )
         db.add(vehicle)
         vehicles.append(vehicle)
     await db.flush()
     counts["vehicles"] = len(vehicles)
 
+    # --- Vehicle Assignments (오늘 기사 배차) ---
+    today = date.today()
+    assignment_count = 0
+    for i, driver in enumerate(drivers):
+        if i < len(vehicles):
+            assignment = VehicleAssignment(
+                vehicle_id=vehicles[i].id,
+                driver_id=driver.id,
+                assigned_date=today,
+            )
+            db.add(assignment)
+            assignment_count += 1
+    await db.flush()
+    counts["vehicle_assignments"] = assignment_count
+
+    # --- Guardian Consents (동의서 — 학부모 중 12명 동의) ---
+    consent_count = 0
+    consented_students = []
+    for i, student in enumerate(all_students):
+        if i < 24:  # 24명 학생 동의 (80%)
+            consent = GuardianConsent(
+                child_id=student.id,
+                guardian_id=student.guardian_id,
+                consent_scope={
+                    "service_terms": True,
+                    "privacy_policy": True,
+                    "child_info_collection": True,
+                    "location_tracking": True,
+                },
+                consent_method="app",
+            )
+            db.add(consent)
+            consent_count += 1
+            consented_students.append(student)
+    await db.flush()
+    counts["consents"] = consent_count
+
     # --- Schedule Templates (weekdays, random pickup time 14:00-17:00) ---
     template_count = 0
-    for student in all_students:
-        # Get the student's enrollment to find the academy
+    for student in consented_students:
         stmt = select(Enrollment).where(Enrollment.student_id == student.id)
         result = await db.execute(stmt)
         enrollment = result.scalar_one_or_none()
@@ -249,26 +335,84 @@ async def seed_data(db: AsyncSession) -> dict:
     await db.flush()
     counts["schedule_templates"] = template_count
 
-    # --- Billing Plans (2 per-ride pricing plans) ---
-    billing_plans = [
-        BillingPlan(
-            academy_id=academies[0].id,
-            name="기본 건별 요금제",
-            price_per_ride=5000,
-            monthly_cap=150000,
-        ),
-        BillingPlan(
-            academy_id=academies[1].id,
-            name="프리미엄 건별 요금제",
-            price_per_ride=7000,
-            monthly_cap=200000,
-        ),
+    # --- Billing Plans (각 학원에 1개씩) ---
+    plan_data = [
+        ("기본 요금제", 5000, 150000),
+        ("프리미엄 요금제", 7000, 200000),
+        ("경제 요금제", 4000, 120000),
+        ("코딩학원 요금제", 6000, 180000),
+        ("미술학원 요금제", 5500, 165000),
     ]
-    for plan in billing_plans:
+    billing_plans = []
+    for i, academy in enumerate(academies):
+        name, price, cap = plan_data[i] if i < len(plan_data) else ("기본", 5000, 150000)
+        plan = BillingPlan(
+            academy_id=academy.id,
+            name=name,
+            price_per_ride=price,
+            monthly_cap=cap,
+        )
         db.add(plan)
+        billing_plans.append(plan)
     await db.flush()
     counts["billing_plans"] = len(billing_plans)
 
+    # --- Invoices (지난달 청구서 — 다양한 상태) ---
+    invoice_count = 0
+    statuses = ["paid", "paid", "paid", "pending", "pending", "overdue"]
+    for i, student in enumerate(all_students[:18]):
+        stmt = select(Enrollment).where(Enrollment.student_id == student.id)
+        result = await db.execute(stmt)
+        enrollment = result.scalar_one_or_none()
+        if not enrollment:
+            continue
+        rides = random.randint(10, 25)
+        price = random.choice([4000, 5000, 6000, 7000])
+        status = statuses[i % len(statuses)]
+        invoice = Invoice(
+            parent_id=student.guardian_id,
+            academy_id=enrollment.academy_id,
+            student_id=student.id,
+            billing_month="2026-03",
+            total_rides=rides,
+            amount=rides * price,
+            status=status,
+            due_date=date(2026, 4, 10),
+            paid_at=datetime.now(UTC) - timedelta(days=random.randint(1, 15)) if status == "paid" else None,
+        )
+        db.add(invoice)
+        invoice_count += 1
+    await db.flush()
+    counts["invoices"] = invoice_count
+
+    # --- Audit Logs (시드 생성 기록 + 샘플 활동) ---
+    audit_actions = [
+        ("CREATE", "academy", academies[0].id, "강남학원관리자", "학원 등록: 서울 강남 수학학원"),
+        ("CREATE", "user", drivers[0].id, "플랫폼관리자", "기사 등록: 김안전"),
+        ("CREATE", "student", all_students[0].id, "김민지맘", "학생 등록: 김민준"),
+        ("UPDATE", "vehicle", vehicles[0].id, "강남학원관리자", "차량 정보 수정: 11가1001"),
+        ("CREATE", "billing_plan", billing_plans[0].id, "강남학원관리자", "요금제 생성: 기본 요금제"),
+        ("UPDATE", "user", drivers[1].id, "플랫폼관리자", "기사 자격 갱신: 이기사"),
+        ("DELETE", "user", inactive_user.id, "플랫폼관리자", "사용자 비활성화: 탈퇴한학부모"),
+        ("CREATE", "student", all_students[5].id, "한도윤맘", "학생 등록: 한도윤"),
+    ]
+    for action, entity_type, entity_id, user_name, details_text in audit_actions:
+        log = AuditLog(
+            user_id=str(academy_admin_users[0].id) if user_name.endswith("관리자") else str(parents[0].id),
+            user_name=user_name,
+            action=action,
+            entity_type=entity_type,
+            entity_id=str(entity_id),
+            details=details_text,
+            ip_address="127.0.0.1",
+        )
+        db.add(log)
+    await db.flush()
+    counts["audit_logs"] = len(audit_actions)
+
+    # Add summary keys for web dashboard compatibility
+    counts["users"] = counts.get("academy_admins", 0) + counts.get("drivers", 0) + counts.get("safety_escorts", 0) + counts.get("parents", 0) + 1  # +1 inactive
+    counts["academies"] = len(academies)
     return {"status": "created", "counts": counts}
 
 

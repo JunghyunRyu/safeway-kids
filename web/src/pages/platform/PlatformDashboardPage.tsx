@@ -49,8 +49,22 @@ export default function PlatformDashboardPage() {
             api.get('/compliance/documents/expiring'),
           ]);
 
-        const toArr = (r: PromiseSettledResult<{ data: unknown }>) =>
-          r.status === 'fulfilled' && Array.isArray(r.value.data) ? r.value.data : [];
+        const toArr = (r: PromiseSettledResult<{ data: unknown }>) => {
+          if (r.status !== 'fulfilled') return [];
+          const d = r.value.data;
+          if (Array.isArray(d)) return d;
+          if (d && typeof d === 'object' && 'items' in (d as Record<string, unknown>))
+            return (d as { items: unknown[] }).items;
+          return [];
+        };
+        const toTotal = (r: PromiseSettledResult<{ data: unknown }>) => {
+          if (r.status !== 'fulfilled') return 0;
+          const d = r.value.data;
+          if (Array.isArray(d)) return d.length;
+          if (d && typeof d === 'object' && 'total' in (d as Record<string, unknown>))
+            return (d as { total: number }).total;
+          return 0;
+        };
 
         const userList = toArr(usersRes) as User[];
         setUsers(userList);
@@ -62,9 +76,9 @@ export default function PlatformDashboardPage() {
 
         setStats({
           academies: toArr(acadRes).length,
-          users: toArr(usersRes).length,
+          users: toTotal(usersRes),
           vehicles: toArr(vehiclesRes).length,
-          students: toArr(studentsRes).length,
+          students: toTotal(studentsRes),
           unpaidInvoices,
           expiringDocs: toArr(expiringRes).length,
         });

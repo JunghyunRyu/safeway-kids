@@ -205,7 +205,11 @@ def _start_daily_cron() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Startup: verify connections
-    await redis_client.ping()
+    try:
+        await redis_client.ping()
+        logger.info("Redis connected")
+    except Exception:
+        logger.warning("Redis not available — GPS buffering and caching will be disabled")
 
     # Deactivate expired compliance documents on startup
     try:

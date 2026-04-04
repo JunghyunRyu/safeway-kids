@@ -36,8 +36,8 @@ export default function PlatformSeedPage() {
     setLoading(true);
     setResult(null);
     try {
-      const { data } = await api.post<SeedResult>('/admin/seed');
-      setResult(data);
+      const { data } = await api.post<{ status: string; counts?: SeedResult }>('/admin/seed');
+      setResult(data.counts ?? data as unknown as SeedResult);
       showToast('시드 데이터가 생성되었습니다', 'success');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
