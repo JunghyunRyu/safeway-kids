@@ -331,6 +331,9 @@ def create_app() -> FastAPI:
     from app.apps.pettracker.router import router as pt_router
     application.include_router(pt_router, prefix="/api/v1", tags=["pettracker"])
 
+    from app.apps.careconnect.router import router as cc_router
+    application.include_router(cc_router, prefix="/api/v1", tags=["careconnect"])
+
     @application.get("/health")
     async def health_check() -> dict:
         """서비스 상태 확인"""

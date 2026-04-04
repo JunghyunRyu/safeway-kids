@@ -36,6 +36,17 @@ from app.core.models import (  # noqa: F401
     LocationConsent,
     Subscription,
 )
+from app.apps.careconnect.models import (  # noqa: F401
+    CcChild,
+    ChildConsent,
+    CaregiverQualification,
+    CaregiverAvailability,
+    CcBooking,
+    CareSession,
+    CareActivityLog,
+    CaregiverWallet,
+    CaregiverReview,
+)
 from app.apps.pettracker.models import (  # noqa: F401
     Pet,
     WalkerQualification,
