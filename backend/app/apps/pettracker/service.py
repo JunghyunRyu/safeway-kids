@@ -463,7 +463,8 @@ async def create_review(
         raise ValidationError(detail="워커가 배정되지 않은 예약입니다")
 
     # Check 48-hour window
-    if booking.updated_at and (datetime.now(UTC) - booking.updated_at) > timedelta(hours=48):
+    updated = booking.updated_at.replace(tzinfo=UTC) if booking.updated_at and booking.updated_at.tzinfo is None else booking.updated_at
+    if updated and (datetime.now(UTC) - updated) > timedelta(hours=48):
         raise ValidationError(detail="리뷰 작성 기한(48시간)이 지났습니다")
 
     # Check no duplicate

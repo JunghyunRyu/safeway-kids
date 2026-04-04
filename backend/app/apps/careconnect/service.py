@@ -375,7 +375,8 @@ async def checkout(db: AsyncSession, session_id: uuid.UUID, cg_id: uuid.UUID) ->
 
     session.checked_out_at = datetime.now(UTC)
     if session.checked_in_at:
-        session.total_minutes = int((session.checked_out_at - session.checked_in_at).total_seconds() / 60)
+        checked_in = session.checked_in_at.replace(tzinfo=UTC) if session.checked_in_at.tzinfo is None else session.checked_in_at
+        session.total_minutes = int((session.checked_out_at - checked_in).total_seconds() / 60)
     await db.flush()
     return session
 

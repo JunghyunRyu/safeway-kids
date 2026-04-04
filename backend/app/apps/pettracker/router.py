@@ -322,20 +322,21 @@ async def admin_dashboard(
 ) -> dict:
     from sqlalchemy import func as sqlfunc
 
+    from app.apps.pettracker.models import PtBooking as _PtBooking
+    from app.apps.pettracker.models import WalkerQualification as _WalkerQual
+
     total_bookings = (await db.execute(
-        select(sqlfunc.count(PtBooking.id))
+        select(sqlfunc.count(_PtBooking.id))
     )).scalar() or 0
     active_walks = (await db.execute(
-        select(sqlfunc.count(PtBooking.id)).where(PtBooking.status == "in_progress")
+        select(sqlfunc.count(_PtBooking.id)).where(_PtBooking.status == "in_progress")
     )).scalar() or 0
     total_walkers = (await db.execute(
-        select(sqlfunc.count(WalkerQualification.id)).where(WalkerQualification.approval_status == "approved")
+        select(sqlfunc.count(_WalkerQual.id)).where(_WalkerQual.approval_status == "approved")
     )).scalar() or 0
     pending_approvals = (await db.execute(
-        select(sqlfunc.count(WalkerQualification.id)).where(WalkerQualification.approval_status == "pending")
+        select(sqlfunc.count(_WalkerQual.id)).where(_WalkerQual.approval_status == "pending")
     )).scalar() or 0
-
-    from app.apps.pettracker.models import WalkerQualification as WQ
     from app.core.models import CommissionRecord
     total_revenue = (await db.execute(
         select(sqlfunc.sum(CommissionRecord.commission_amount))
