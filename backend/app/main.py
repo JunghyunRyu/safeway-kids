@@ -24,6 +24,17 @@ async def gps_flush_loop() -> None:
     """Background task: flush GPS buffers from Redis to PostgreSQL every 30s."""
     from app.modules.vehicle_telemetry.service import flush_gps_buffer
 
+    redis_available = False
+    try:
+        await redis_client.ping()
+        redis_available = True
+    except Exception:
+        pass
+
+    if not redis_available:
+        logger.info("Redis not available — GPS flush loop disabled")
+        return
+
     while True:
         try:
             await asyncio.sleep(settings.gps_flush_interval_seconds)
