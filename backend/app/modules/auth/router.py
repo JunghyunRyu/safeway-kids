@@ -92,6 +92,12 @@ async def refresh_token(
         from app.common.exceptions import UnauthorizedError
         raise UnauthorizedError(detail="사용자를 찾을 수 없습니다")
 
+    # Verify app_context from refresh token matches user (S-08)
+    jwt_app_ctx = payload.get("app_context")
+    if jwt_app_ctx and user.app_context != jwt_app_ctx:
+        from app.common.exceptions import UnauthorizedError
+        raise UnauthorizedError(detail="앱 컨텍스트가 일치하지 않습니다")
+
     return service.create_token_response(user)
 
 
