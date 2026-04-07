@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { getWalkerProfile, type WalkerProfile } from '../../api/walkers';
@@ -9,7 +9,7 @@ export default function WalkerProfileDetailScreen({ route, navigation }: any) {
   const [profile, setProfile] = useState<WalkerProfile | null>(null);
 
   useEffect(() => {
-    getWalkerProfile(walkerId).then(setProfile).catch(() => {});
+    getWalkerProfile(walkerId).then(setProfile).catch(() => { Alert.alert('오류', '프로필을 불러올 수 없습니다'); });
   }, [walkerId]);
 
   if (!profile) {

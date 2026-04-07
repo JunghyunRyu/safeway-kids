@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { getCaregiverProfile, type CaregiverProfile } from '../../api/caregivers';
@@ -9,6 +9,7 @@ const TRUST_BADGES = [
   { key: 'has_child_abuse_check' as const, label: '아동학대 이력 없음', icon: 'shield-checkmark' as const },
   { key: 'has_sex_offense_check' as const, label: '성범죄 이력 없음', icon: 'shield-checkmark' as const },
   { key: 'has_cpr_cert' as const, label: 'CPR 자격증 보유', icon: 'medkit' as const },
+  { key: 'has_insurance' as const, label: '배상책임보험', icon: 'shield-checkmark' as const },
   { key: 'approval_status' as const, label: '본인인증 완료', icon: 'person-circle' as const },
 ];
 
@@ -17,7 +18,9 @@ export default function CaregiverProfileDetailScreen({ route, navigation }: any)
   const [profile, setProfile] = useState<CaregiverProfile | null>(null);
 
   useEffect(() => {
-    getCaregiverProfile(caregiverId).then(setProfile).catch(() => {});
+    getCaregiverProfile(caregiverId).then(setProfile).catch(() => {
+      Alert.alert('오류', '데이터를 불러올 수 없습니다');
+    });
   }, [caregiverId]);
 
   if (!profile) {
@@ -25,9 +28,12 @@ export default function CaregiverProfileDetailScreen({ route, navigation }: any)
   }
 
   const badgeEntries = TRUST_BADGES.map((b) => {
-    const active = b.key === 'approval_status'
-      ? profile.approval_status === 'approved'
-      : !!profile[b.key as keyof CaregiverProfile];
+    let active: boolean;
+    if (b.key === 'approval_status') {
+      active = profile.approval_status === 'approved';
+    } else {
+      active = !!profile[b.key as keyof CaregiverProfile];
+    }
     return { ...b, active };
   });
 

@@ -28,7 +28,7 @@ export default function LoginScreen({ onLogin }: { onLogin: (role: Role) => void
     if (!code || code.length !== 6) { Alert.alert('오류', '인증번호 6자리를 입력해 주세요'); return; }
     setLoading(true);
     try {
-      await verifyOtp(phone, code, name || '사용자', role, 'careconnect');
+      await verifyOtp(phone, code, name || '사용자', role);
       onLogin(role);
     } catch { Alert.alert('오류', '인증번호가 올바르지 않습니다'); }
     setLoading(false);
@@ -37,7 +37,7 @@ export default function LoginScreen({ onLogin }: { onLogin: (role: Role) => void
   const handleDevLogin = async () => {
     setLoading(true);
     try {
-      await devLogin('01012345678', '테스트 유저', role, 'careconnect');
+      await devLogin('01012345678', '테스트 유저', role);
       onLogin(role);
     } catch { Alert.alert('오류', '로그인에 실패했습니다'); }
     setLoading(false);
@@ -72,9 +72,11 @@ export default function LoginScreen({ onLogin }: { onLogin: (role: Role) => void
           <Text style={styles.primaryBtnText}>시작하기</Text>
         </Pressable>
 
-        <Pressable style={styles.devBtn} onPress={handleDevLogin}>
-          <Text style={styles.devBtnText}>개발용 바로 로그인</Text>
-        </Pressable>
+        {__DEV__ && (
+          <Pressable style={styles.devBtn} onPress={handleDevLogin}>
+            <Text style={styles.devBtnText}>개발용 바로 로그인</Text>
+          </Pressable>
+        )}
       </View>
     );
   }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { setAvailability } from '../../api/caregivers';
@@ -14,7 +14,9 @@ export default function ScheduleScreen() {
 
   const loadSlots = async () => {
     // availability list endpoint can be added later
-    try { /* setSlots(await listAvailability()); */ } catch {}
+    try { /* setSlots(await listAvailability()); */ } catch {
+      Alert.alert('오류', '데이터를 불러올 수 없습니다');
+    }
   };
 
   useEffect(() => { loadSlots(); }, []);
@@ -26,7 +28,9 @@ export default function ScheduleScreen() {
       setSlots((prev) => [...prev, { date: newDate, start: newStart, end: newEnd, status: '활성' }]);
       setNewDate('');
       await loadSlots();
-    } catch {}
+    } catch {
+      Alert.alert('오류', '가용 시간 등록에 실패했습니다');
+    }
   };
 
   return (

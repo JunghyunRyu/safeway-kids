@@ -106,6 +106,13 @@ class BookingResponse(BaseModel):
     price: int
     commission_rate: int
     created_at: datetime
+    # Pet info (populated from relationship)
+    pet_name: str | None = None
+    pet_species: str | None = None
+    pet_temperament: str | None = None
+    pet_weight_kg: float | None = None
+    pet_special_needs: str | None = None
+    owner_name: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -159,6 +166,7 @@ class WalletResponse(BaseModel):
     balance: int
     bank_name: str | None
     account_holder: str | None
+    commission_rate: int = 15
 
     model_config = {"from_attributes": True}
 

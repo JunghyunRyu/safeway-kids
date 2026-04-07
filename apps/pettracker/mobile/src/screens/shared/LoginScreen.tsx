@@ -72,9 +72,11 @@ export default function LoginScreen({ onLogin }: { onLogin: (role: Role) => void
           <Text style={styles.primaryBtnText}>시작하기</Text>
         </Pressable>
 
-        <Pressable style={styles.devBtn} onPress={handleDevLogin}>
-          <Text style={styles.devBtnText}>개발용 바로 로그인</Text>
-        </Pressable>
+        {__DEV__ && (
+          <Pressable style={styles.devBtn} onPress={handleDevLogin}>
+            <Text style={styles.devBtnText}>개발용 바로 로그인</Text>
+          </Pressable>
+        )}
       </View>
     );
   }

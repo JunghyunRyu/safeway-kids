@@ -6,7 +6,7 @@ import { createPet } from '../../api/pets';
 
 export default function PetRegistrationScreen({ navigation }: any) {
   const [name, setName] = useState('');
-  const [species, setSpecies] = useState<'dog' | 'cat'>('dog');
+  const [species, setSpecies] = useState<'dog' | 'cat' | null>(null);
   const [breed, setBreed] = useState('');
   const [weightKg, setWeightKg] = useState('');
   const [medicalNotes, setMedicalNotes] = useState('');
@@ -16,6 +16,7 @@ export default function PetRegistrationScreen({ navigation }: any) {
 
   const handleSubmit = async () => {
     if (!name.trim()) { Alert.alert('오류', '이름을 입력해 주세요'); return; }
+    if (!species) { Alert.alert('오류', '강아지 또는 고양이를 선택해 주세요'); return; }
     setLoading(true);
     try {
       await createPet({
@@ -46,11 +47,17 @@ export default function PetRegistrationScreen({ navigation }: any) {
 
       {/* Species selector */}
       <View style={styles.speciesRow}>
-        <Pressable style={[styles.speciesBtn, species === 'dog' && styles.speciesBtnActive]} onPress={() => setSpecies('dog')}>
+        <Pressable
+          style={[styles.speciesBtn, species === 'dog' && styles.speciesBtnActive, species === null && styles.speciesBtnInactive]}
+          onPress={() => setSpecies('dog')}
+        >
           <Text style={styles.speciesEmoji}>🐕</Text>
           <Text style={[styles.speciesLabel, species === 'dog' && styles.speciesLabelActive]}>강아지</Text>
         </Pressable>
-        <Pressable style={[styles.speciesBtn, species === 'cat' && styles.speciesBtnActive]} onPress={() => setSpecies('cat')}>
+        <Pressable
+          style={[styles.speciesBtn, species === 'cat' && styles.speciesBtnActive, species === null && styles.speciesBtnInactive]}
+          onPress={() => setSpecies('cat')}
+        >
           <Text style={styles.speciesEmoji}>🐈</Text>
           <Text style={[styles.speciesLabel, species === 'cat' && styles.speciesLabelActive]}>고양이</Text>
         </Pressable>
@@ -96,6 +103,7 @@ const styles = StyleSheet.create({
   speciesRow: { flexDirection: 'row', gap: Spacing.md, paddingHorizontal: Spacing.base, marginBottom: Spacing.lg },
   speciesBtn: { flex: 1, alignItems: 'center', padding: Spacing.lg, backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 2, borderColor: Colors.borderLight },
   speciesBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  speciesBtnInactive: { opacity: 0.6 },
   speciesEmoji: { fontSize: 32, marginBottom: 4 },
   speciesLabel: { fontSize: Typography.sizes.base, fontWeight: Typography.weights.medium, color: Colors.textSecondary },
   speciesLabelActive: { color: Colors.primary },

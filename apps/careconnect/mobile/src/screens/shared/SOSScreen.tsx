@@ -20,8 +20,10 @@ export default function SOSScreen({ navigation }: any) {
               lat = loc.coords.latitude;
               lon = loc.coords.longitude;
             }
-          } catch {}
-          try { await apiClient.post('/notifications/sos', { latitude: lat, longitude: lon, sos_type: 'emergency' }); } catch {}
+          } catch { /* 위치 권한 거부 시 기본 좌표 사용 */ }
+          try { await apiClient.post('/notifications/sos', { latitude: lat, longitude: lon, sos_type: 'emergency' }); } catch {
+            Alert.alert('알림', 'SOS 신호 전송에 실패했습니다. 112에 직접 연결합니다.');
+          }
           Linking.openURL('tel:112');
         },
       },

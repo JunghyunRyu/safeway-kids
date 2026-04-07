@@ -199,7 +199,18 @@ async def list_bookings(
 ) -> list[BookingResponse]:
     role_str = user.role.value if hasattr(user.role, "value") else user.role
     bookings = await service.list_bookings(db, user.id, role_str, status)
-    return [BookingResponse.model_validate(b) for b in bookings]
+    results = []
+    for b in bookings:
+        resp = BookingResponse.model_validate(b)
+        # Populate pet info from joined relationship
+        if hasattr(b, "pet") and b.pet:
+            resp.pet_name = b.pet.name
+            resp.pet_species = b.pet.species
+            resp.pet_temperament = b.pet.temperament
+            resp.pet_weight_kg = b.pet.weight_kg
+            resp.pet_special_needs = b.pet.special_needs
+        results.append(resp)
+    return results
 
 
 # ── Walk Sessions ────────���───────────────────────────────────────
@@ -290,16 +301,27 @@ async def list_transactions(
     user: User = Depends(require_walker),
 ) -> list[dict]:
     txs = await service.list_transactions(db, user.id)
-    return [
-        {
+    results = []
+    for t in txs:
+        # For earning transactions, calculate gross and fee based on 15% commission
+        commission_rate = 15
+        gross_amount = t.amount
+        platform_fee = 0
+        if t.tx_type == "earning":
+            # net = gross * (1 - rate/100) => gross = net / (1 - rate/100)
+            gross_amount = round(t.amount / (1 - commission_rate / 100))
+            platform_fee = gross_amount - t.amount
+        results.append({
             "id": str(t.id),
             "amount": t.amount,
             "tx_type": t.tx_type,
             "status": t.status,
             "created_at": t.created_at.isoformat(),
-        }
-        for t in txs
-    ]
+            "gross_amount": gross_amount,
+            "platform_fee": platform_fee,
+            "description": t.description if hasattr(t, "description") else None,
+        })
+    return results
 
 
 @router.post("/wallet/withdraw")

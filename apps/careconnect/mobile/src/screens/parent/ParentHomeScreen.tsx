@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { listChildren, type Child } from '../../api/children';
@@ -18,7 +18,9 @@ export default function ParentHomeScreen({ navigation }: any) {
       ]);
       setChildren(childrenData);
       setNextBooking(bookingsData[0] || null);
-    } catch {}
+    } catch {
+      Alert.alert('오류', '데이터를 불러올 수 없습니다');
+    }
   };
 
   useEffect(() => { loadData(); }, []);
@@ -39,8 +41,16 @@ export default function ParentHomeScreen({ navigation }: any) {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
     >
       <View style={styles.header}>
-        <Text style={styles.greeting}>안녕하세요! 👶</Text>
-        <Text style={styles.subtitle}>오늘도 안전한 돌봄을 시작하세요</Text>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.greeting}>안녕하세요! 👶</Text>
+            <Text style={styles.subtitle}>오늘도 안전한 돌봄을 시작하세요</Text>
+          </View>
+          <Pressable style={styles.sosHeaderBtn} onPress={() => navigation.navigate('SOS')}>
+            <Ionicons name="warning" size={18} color="#fff" />
+            <Text style={styles.sosHeaderText}>SOS</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Next Booking Card */}
@@ -103,8 +113,15 @@ export default function ParentHomeScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: { padding: Spacing.xl, paddingTop: 60 },
+  headerRow: { flexDirection: 'row', alignItems: 'center' },
   greeting: { fontSize: Typography.sizes.xxl, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
   subtitle: { fontSize: Typography.sizes.base, color: Colors.textSecondary, marginTop: 4 },
+  sosHeaderBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#DC2626', paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: Radius.full,
+  },
+  sosHeaderText: { color: '#fff', fontSize: Typography.sizes.xs, fontWeight: Typography.weights.bold },
   bookingCard: {
     marginHorizontal: Spacing.base, padding: Spacing.base, backgroundColor: Colors.primaryLight,
     borderRadius: Radius.lg, marginBottom: Spacing.base,

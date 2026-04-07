@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { listAvailability, setAvailability } from '../../api/walkers';
@@ -11,7 +11,7 @@ export default function ScheduleScreen() {
   const [newEnd, setNewEnd] = useState('18:00');
 
   const loadSlots = async () => {
-    try { setSlots(await listAvailability()); } catch {}
+    try { setSlots(await listAvailability()); } catch { Alert.alert('오류', '데이터를 불러올 수 없습니다'); }
   };
 
   useEffect(() => { loadSlots(); }, []);
@@ -22,7 +22,7 @@ export default function ScheduleScreen() {
       await setAvailability({ available_date: newDate, start_time: newStart, end_time: newEnd });
       setNewDate('');
       await loadSlots();
-    } catch {}
+    } catch { Alert.alert('오류', '스케줄 추가에 실패했습니다'); }
   };
 
   return (

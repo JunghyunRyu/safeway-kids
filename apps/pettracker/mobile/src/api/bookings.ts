@@ -13,6 +13,13 @@ export interface Booking {
   price: number;
   commission_rate: number;
   created_at: string;
+  // Pet info (populated from backend relationship)
+  pet_name?: string | null;
+  pet_species?: string | null;
+  pet_temperament?: string | null;
+  pet_weight_kg?: number | null;
+  pet_special_needs?: string | null;
+  owner_name?: string | null;
 }
 
 export interface BookingCreateData {

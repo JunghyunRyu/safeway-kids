@@ -219,6 +219,8 @@ class CaregiverReview(Base):
     caregiver_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
     rating: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-5
     comment: Mapped[str | None] = mapped_column(Text)
+    caregiver_reply: Mapped[str | None] = mapped_column(Text)
+    replied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

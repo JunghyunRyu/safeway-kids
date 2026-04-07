@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { getWalkReport, type WalkReport } from '../../api/walks';
@@ -9,7 +9,7 @@ export default function WalkReportScreen({ route, navigation }: any) {
   const [report, setReport] = useState<WalkReport | null>(null);
 
   useEffect(() => {
-    if (sessionId) getWalkReport(sessionId).then(setReport).catch(() => {});
+    if (sessionId) getWalkReport(sessionId).then(setReport).catch(() => { Alert.alert('오류', '리포트를 불러올 수 없습니다'); });
   }, [sessionId]);
 
   return (

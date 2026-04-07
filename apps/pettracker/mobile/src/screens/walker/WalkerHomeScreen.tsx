@@ -1,28 +1,62 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
-import { listBookings, type Booking } from '../../api/bookings';
+import { listBookings, acceptBooking, declineBooking, type Booking } from '../../api/bookings';
 import { getWallet, type Wallet } from '../../api/wallet';
 
 export default function WalkerHomeScreen() {
   const [todayBookings, setTodayBookings] = useState<Booking[]>([]);
+  const [pendingBookings, setPendingBookings] = useState<Booking[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
     try {
-      const [bookings, walletData] = await Promise.all([
+      const [confirmed, pending, walletData] = await Promise.all([
         listBookings('confirmed'),
+        listBookings('pending'),
         getWallet(),
       ]);
-      setTodayBookings(bookings.slice(0, 5));
+      setTodayBookings(confirmed.slice(0, 5));
+      setPendingBookings(pending);
       setWallet(walletData);
-    } catch {}
+    } catch {
+      Alert.alert('오류', '데이터를 불러올 수 없습니다');
+    }
   };
 
   useEffect(() => { loadData(); }, []);
   const onRefresh = async () => { setRefreshing(true); await loadData(); setRefreshing(false); };
+
+  const handleAccept = async (bookingId: string) => {
+    try {
+      await acceptBooking(bookingId);
+      Alert.alert('수락 완료', '예약을 수락했습니다.');
+      await loadData();
+    } catch {
+      Alert.alert('오류', '예약 수락에 실패했습니다');
+    }
+  };
+
+  const handleDecline = async (bookingId: string) => {
+    Alert.alert('예약 거절', '이 예약을 거절하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '거절',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await declineBooking(bookingId);
+            Alert.alert('거절 완료', '예약을 거절했습니다.');
+            await loadData();
+          } catch {
+            Alert.alert('오류', '예약 거절에 실패했습니다');
+          }
+        },
+      },
+    ]);
+  };
 
   return (
     <ScrollView
@@ -40,6 +74,35 @@ export default function WalkerHomeScreen() {
           {wallet ? `${wallet.balance.toLocaleString()}원` : '-'}
         </Text>
       </View>
+
+      {/* Pending Bookings */}
+      {pendingBookings.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>대기 중인 요청</Text>
+          {pendingBookings.map((b) => (
+            <View key={b.id} style={styles.pendingCard}>
+              <View style={styles.pendingInfo}>
+                <Text style={styles.pendingPet}>
+                  {b.pet_species === 'cat' ? '🐈' : '🐕'} {b.pet_name || '반려동물'}
+                </Text>
+                <Text style={styles.pendingTime}>
+                  {new Date(b.scheduled_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {' · '}{b.duration_minutes}분
+                </Text>
+                <Text style={styles.pendingPrice}>{b.price.toLocaleString()}원</Text>
+              </View>
+              <View style={styles.pendingActions}>
+                <Pressable style={styles.acceptBtn} onPress={() => handleAccept(b.id)}>
+                  <Text style={styles.acceptBtnText}>수락</Text>
+                </Pressable>
+                <Pressable style={styles.declineBtn} onPress={() => handleDecline(b.id)}>
+                  <Text style={styles.declineBtnText}>거절</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </>
+      )}
 
       {/* Today's Bookings */}
       <Text style={styles.sectionTitle}>예정된 예약</Text>
@@ -86,6 +149,27 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.textPrimary,
     paddingHorizontal: Spacing.base, marginTop: Spacing.xl, marginBottom: Spacing.md,
   },
+  // Pending booking cards
+  pendingCard: {
+    marginHorizontal: Spacing.base, backgroundColor: Colors.warningLight, borderRadius: Radius.lg,
+    padding: Spacing.base, marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.warning,
+  },
+  pendingInfo: { marginBottom: Spacing.sm },
+  pendingPet: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.semibold, color: Colors.textPrimary },
+  pendingTime: { fontSize: Typography.sizes.sm, color: Colors.textSecondary, marginTop: 2 },
+  pendingPrice: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.bold, color: Colors.accent, marginTop: 2 },
+  pendingActions: { flexDirection: 'row', gap: Spacing.sm },
+  acceptBtn: {
+    flex: 1, backgroundColor: Colors.accent, paddingVertical: Spacing.sm,
+    borderRadius: Radius.md, alignItems: 'center',
+  },
+  acceptBtnText: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.bold, color: Colors.textInverse },
+  declineBtn: {
+    flex: 1, backgroundColor: Colors.surface, paddingVertical: Spacing.sm,
+    borderRadius: Radius.md, alignItems: 'center', borderWidth: 1, borderColor: Colors.danger,
+  },
+  declineBtnText: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.medium, color: Colors.danger },
+  // Confirmed bookings
   emptyState: { alignItems: 'center', marginTop: 40 },
   emptyText: { fontSize: Typography.sizes.base, color: Colors.textDisabled, marginTop: Spacing.sm },
   bookingCard: {

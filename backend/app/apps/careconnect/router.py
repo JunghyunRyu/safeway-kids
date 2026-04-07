@@ -19,6 +19,8 @@ from app.apps.careconnect.schemas import (
     ChildCreate,
     ChildResponse,
     ConsentCreate,
+    ReviewReplyRequest,
+    SessionMemoRequest,
     WithdrawRequest,
 )
 from app.database import get_db
@@ -167,6 +169,47 @@ async def confirm_handover(session_id: uuid.UUID, db: AsyncSession = Depends(get
     return {"message": "인수가 확인되었습니다"}
 
 
+@router.get("/sessions/{session_id}/activities")
+async def get_session_activities(session_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(require_cc_any)):
+    from sqlalchemy import select
+    from app.apps.careconnect.models import CareActivityLog
+    logs = (await db.execute(
+        select(CareActivityLog).where(CareActivityLog.session_id == session_id).order_by(CareActivityLog.logged_at.desc())
+    )).scalars().all()
+    return [
+        {"id": str(l.id), "activity_type": l.activity_type, "description": l.description or "",
+         "time": l.logged_at.strftime("%H:%M") if l.logged_at else "", "photo_url": l.photo_url}
+        for l in logs
+    ]
+
+
+@router.post("/sessions/{session_id}/memo")
+async def save_session_memo(session_id: uuid.UUID, body: SessionMemoRequest, db: AsyncSession = Depends(get_db), user: User = Depends(require_caregiver)):
+    from sqlalchemy import select
+    from app.apps.careconnect.models import CareSession
+    session = (await db.execute(select(CareSession).where(CareSession.id == session_id))).scalar_one_or_none()
+    if not session:
+        from fastapi import HTTPException
+        raise HTTPException(404, "세션을 찾을 수 없습니다")
+    session.caregiver_memo = body.memo
+    await db.commit()
+    return {"message": "메모가 저장되었습니다"}
+
+
+# ── Caregiver Qualification Status ──────────────────────────────
+
+@router.get("/caregivers/qualification/status")
+async def get_qualification_status(db: AsyncSession = Depends(get_db), user: User = Depends(require_caregiver)):
+    from sqlalchemy import select
+    from app.apps.careconnect.models import CaregiverQualification
+    qual = (await db.execute(
+        select(CaregiverQualification).where(CaregiverQualification.user_id == user.id)
+    )).scalar_one_or_none()
+    if not qual:
+        return {"approval_status": "not_submitted"}
+    return {"approval_status": qual.approval_status}
+
+
 # ── Reviews ──────────────────────────────────────────────────────
 
 @router.post("/reviews", status_code=201)
@@ -174,6 +217,24 @@ async def create_review(body: CcReviewCreate, db: AsyncSession = Depends(get_db)
     review = await service.create_cc_review(db, user.id, body)
     await db.commit()
     return {"review_id": str(review.id), "rating": review.rating}
+
+
+@router.post("/reviews/{review_id}/reply")
+async def reply_to_review(review_id: uuid.UUID, body: ReviewReplyRequest, db: AsyncSession = Depends(get_db), user: User = Depends(require_caregiver)):
+    from datetime import datetime, timezone
+    from sqlalchemy import select
+    from app.apps.careconnect.models import CaregiverReview
+    review = (await db.execute(select(CaregiverReview).where(CaregiverReview.id == review_id))).scalar_one_or_none()
+    if not review:
+        from fastapi import HTTPException
+        raise HTTPException(404, "리뷰를 찾을 수 없습니다")
+    if review.caregiver_id != user.id:
+        from fastapi import HTTPException
+        raise HTTPException(403, "본인의 리뷰에만 답변할 수 있습니다")
+    review.caregiver_reply = body.reply
+    review.replied_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"message": "답변이 등록되었습니다"}
 
 
 # ── Wallet ───────────────────────────────────────────────────────
@@ -189,6 +250,23 @@ async def withdraw(body: WithdrawRequest, db: AsyncSession = Depends(get_db), us
     tx = await service.cc_withdraw(db, user.id, body.amount)
     await db.commit()
     return {"message": f"{body.amount:,}원 출금 요청됨", "tx_id": str(tx.id)}
+
+
+@router.get("/wallet/transactions")
+async def list_transactions(db: AsyncSession = Depends(get_db), user: User = Depends(require_caregiver)):
+    from sqlalchemy import select
+    from app.apps.careconnect.models import CaregiverWallet
+    from app.core.models import WalletTransaction
+    wallet = (await db.execute(select(CaregiverWallet).where(CaregiverWallet.user_id == user.id))).scalar_one_or_none()
+    if not wallet:
+        return []
+    txs = (await db.execute(
+        select(WalletTransaction).where(WalletTransaction.wallet_id == wallet.id).order_by(WalletTransaction.created_at.desc()).limit(50)
+    )).scalars().all()
+    return [
+        {"id": str(t.id), "amount": t.amount, "tx_type": t.tx_type, "status": t.status, "created_at": t.created_at.isoformat()}
+        for t in txs
+    ]
 
 
 # ── Admin ────────────────────────────────────────────────────────

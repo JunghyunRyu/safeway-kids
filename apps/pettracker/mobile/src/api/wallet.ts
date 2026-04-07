@@ -4,6 +4,7 @@ export interface Wallet {
   balance: number;
   bank_name: string | null;
   account_holder: string | null;
+  commission_rate: number;
 }
 
 export interface WalletTransaction {
@@ -12,6 +13,9 @@ export interface WalletTransaction {
   tx_type: string;
   status: string;
   created_at: string;
+  gross_amount: number;
+  platform_fee: number;
+  description: string | null;
 }
 
 export async function getWallet(): Promise<Wallet> {

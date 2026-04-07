@@ -62,6 +62,7 @@ class CaregiverProfileResponse(BaseModel):
     has_child_abuse_check: bool
     has_sex_offense_check: bool
     has_cpr_cert: bool
+    has_insurance: bool = False
     avg_rating: float | None = None
     total_sessions: int = 0
     total_reviews: int = 0
@@ -122,7 +123,16 @@ class CcWalletResponse(BaseModel):
     balance: int
     bank_name: str | None
     account_holder: str | None
+    commission_rate: int = 20
     model_config = {"from_attributes": True}
+
+
+class ReviewReplyRequest(BaseModel):
+    reply: str = Field(..., min_length=1, max_length=1000)
+
+
+class SessionMemoRequest(BaseModel):
+    memo: str = Field(..., min_length=1, max_length=2000)
 
 
 class WithdrawRequest(BaseModel):

@@ -6,7 +6,7 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 const { width } = Dimensions.get('window');
 
 const SLIDES = [
-  { icon: 'paw' as const, title: '안심 산책', desc: '인증된 산책 도우미가\n소중한 반려동물과 함께합니다.', bg: '#F4A22D' },
+  { icon: 'paw' as const, title: '안심 산책', desc: '강아지, 고양이 모두\n안심하고 맡기세요.', bg: '#F4A22D' },
   { icon: 'camera' as const, title: '실시간 사진', desc: '산책 중 사진과 메시지로\n우리 아이의 모습을 확인하세요.', bg: '#2D9E6B' },
   { icon: 'map' as const, title: 'GPS 추적', desc: '실시간 위치 추적으로\n산책 경로를 직접 확인할 수 있어요.', bg: '#3B82C4' },
 ];

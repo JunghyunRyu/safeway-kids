@@ -2,9 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
-import { getWallet, requestWithdrawal, type CcWallet } from '../../api/wallet';
-
-interface Transaction { id: string; amount: number; tx_type: string; status: string; created_at: string }
+import { getWallet, requestWithdrawal, listTransactions, type CcWallet, type CcTransaction } from '../../api/wallet';
 
 const TX_TYPE_LABELS: Record<string, string> = {
   earning: '수입', withdrawal: '출금', refund: '환불', adjustment: '조정',
@@ -12,14 +10,21 @@ const TX_TYPE_LABELS: Record<string, string> = {
 
 export default function EarningsScreen() {
   const [wallet, setWallet] = useState<CcWallet | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<CcTransaction[]>([]);
 
   const loadData = async () => {
     try {
       const w = await getWallet();
       setWallet(w);
-      // transactions list endpoint can be added later
-    } catch {}
+    } catch {
+      Alert.alert('오류', '데이터를 불러올 수 없습니다');
+    }
+    try {
+      const txs = await listTransactions();
+      setTransactions(txs);
+    } catch {
+      // transactions endpoint may not exist yet — silently continue
+    }
   };
 
   useEffect(() => { loadData(); }, []);
@@ -38,7 +43,9 @@ export default function EarningsScreen() {
             await requestWithdrawal(wallet.balance);
             await loadData();
             Alert.alert('완료', '출금 요청이 처리되었습니다 (D+1)');
-          } catch {}
+          } catch {
+            Alert.alert('오류', '출금 요청에 실패했습니다');
+          }
         },
       },
     ]);
@@ -56,6 +63,18 @@ export default function EarningsScreen() {
         <Pressable style={styles.withdrawBtn} onPress={handleWithdraw}>
           <Text style={styles.withdrawText}>출금하기</Text>
         </Pressable>
+      </View>
+
+      {/* Commission & Settlement Info */}
+      <View style={styles.infoCard}>
+        <View style={styles.infoRow}>
+          <Ionicons name="information-circle" size={16} color={Colors.info} />
+          <Text style={styles.infoText}>플랫폼 수수료: {wallet?.commission_rate ?? 20}%</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Ionicons name="time-outline" size={16} color={Colors.info} />
+          <Text style={styles.infoText}>정산: 영업일 기준 D+1</Text>
+        </View>
       </View>
 
       <Text style={styles.sectionTitle}>거래 내역</Text>
@@ -101,6 +120,12 @@ const styles = StyleSheet.create({
   balanceAmount: { fontSize: Typography.sizes.display, fontWeight: Typography.weights.extrabold, color: '#fff', marginVertical: 8 },
   withdrawBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.sm, borderRadius: Radius.md },
   withdrawText: { color: '#fff', fontWeight: Typography.weights.bold, fontSize: Typography.sizes.base },
+  infoCard: {
+    marginHorizontal: Spacing.base, marginTop: Spacing.md, padding: Spacing.base,
+    backgroundColor: Colors.infoLight, borderRadius: Radius.md, gap: 6,
+  },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  infoText: { fontSize: Typography.sizes.sm, color: Colors.info, fontWeight: Typography.weights.medium },
   sectionTitle: {
     fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.textPrimary,
     paddingHorizontal: Spacing.base, marginTop: Spacing.xl, marginBottom: Spacing.md,

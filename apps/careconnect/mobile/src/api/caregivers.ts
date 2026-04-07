@@ -10,6 +10,7 @@ export interface CaregiverProfile {
   has_child_abuse_check: boolean;
   has_sex_offense_check: boolean;
   has_cpr_cert: boolean;
+  has_insurance: boolean;
   avg_rating: number | null;
   total_sessions: number;
   total_reviews: number;
@@ -30,4 +31,8 @@ export async function submitQualification(data: Record<string, unknown>): Promis
 
 export async function setAvailability(data: { available_date: string; start_time: string; end_time: string }): Promise<void> {
   await apiClient.post('/cc/caregivers/availability', data);
+}
+
+export async function getQualificationStatus(): Promise<{ approval_status: string }> {
+  return (await apiClient.get('/cc/caregivers/qualification/status')).data;
 }

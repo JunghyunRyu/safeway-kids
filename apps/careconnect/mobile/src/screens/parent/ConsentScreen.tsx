@@ -5,9 +5,9 @@ import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/th
 import { createConsent } from '../../api/children';
 
 const CONSENT_ITEMS = [
-  { key: 'gps_tracking', label: 'GPS 위치추적 동의', desc: '돌봄 중 아이의 위치를 실시간으로 확인합니다' },
-  { key: 'photo_activity', label: '활동 사진 촬영 동의', desc: '돌봄자가 활동 사진을 촬영하여 공유합니다' },
-  { key: 'personal_info', label: '개인정보 수집 동의', desc: '아이의 개인정보를 돌봄 서비스 제공에 활용합니다' },
+  { key: 'gps_tracking', label: 'GPS 위치 확인', desc: '돌봄 시간 동안 아이가 어디에 있는지 부모님이 실시간으로 볼 수 있어요' },
+  { key: 'photo_activity', label: '활동 사진 공유', desc: '돌봄자가 아이의 활동 사진을 찍어서 부모님께 보내드려요' },
+  { key: 'personal_info', label: '아이 정보 제공', desc: '이름, 알레르기 등 돌봄에 꼭 필요한 정보를 돌봄자에게 전달해요' },
 ];
 
 export default function ConsentScreen({ route, navigation }: any) {
@@ -39,7 +39,9 @@ export default function ConsentScreen({ route, navigation }: any) {
       Alert.alert('동의 완료', '법정대리인 동의가 완료되었습니다', [
         { text: '확인', onPress: () => navigation.goBack() },
       ]);
-    } catch { Alert.alert('오류', '동의 처리에 실패했습니다'); }
+    } catch {
+      Alert.alert('오류', '동의 처리에 실패했습니다');
+    }
     setLoading(false);
   };
 
@@ -49,16 +51,16 @@ export default function ConsentScreen({ route, navigation }: any) {
         <Pressable onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>법정대리인 동의</Text>
+        <Text style={styles.title}>보호자 동의</Text>
       </View>
 
       {/* Legal notice */}
       <View style={styles.noticeCard}>
         <Ionicons name="information-circle" size={24} color={Colors.info} />
         <View style={styles.noticeContent}>
-          <Text style={styles.noticeTitle}>14세 미만 아동 법정대리인 동의</Text>
+          <Text style={styles.noticeTitle}>부모님/보호자 동의</Text>
           <Text style={styles.noticeText}>
-            개인정보 보호법 제22조에 따라 14세 미만 아동의 개인정보 처리 시 법정대리인의 동의가 필요합니다.
+            아이의 정보를 안전하게 보호하기 위해 부모님(또는 법적 보호자)의 동의가 필요합니다.
           </Text>
         </View>
       </View>

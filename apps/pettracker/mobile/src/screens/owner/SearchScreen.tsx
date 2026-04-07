@@ -1,21 +1,47 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { searchWalkers, type WalkerSearchResult } from '../../api/walkers';
+
+// 서울 시청 기본 좌표 (위치 권한 거부 시 폴백)
+const DEFAULT_LAT = 37.5665;
+const DEFAULT_LNG = 126.978;
 
 export default function SearchScreen({ navigation }: any) {
   const [results, setResults] = useState<WalkerSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [userLat, setUserLat] = useState(DEFAULT_LAT);
+  const [userLng, setUserLng] = useState(DEFAULT_LNG);
+  const [locationDenied, setLocationDenied] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setLocationDenied(true);
+          return;
+        }
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setUserLat(loc.coords.latitude);
+        setUserLng(loc.coords.longitude);
+      } catch {
+        setLocationDenied(true);
+      }
+    })();
+  }, []);
 
   const doSearch = async () => {
     setLoading(true);
     try {
-      // Default to Seoul coordinates for demo
-      const data = await searchWalkers(37.5665, 126.978, date);
+      const data = await searchWalkers(userLat, userLng, date);
       setResults(data);
-    } catch {}
+    } catch {
+      Alert.alert('오류', '검색에 실패했습니다');
+    }
     setLoading(false);
   };
 
@@ -56,6 +82,12 @@ export default function SearchScreen({ navigation }: any) {
       <View style={styles.header}>
         <Text style={styles.title}>산책 도우미 찾기</Text>
       </View>
+      {locationDenied && (
+        <View style={styles.locationNotice}>
+          <Ionicons name="location-outline" size={16} color={Colors.warning} />
+          <Text style={styles.locationNoticeText}>위치 권한이 필요합니다. 기본 위치(서울)로 검색합니다.</Text>
+        </View>
+      )}
       <View style={styles.searchBar}>
         <TextInput
           style={styles.dateInput}
@@ -92,6 +124,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.base, paddingTop: 60, paddingBottom: Spacing.md },
   title: { fontSize: Typography.sizes.xl, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
+  locationNotice: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.base, paddingVertical: 8, backgroundColor: Colors.warningLight, marginHorizontal: Spacing.base, borderRadius: Radius.sm, marginBottom: Spacing.sm },
+  locationNoticeText: { fontSize: Typography.sizes.xs, color: Colors.textSecondary, flex: 1 },
   searchBar: { flexDirection: 'row', paddingHorizontal: Spacing.base, marginBottom: Spacing.md },
   dateInput: {
     flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.md, paddingHorizontal: Spacing.md,

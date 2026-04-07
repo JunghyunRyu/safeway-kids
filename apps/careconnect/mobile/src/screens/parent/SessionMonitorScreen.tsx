@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { getSessionActivities, type SessionActivity } from '../../api/sessions';
 
 interface ActivityItem {
   id: string;
@@ -20,24 +21,46 @@ const ACTIVITY_ICONS: Record<string, { icon: string; color: string }> = {
   outdoor: { icon: 'sunny', color: Colors.success },
 };
 
-// Placeholder data — in production, fetched from WebSocket or API
-const MOCK_FEED: ActivityItem[] = [
-  { id: '1', activity_type: 'meal', description: '점심 식사를 했어요 (잔반 없음)', time: '12:00' },
-  { id: '2', activity_type: 'nap', description: '낮잠 시작 (1시간 예정)', time: '13:00' },
-  { id: '3', activity_type: 'play', description: '블록 놀이를 하고 있어요', time: '14:30' },
-  { id: '4', activity_type: 'outdoor', description: '놀이터에서 뛰어놀고 있어요', time: '15:30' },
-  { id: '5', activity_type: 'snack', description: '간식 시간 (과일, 우유)', time: '16:00' },
-];
-
 export default function SessionMonitorScreen({ route, navigation }: any) {
-  const [feed] = useState<ActivityItem[]>(MOCK_FEED);
+  const sessionId = route?.params?.sessionId;
+  const [feed, setFeed] = useState<ActivityItem[]>([]);
   const [noReportAlert, setNoReportAlert] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Simulate 30-min no-report detection
+  // Poll session activities every 10 seconds
   useEffect(() => {
-    const timer = setTimeout(() => setNoReportAlert(true), 5000); // Demo: show after 5s
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchFeed = async () => {
+      if (!sessionId) return;
+      try {
+        const activities = await getSessionActivities(sessionId);
+        setFeed(activities);
+      } catch {
+        Alert.alert('오류', '데이터를 불러올 수 없습니다');
+      }
+    };
+    fetchFeed();
+    pollRef.current = setInterval(fetchFeed, 10000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [sessionId]);
+
+  // Real 30-min no-report detection
+  useEffect(() => {
+    if (feed.length === 0) return;
+    const lastTime = new Date(feed[0].time).getTime();
+    const elapsed = Date.now() - lastTime;
+    if (isNaN(lastTime)) {
+      // time is HH:MM format from API — build today's date
+      const [h, m] = feed[0].time.split(':').map(Number);
+      const now = new Date();
+      const lastDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
+      const elapsedMs = now.getTime() - lastDate.getTime();
+      if (elapsedMs > 30 * 60 * 1000) setNoReportAlert(true);
+      else setNoReportAlert(false);
+    } else {
+      if (elapsed > 30 * 60 * 1000) setNoReportAlert(true);
+      else setNoReportAlert(false);
+    }
+  }, [feed]);
 
   const handleSOS = () => {
     Alert.alert(
@@ -45,7 +68,7 @@ export default function SessionMonitorScreen({ route, navigation }: any) {
       '긴급 상황입니까? 돌봄자와 관리자에게 즉시 알림을 보냅니다.',
       [
         { text: '취소', style: 'cancel' },
-        { text: 'SOS 보내기', style: 'destructive', onPress: () => Alert.alert('전송 완료', 'SOS 알림이 전송되었습니다') },
+        { text: 'SOS 보내기', style: 'destructive', onPress: () => navigation?.navigate('SOS') },
       ],
     );
   };
@@ -104,7 +127,7 @@ export default function SessionMonitorScreen({ route, navigation }: any) {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="camera-outline" size={48} color={Colors.textDisabled} />
-            <Text style={styles.emptyText}>아직 활동이 없어요</Text>
+            <Text style={styles.emptyText}>아직 활동 기록이 없습니다</Text>
           </View>
         }
       />

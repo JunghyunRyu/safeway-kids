@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { listBookings, type Booking } from '../../api/bookings';
@@ -19,7 +19,7 @@ export default function BookingsScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
-    try { setBookings(await listBookings()); } catch {}
+    try { setBookings(await listBookings()); } catch { Alert.alert('오류', '데이터를 불러올 수 없습니다'); }
   };
 
   useEffect(() => { loadData(); }, []);

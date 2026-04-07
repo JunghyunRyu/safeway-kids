@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { listChildren, type Child } from '../../api/children';
 import { createBooking } from '../../api/bookings';
@@ -13,6 +14,25 @@ const DURATIONS = [
 
 const HOURLY_RATE = 15000;
 
+const getDateString = (offset: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().split('T')[0];
+};
+
+const DATE_OPTIONS = [
+  { label: '오늘', value: getDateString(0) },
+  { label: '내일', value: getDateString(1) },
+  { label: '모레', value: getDateString(2) },
+];
+
+const TIME_OPTIONS = [
+  { label: '오전 9시', hour: 9 },
+  { label: '오후 2시', hour: 14 },
+  { label: '오후 4시', hour: 16 },
+  { label: '오후 6시', hour: 18 },
+];
+
 export default function BookingCreateScreen({ route, navigation }: any) {
   const caregiverId = route?.params?.caregiverId;
   const [children, setChildren] = useState<Child[]>([]);
@@ -21,13 +41,34 @@ export default function BookingCreateScreen({ route, navigation }: any) {
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasConsent, setHasConsent] = useState(true); // In production, check from API
+  const [selectedDate, setSelectedDate] = useState(getDateString(1));
+  const [selectedTimeHour, setSelectedTimeHour] = useState(14);
+  const [userLat, setUserLat] = useState(37.5665);
+  const [userLon, setUserLon] = useState(126.978);
 
-  useEffect(() => { listChildren().then(setChildren).catch(() => {}); }, []);
+  useEffect(() => {
+    listChildren().then(setChildren).catch(() => {
+      Alert.alert('오류', '데이터를 불러올 수 없습니다');
+    });
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          setUserLat(loc.coords.latitude);
+          setUserLon(loc.coords.longitude);
+        }
+      } catch { /* 위치 권한 거부 시 서울 기본 좌표 사용 */ }
+    })();
+  }, []);
 
   const handleBook = async () => {
     if (!selectedChild) { Alert.alert('오류', '아이를 선택해 주세요'); return; }
     if (!hasConsent) {
-      Alert.alert('동의 필요', '14세 미만 법정대리인 동의가 필요합니다', [
+      Alert.alert('동의 필요', '부모님/보호자 동의가 필요합니다', [
         { text: '동의하러 가기', onPress: () => navigation.navigate('Consent', { childId: selectedChild }) },
         { text: '취소', style: 'cancel' },
       ]);
@@ -35,19 +76,22 @@ export default function BookingCreateScreen({ route, navigation }: any) {
     }
     setLoading(true);
     try {
+      const scheduledAt = new Date(`${selectedDate}T${String(selectedTimeHour).padStart(2, '0')}:00:00`);
       await createBooking({
         child_id: selectedChild,
         duration_hours: duration.hours,
-        scheduled_at: new Date(Date.now() + 3600000).toISOString(),
+        scheduled_at: scheduledAt.toISOString(),
         hourly_rate: HOURLY_RATE,
-        care_latitude: 37.5665,
-        care_longitude: 126.978,
+        care_latitude: userLat,
+        care_longitude: userLon,
         care_address: address || '서울',
       });
       Alert.alert('예약 완료', '돌봄 예약이 생성되었습니다!', [
         { text: '확인', onPress: () => navigation.navigate('Bookings') },
       ]);
-    } catch { Alert.alert('오류', '예약에 실패했습니다'); }
+    } catch {
+      Alert.alert('오류', '예약에 실패했습니다');
+    }
     setLoading(false);
   };
 
@@ -64,7 +108,7 @@ export default function BookingCreateScreen({ route, navigation }: any) {
       {!hasConsent && (
         <View style={styles.warningBanner}>
           <Ionicons name="warning" size={20} color={Colors.danger} />
-          <Text style={styles.warningText}>14세 미만 동의 필요 - 예약 전 법정대리인 동의를 완료해 주세요</Text>
+          <Text style={styles.warningText}>부모님/보호자 동의 필요 - 예약 전 동의를 완료해 주세요</Text>
         </View>
       )}
 
@@ -86,6 +130,35 @@ export default function BookingCreateScreen({ route, navigation }: any) {
           {selectedChild === child.id && <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />}
         </Pressable>
       ))}
+
+      {/* Date Selection */}
+      <Text style={styles.label}>돌봄 날짜</Text>
+      <View style={styles.dateRow}>
+        {DATE_OPTIONS.map((opt) => (
+          <Pressable
+            key={opt.value}
+            style={[styles.dateBtn, selectedDate === opt.value && styles.dateBtnActive]}
+            onPress={() => setSelectedDate(opt.value)}
+          >
+            <Text style={[styles.dateBtnText, selectedDate === opt.value && styles.dateBtnTextActive]}>{opt.label}</Text>
+            <Text style={[styles.dateBtnSub, selectedDate === opt.value && { color: Colors.primary }]}>{opt.value.slice(5)}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Time Selection */}
+      <Text style={styles.label}>돌봄 시작 시간</Text>
+      <View style={styles.timeRow}>
+        {TIME_OPTIONS.map((opt) => (
+          <Pressable
+            key={opt.hour}
+            style={[styles.timeBtn, selectedTimeHour === opt.hour && styles.timeBtnActive]}
+            onPress={() => setSelectedTimeHour(opt.hour)}
+          >
+            <Text style={[styles.timeBtnText, selectedTimeHour === opt.hour && styles.timeBtnTextActive]}>{opt.label}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       {/* Duration Selection */}
       <Text style={styles.label}>돌봄 시간</Text>
@@ -116,6 +189,10 @@ export default function BookingCreateScreen({ route, navigation }: any) {
 
       {/* Summary */}
       <View style={styles.summary}>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>돌봄 일시</Text>
+          <Text style={styles.summaryValue}>{selectedDate} {TIME_OPTIONS.find(t => t.hour === selectedTimeHour)?.label}</Text>
+        </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>돌봄 시간</Text>
           <Text style={styles.summaryValue}>{duration.label}</Text>
@@ -158,6 +235,23 @@ const styles = StyleSheet.create({
   optionEmoji: { fontSize: 24 },
   optionLabel: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.medium, color: Colors.textPrimary },
   allergyNote: { fontSize: Typography.sizes.xs, color: Colors.danger, marginTop: 2 },
+  dateRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.base },
+  dateBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: Spacing.md, backgroundColor: Colors.surface,
+    borderRadius: Radius.md, borderWidth: 2, borderColor: Colors.borderLight,
+  },
+  dateBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  dateBtnText: { fontSize: Typography.sizes.base, fontWeight: Typography.weights.bold, color: Colors.textSecondary },
+  dateBtnTextActive: { color: Colors.primary },
+  dateBtnSub: { fontSize: Typography.sizes.xs, color: Colors.textDisabled, marginTop: 2 },
+  timeRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.base, flexWrap: 'wrap' },
+  timeBtn: {
+    flex: 1, minWidth: 70, alignItems: 'center', paddingVertical: Spacing.md, backgroundColor: Colors.surface,
+    borderRadius: Radius.md, borderWidth: 2, borderColor: Colors.borderLight,
+  },
+  timeBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  timeBtnText: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.bold, color: Colors.textSecondary },
+  timeBtnTextActive: { color: Colors.primary },
   durationRow: { flexDirection: 'row', gap: Spacing.md, paddingHorizontal: Spacing.base },
   durationBtn: { flex: 1, padding: Spacing.base, backgroundColor: Colors.surface, borderRadius: Radius.md, alignItems: 'center', borderWidth: 2, borderColor: Colors.borderLight },
   durationBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },

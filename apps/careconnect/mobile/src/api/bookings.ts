@@ -33,3 +33,7 @@ export async function cancelBooking(id: string, reason?: string): Promise<void> 
 export async function listBookings(status?: string): Promise<CcBooking[]> {
   return (await apiClient.get('/cc/bookings', { params: status ? { status } : {} })).data;
 }
+
+export async function declineBooking(id: string, reason?: string): Promise<void> {
+  await apiClient.post(`/cc/bookings/${id}/cancel`, null, { params: reason ? { reason } : { reason: '돌봄자 거절' } });
+}

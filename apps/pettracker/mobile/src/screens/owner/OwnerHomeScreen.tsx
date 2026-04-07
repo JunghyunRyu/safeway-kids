@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { listPets, type Pet } from '../../api/pets';
@@ -18,7 +18,7 @@ export default function OwnerHomeScreen({ navigation }: any) {
       ]);
       setPets(petsData);
       setNextBooking(bookingsData[0] || null);
-    } catch {}
+    } catch { Alert.alert('오류', '데이터를 불러올 수 없습니다'); }
   };
 
   useEffect(() => { loadData(); }, []);

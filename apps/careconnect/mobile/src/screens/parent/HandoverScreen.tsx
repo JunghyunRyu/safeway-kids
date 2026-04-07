@@ -20,7 +20,9 @@ export default function HandoverScreen({ route, navigation }: any) {
         { text: '리뷰 작성', onPress: () => navigation.navigate('Review', { bookingId: route?.params?.bookingId }) },
         { text: '확인', onPress: () => navigation.navigate('Home') },
       ]);
-    } catch { Alert.alert('오류', '인수 확인에 실패했습니다'); }
+    } catch {
+      Alert.alert('오류', '인수 확인에 실패했습니다');
+    }
     setLoading(false);
   };
 

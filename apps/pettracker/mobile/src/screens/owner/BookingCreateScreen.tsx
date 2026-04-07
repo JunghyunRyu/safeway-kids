@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { listPets, type Pet } from '../../api/pets';
 import { createBooking } from '../../api/bookings';
@@ -10,6 +11,17 @@ const DURATIONS = [
   { minutes: 60, label: '60분', price: 25000 },
 ];
 
+const TIME_SLOTS = [
+  { label: '오전 10시', hour: 10, minute: 0 },
+  { label: '오후 2시', hour: 14, minute: 0 },
+  { label: '오후 4시', hour: 16, minute: 0 },
+  { label: '오후 6시', hour: 18, minute: 0 },
+];
+
+// 서울 시청 기본 좌표
+const DEFAULT_LAT = 37.5665;
+const DEFAULT_LNG = 126.978;
+
 export default function BookingCreateScreen({ route, navigation }: any) {
   const walkerId = route?.params?.walkerId;
   const [pets, setPets] = useState<Pet[]>([]);
@@ -17,8 +29,37 @@ export default function BookingCreateScreen({ route, navigation }: any) {
   const [duration, setDuration] = useState(DURATIONS[0]);
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
+  // 날짜 선택: 'today' | 'tomorrow'
+  const [selectedDay, setSelectedDay] = useState<'today' | 'tomorrow'>('today');
+  // 시간대 선택
+  const [selectedTime, setSelectedTime] = useState(TIME_SLOTS[0]);
+  // GPS 좌표
+  const [pickupLat, setPickupLat] = useState(DEFAULT_LAT);
+  const [pickupLng, setPickupLng] = useState(DEFAULT_LNG);
 
-  useEffect(() => { listPets().then(setPets).catch(() => {}); }, []);
+  useEffect(() => {
+    listPets().then(setPets).catch(() => { Alert.alert('오류', '반려동물 목록을 불러올 수 없습니다'); });
+    // 실제 위치 가져오기
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setPickupLat(loc.coords.latitude);
+        setPickupLng(loc.coords.longitude);
+      } catch { /* 위치 가져오기 실패 시 기본 좌표 사용 */ }
+    })();
+  }, []);
+
+  const getScheduledAt = (): string => {
+    const now = new Date();
+    const target = new Date(now);
+    if (selectedDay === 'tomorrow') {
+      target.setDate(target.getDate() + 1);
+    }
+    target.setHours(selectedTime.hour, selectedTime.minute, 0, 0);
+    return target.toISOString();
+  };
 
   const handleBook = async () => {
     if (!selectedPet) { Alert.alert('오류', '반려동물을 선택해 주세요'); return; }
@@ -27,9 +68,9 @@ export default function BookingCreateScreen({ route, navigation }: any) {
       await createBooking({
         pet_id: selectedPet,
         duration_minutes: duration.minutes,
-        scheduled_at: new Date(Date.now() + 3600000).toISOString(), // 1시간 후 기본
-        pickup_latitude: 37.5665,
-        pickup_longitude: 126.978,
+        scheduled_at: getScheduledAt(),
+        pickup_latitude: pickupLat,
+        pickup_longitude: pickupLng,
         pickup_address: address || '서울',
         price: duration.price,
       });
@@ -78,6 +119,37 @@ export default function BookingCreateScreen({ route, navigation }: any) {
         ))}
       </View>
 
+      {/* Date Selection */}
+      <Text style={styles.label}>날짜 선택</Text>
+      <View style={styles.durationRow}>
+        <Pressable
+          style={[styles.durationBtn, selectedDay === 'today' && styles.durationBtnActive]}
+          onPress={() => setSelectedDay('today')}
+        >
+          <Text style={[styles.durationText, selectedDay === 'today' && styles.durationTextActive]}>오늘</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.durationBtn, selectedDay === 'tomorrow' && styles.durationBtnActive]}
+          onPress={() => setSelectedDay('tomorrow')}
+        >
+          <Text style={[styles.durationText, selectedDay === 'tomorrow' && styles.durationTextActive]}>내일</Text>
+        </Pressable>
+      </View>
+
+      {/* Time Selection */}
+      <Text style={styles.label}>시간대 선택</Text>
+      <View style={styles.timeRow}>
+        {TIME_SLOTS.map((slot) => (
+          <Pressable
+            key={slot.label}
+            style={[styles.timeBtn, selectedTime.hour === slot.hour && styles.timeBtnActive]}
+            onPress={() => setSelectedTime(slot)}
+          >
+            <Text style={[styles.timeText, selectedTime.hour === slot.hour && styles.timeTextActive]}>{slot.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
       {/* Address */}
       <Text style={styles.label}>픽업 주소</Text>
       <TextInput
@@ -90,6 +162,10 @@ export default function BookingCreateScreen({ route, navigation }: any) {
 
       {/* Summary */}
       <View style={styles.summary}>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>예약 일시</Text>
+          <Text style={styles.summaryValue}>{selectedDay === 'today' ? '오늘' : '내일'} {selectedTime.label}</Text>
+        </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>산책 시간</Text>
           <Text style={styles.summaryValue}>{duration.label}</Text>
@@ -128,6 +204,11 @@ const styles = StyleSheet.create({
   durationText: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.bold, color: Colors.textSecondary },
   durationTextActive: { color: Colors.primary },
   priceText: { fontSize: Typography.sizes.sm, color: Colors.textDisabled, marginTop: 4 },
+  timeRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.base, flexWrap: 'wrap' },
+  timeBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.surface, borderRadius: Radius.md, borderWidth: 2, borderColor: Colors.borderLight },
+  timeBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  timeText: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.medium, color: Colors.textSecondary },
+  timeTextActive: { color: Colors.primary },
   input: {
     marginHorizontal: Spacing.base, backgroundColor: Colors.surface, borderRadius: Radius.md,
     paddingHorizontal: Spacing.base, paddingVertical: Spacing.md, fontSize: Typography.sizes.base,

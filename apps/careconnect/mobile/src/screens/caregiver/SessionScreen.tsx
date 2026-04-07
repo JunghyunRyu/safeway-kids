@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ScrollView, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
-import { checkin, addActivity, checkout } from '../../api/sessions';
+import { checkin, addActivity, checkout, saveSessionMemo } from '../../api/sessions';
+import { listBookings, type CcBooking } from '../../api/bookings';
 
 type SessionState = 'idle' | 'checked_in' | 'checked_out';
 
@@ -15,14 +17,22 @@ const ACTIVITIES = [
   { type: 'outdoor', label: '외출', emoji: '\uD83C\uDF33' },
 ];
 
-export default function SessionScreen() {
+export default function SessionScreen({ navigation }: any) {
   const [state, setState] = useState<SessionState>('idle');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [activitiesCount, setActivitiesCount] = useState(0);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [memo, setMemo] = useState('');
+  const [confirmedBookings, setConfirmedBookings] = useState<CcBooking[]>([]);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (state === 'idle') {
+      loadConfirmedBookings();
+    }
+  }, [state]);
 
   useEffect(() => {
     if (state === 'checked_in') {
@@ -30,6 +40,17 @@ export default function SessionScreen() {
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [state]);
+
+  const loadConfirmedBookings = async () => {
+    try {
+      const bookings = await listBookings('confirmed');
+      const today = new Date().toISOString().split('T')[0];
+      const todayBookings = bookings.filter((b) => b.scheduled_at.split('T')[0] === today);
+      setConfirmedBookings(todayBookings);
+    } catch {
+      Alert.alert('오류', '예약 목록을 불러올 수 없습니다');
+    }
+  };
 
   const formatTime = (s: number) => {
     const h = Math.floor(s / 3600);
@@ -40,15 +61,28 @@ export default function SessionScreen() {
       : `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   };
 
-  const handleCheckin = () => {
+  const handleCheckin = (bookingId: string) => {
     Alert.alert('돌봄 시작', '돌봄을 시작하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       {
         text: '시작',
         onPress: async () => {
           try {
-            const result = await checkin('demo-booking-id', { latitude: 0, longitude: 0, accuracy: 10 });
+            let latitude = 37.5665;
+            let longitude = 126.978;
+            let accuracy = 10;
+            try {
+              const { status } = await Location.requestForegroundPermissionsAsync();
+              if (status === 'granted') {
+                const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+                latitude = loc.coords.latitude;
+                longitude = loc.coords.longitude;
+                accuracy = loc.coords.accuracy ?? 10;
+              }
+            } catch { /* GPS 실패 시 기본 좌표 사용 */ }
+            const result = await checkin(bookingId, { latitude, longitude, accuracy });
             setSessionId(result.session_id);
+            setSelectedBookingId(bookingId);
             setState('checked_in');
             setElapsed(0);
             setActivitiesCount(0);
@@ -65,7 +99,9 @@ export default function SessionScreen() {
     try {
       await addActivity(sessionId, { activity_type: activityType });
       setActivitiesCount((c) => c + 1);
-    } catch {}
+    } catch {
+      Alert.alert('오류', '활동 기록에 실패했습니다');
+    }
   };
 
   const handleCheckout = () => {
@@ -80,11 +116,29 @@ export default function SessionScreen() {
               const result = await checkout(sessionId);
               setTotalMinutes(result.total_minutes);
             }
-          } catch {}
+          } catch {
+            Alert.alert('오류', '체크아웃에 실패했습니다');
+          }
           setState('checked_out');
         },
       },
     ]);
+  };
+
+  const handleConfirm = async () => {
+    if (sessionId && memo.trim()) {
+      try {
+        await saveSessionMemo(sessionId, memo.trim());
+      } catch {
+        Alert.alert('오류', '메모 저장에 실패했습니다');
+      }
+    }
+    setState('idle');
+    setElapsed(0);
+    setActivitiesCount(0);
+    setMemo('');
+    setSessionId(null);
+    setSelectedBookingId(null);
   };
 
   return (
@@ -95,12 +149,40 @@ export default function SessionScreen() {
 
       {state === 'idle' && (
         <View style={styles.center}>
-          <Ionicons name="heart" size={80} color={Colors.textDisabled} />
-          <Text style={styles.idleText}>확정된 예약에서 돌봄을 시작하세요</Text>
-          <Pressable style={styles.startBtn} onPress={handleCheckin}>
-            <Ionicons name="play" size={24} color={Colors.textInverse} />
-            <Text style={styles.btnText}>돌봄 시작</Text>
-          </Pressable>
+          {confirmedBookings.length === 0 ? (
+            <>
+              <Ionicons name="heart" size={80} color={Colors.textDisabled} />
+              <Text style={styles.idleText}>오늘 확정된 예약이 없습니다</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.bookingListTitle}>오늘 확정된 예약</Text>
+              {confirmedBookings.map((booking) => (
+                <Pressable
+                  key={booking.id}
+                  style={styles.bookingCard}
+                  onPress={() => handleCheckin(booking.id)}
+                >
+                  <View style={styles.bookingCardLeft}>
+                    <Ionicons name="calendar" size={24} color={Colors.primary} />
+                  </View>
+                  <View style={styles.bookingCardContent}>
+                    <Text style={styles.bookingCardTime}>
+                      {new Date(booking.scheduled_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    <Text style={styles.bookingCardDuration}>{booking.duration_hours}시간 돌봄</Text>
+                    <Text style={styles.bookingCardPrice}>
+                      {(booking.hourly_rate * booking.duration_hours).toLocaleString()}원
+                    </Text>
+                  </View>
+                  <View style={styles.bookingCardAction}>
+                    <Ionicons name="play-circle" size={32} color={Colors.primary} />
+                    <Text style={styles.bookingCardActionText}>시작</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </>
+          )}
         </View>
       )}
 
@@ -127,6 +209,17 @@ export default function SessionScreen() {
               </Pressable>
             ))}
           </View>
+
+          {/* Activity Log Detail Button — P1-18 */}
+          {sessionId && (
+            <Pressable
+              style={styles.activityDetailBtn}
+              onPress={() => navigation?.navigate('ActivityLog', { sessionId })}
+            >
+              <Ionicons name="list" size={18} color={Colors.primary} />
+              <Text style={styles.activityDetailText}>활동 기록 상세</Text>
+            </Pressable>
+          )}
 
           {/* Photo Button */}
           <Pressable style={styles.photoFab}>
@@ -159,7 +252,7 @@ export default function SessionScreen() {
             textAlignVertical="top"
           />
 
-          <Pressable style={styles.resetBtn} onPress={() => { setState('idle'); setElapsed(0); setActivitiesCount(0); setMemo(''); }}>
+          <Pressable style={styles.resetBtn} onPress={handleConfirm}>
             <Text style={styles.resetText}>확인</Text>
           </Pressable>
         </View>
@@ -175,10 +268,18 @@ const styles = StyleSheet.create({
   title: { fontSize: Typography.sizes.xl, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
   center: { flex: 1, alignItems: 'center', paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
   idleText: { fontSize: Typography.sizes.md, color: Colors.textDisabled, marginTop: Spacing.lg, marginBottom: Spacing.xxl, textAlign: 'center' },
-  startBtn: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.base, borderRadius: Radius.lg, gap: 8,
+  bookingListTitle: { fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.textPrimary, alignSelf: 'flex-start', marginBottom: Spacing.md },
+  bookingCard: {
+    flexDirection: 'row', alignItems: 'center', width: '100%', backgroundColor: Colors.surface,
+    borderRadius: Radius.lg, padding: Spacing.base, marginBottom: Spacing.sm, ...Shadows.sm,
   },
+  bookingCardLeft: { width: 48, height: 48, borderRadius: Radius.md, backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
+  bookingCardContent: { flex: 1, marginLeft: Spacing.md },
+  bookingCardTime: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
+  bookingCardDuration: { fontSize: Typography.sizes.sm, color: Colors.textSecondary, marginTop: 2 },
+  bookingCardPrice: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.medium, color: Colors.primary, marginTop: 2 },
+  bookingCardAction: { alignItems: 'center' },
+  bookingCardActionText: { fontSize: Typography.sizes.xs, color: Colors.primary, fontWeight: Typography.weights.medium, marginTop: 2 },
   btnText: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.bold, color: Colors.textInverse },
   allergyBanner: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.dangerLight,
@@ -194,7 +295,7 @@ const styles = StyleSheet.create({
   timerLabel: { fontSize: Typography.sizes.base, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
   activityGrid: {
     flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.sm,
-    marginBottom: Spacing.xl, width: '100%',
+    marginBottom: Spacing.md, width: '100%',
   },
   activityBtn: {
     width: 90, height: 72, backgroundColor: Colors.surface, borderRadius: Radius.md,
@@ -202,6 +303,12 @@ const styles = StyleSheet.create({
   },
   activityEmoji: { fontSize: 24, marginBottom: 4 },
   activityLabel: { fontSize: Typography.sizes.xs, color: Colors.textSecondary, fontWeight: Typography.weights.medium },
+  activityDetailBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+    borderWidth: 1, borderColor: Colors.primary, borderRadius: Radius.md, marginBottom: Spacing.xl,
+  },
+  activityDetailText: { fontSize: Typography.sizes.sm, color: Colors.primary, fontWeight: Typography.weights.medium },
   photoFab: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent,
     justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.xl,

@@ -26,7 +26,7 @@ export default function BookingDetailScreen({ route, navigation }: any) {
             await cancelBooking(booking.id);
             Alert.alert('취소 완료', '예약이 취소되었습니다');
             navigation.goBack();
-          } catch {}
+          } catch { Alert.alert('오류', '예약 취소에 실패했습니다'); }
         },
       },
     ]);

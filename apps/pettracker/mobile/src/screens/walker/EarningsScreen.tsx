@@ -17,7 +17,9 @@ export default function EarningsScreen() {
       const [w, txs] = await Promise.all([getWallet(), listTransactions()]);
       setWallet(w);
       setTransactions(txs);
-    } catch {}
+    } catch {
+      Alert.alert('오류', '데이터를 불러올 수 없습니다');
+    }
   };
 
   useEffect(() => { loadData(); }, []);
@@ -36,11 +38,15 @@ export default function EarningsScreen() {
             await requestWithdrawal(wallet.balance);
             await loadData();
             Alert.alert('완료', '출금 요청이 처리되었습니다 (D+1)');
-          } catch {}
+          } catch {
+            Alert.alert('오류', '출금 요청에 실패했습니다');
+          }
         },
       },
     ]);
   };
+
+  const commissionRate = wallet?.commission_rate ?? 15;
 
   return (
     <View style={styles.container}>
@@ -54,6 +60,12 @@ export default function EarningsScreen() {
         <Pressable style={styles.withdrawBtn} onPress={handleWithdraw}>
           <Text style={styles.withdrawText}>출금하기</Text>
         </Pressable>
+      </View>
+
+      {/* Commission Rate Info */}
+      <View style={styles.commissionInfo}>
+        <Ionicons name="information-circle-outline" size={16} color={Colors.textSecondary} />
+        <Text style={styles.commissionText}>플랫폼 수수료: {commissionRate}%</Text>
       </View>
 
       <Text style={styles.sectionTitle}>거래 내역</Text>
@@ -72,7 +84,13 @@ export default function EarningsScreen() {
             </View>
             <View style={styles.txInfo}>
               <Text style={styles.txType}>{TX_TYPE_LABELS[item.tx_type] || item.tx_type}</Text>
+              {item.description && <Text style={styles.txDescription}>{item.description}</Text>}
               <Text style={styles.txDate}>{new Date(item.created_at).toLocaleDateString('ko-KR')}</Text>
+              {item.tx_type === 'earning' && item.platform_fee > 0 && (
+                <Text style={styles.txFee}>
+                  총액 {item.gross_amount.toLocaleString()}원 - 수수료 {item.platform_fee.toLocaleString()}원
+                </Text>
+              )}
             </View>
             <Text style={[styles.txAmount, { color: item.amount > 0 ? Colors.success : Colors.danger }]}>
               {item.amount > 0 ? '+' : ''}{item.amount.toLocaleString()}원
@@ -99,6 +117,12 @@ const styles = StyleSheet.create({
   balanceAmount: { fontSize: Typography.sizes.display, fontWeight: Typography.weights.extrabold, color: '#fff', marginVertical: 8 },
   withdrawBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.sm, borderRadius: Radius.md },
   withdrawText: { color: '#fff', fontWeight: Typography.weights.bold, fontSize: Typography.sizes.base },
+  commissionInfo: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginHorizontal: Spacing.base, marginTop: Spacing.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.sm,
+  },
+  commissionText: { fontSize: Typography.sizes.sm, color: Colors.textSecondary },
   sectionTitle: {
     fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.textPrimary,
     paddingHorizontal: Spacing.base, marginTop: Spacing.xl, marginBottom: Spacing.md,
@@ -110,7 +134,9 @@ const styles = StyleSheet.create({
   txIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.surfaceElevated, justifyContent: 'center', alignItems: 'center' },
   txInfo: { flex: 1, marginLeft: Spacing.md },
   txType: { fontSize: Typography.sizes.base, fontWeight: Typography.weights.medium, color: Colors.textPrimary },
+  txDescription: { fontSize: Typography.sizes.xs, color: Colors.textSecondary, marginTop: 1 },
   txDate: { fontSize: Typography.sizes.xs, color: Colors.textDisabled, marginTop: 2 },
+  txFee: { fontSize: Typography.sizes.xs, color: Colors.textDisabled, marginTop: 2 },
   txAmount: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.bold },
   empty: { alignItems: 'center', marginTop: 40 },
   emptyText: { color: Colors.textDisabled },
