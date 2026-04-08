@@ -2,19 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
-import { setAvailability } from '../../api/caregivers';
-
-interface AvailSlot { date: string; start: string; end: string; status: string }
+import { setAvailability, listAvailability, deleteAvailability, type AvailabilitySlot } from '../../api/caregivers';
 
 export default function ScheduleScreen() {
-  const [slots, setSlots] = useState<AvailSlot[]>([]);
+  const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [newDate, setNewDate] = useState('');
   const [newStart, setNewStart] = useState('09:00');
   const [newEnd, setNewEnd] = useState('18:00');
 
   const loadSlots = async () => {
-    // availability list endpoint can be added later
-    try { /* setSlots(await listAvailability()); */ } catch {
+    try {
+      const data = await listAvailability();
+      setSlots(data);
+    } catch {
       Alert.alert('오류', '데이터를 불러올 수 없습니다');
     }
   };
@@ -25,12 +25,29 @@ export default function ScheduleScreen() {
     if (!newDate) return;
     try {
       await setAvailability({ available_date: newDate, start_time: newStart, end_time: newEnd });
-      setSlots((prev) => [...prev, { date: newDate, start: newStart, end: newEnd, status: '활성' }]);
       setNewDate('');
       await loadSlots();
     } catch {
       Alert.alert('오류', '가용 시간 등록에 실패했습니다');
     }
+  };
+
+  const handleDelete = (slot: AvailabilitySlot) => {
+    Alert.alert('삭제', `${slot.available_date} ${slot.start_time}~${slot.end_time} 일정을 삭제하시겠습니까?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteAvailability(slot.id);
+            await loadSlots();
+          } catch {
+            Alert.alert('오류', '삭제에 실패했습니다');
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -50,16 +67,16 @@ export default function ScheduleScreen() {
 
       <FlatList
         data={slots}
-        keyExtractor={(_, i) => String(i)}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: Spacing.base }}
         renderItem={({ item }) => (
           <View style={styles.slotCard}>
             <Ionicons name="calendar" size={20} color={Colors.primary} />
-            <Text style={styles.slotDate}>{item.date}</Text>
-            <Text style={styles.slotTime}>{item.start} ~ {item.end}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: Colors.successLight }]}>
-              <Text style={[styles.statusText, { color: Colors.success }]}>{item.status}</Text>
-            </View>
+            <Text style={styles.slotDate}>{item.available_date}</Text>
+            <Text style={styles.slotTime}>{item.start_time} ~ {item.end_time}</Text>
+            <Pressable onPress={() => handleDelete(item)} style={styles.deleteBtn}>
+              <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+            </Pressable>
           </View>
         )}
         ListEmptyComponent={
@@ -81,15 +98,14 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.sm, paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.sm, fontSize: Typography.sizes.sm, borderWidth: 1, borderColor: Colors.borderLight, color: Colors.textPrimary,
   },
-  addBtn: { width: 40, height: 40, backgroundColor: Colors.primary, borderRadius: Radius.sm, justifyContent: 'center', alignItems: 'center' },
+  addBtn: { width: 44, height: 44, backgroundColor: Colors.primary, borderRadius: Radius.sm, justifyContent: 'center', alignItems: 'center' },
   slotCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface,
     borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.sm, gap: 8, ...Shadows.sm,
   },
   slotDate: { fontSize: Typography.sizes.base, fontWeight: Typography.weights.medium, color: Colors.textPrimary },
   slotTime: { flex: 1, fontSize: Typography.sizes.sm, color: Colors.textSecondary },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.xs },
-  statusText: { fontSize: Typography.sizes.xs, fontWeight: Typography.weights.semibold },
+  deleteBtn: { padding: 8 },
   empty: { alignItems: 'center', marginTop: 40 },
   emptyText: { color: Colors.textDisabled, fontSize: Typography.sizes.base },
 });
