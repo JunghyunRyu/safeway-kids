@@ -9,7 +9,7 @@ const TRUST_BADGES = [
   { key: 'has_background_check' as const, label: '신원조회', icon: 'shield-checkmark' as const },
   { key: 'has_child_abuse_check' as const, label: '아동학대', icon: 'shield-checkmark' as const },
   { key: 'has_sex_offense_check' as const, label: '성범죄', icon: 'shield-checkmark' as const },
-  { key: 'has_cpr_cert' as const, label: 'CPR', icon: 'medkit' as const },
+  { key: 'has_cpr_cert' as const, label: '심폐소생술', icon: 'medkit' as const },
   { key: 'has_insurance' as const, label: '배상보험', icon: 'shield-checkmark' as const },
 ];
 

@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { getMe } from '@safeway/core-mobile/api/auth';
 
 export default function WalkerProfileScreen() {
+  const [name, setName] = useState('산책 도우미');
+
+  useEffect(() => {
+    getMe()
+      .then((me) => setName(me.name || '산책 도우미'))
+      .catch(() => {});
+  }, []);
+
   const menuItems = [
     { icon: 'document-text' as const, label: '자격증/서류 관리', onPress: () => {} },
     { icon: 'star' as const, label: '내 리뷰 보기', onPress: () => {} },
@@ -18,8 +27,8 @@ export default function WalkerProfileScreen() {
         <View style={styles.avatar}>
           <Ionicons name="person-circle" size={72} color={Colors.accent} />
         </View>
-        <Text style={styles.name}>산책 도우미</Text>
-        <Text style={styles.role}>워커</Text>
+        <Text style={styles.name}>{name}</Text>
+        <Text style={styles.role}>펫트래커 산책사</Text>
       </View>
 
       <View style={styles.menu}>

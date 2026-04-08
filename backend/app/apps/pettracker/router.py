@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.apps.pettracker import service
@@ -14,11 +14,14 @@ from app.apps.pettracker.schemas import (
     PetResponse,
     PetUpdate,
     ReviewCreate,
+    ReviewReplyRequest,
+    ReviewWithReplyResponse,
     ReviewResponse,
     WalkerAvailabilityCreate,
     WalkerProfileResponse,
     WalkerQualificationCreate,
     WalkerSearchParams,
+    WalkMemoUpdate,
     WalkReportResponse,
     WalletResponse,
     WithdrawRequest,
@@ -282,6 +285,65 @@ async def create_review(
     review = await service.create_review(db, user.id, body)
     await db.commit()
     return ReviewResponse.model_validate(review)
+
+
+@router.get("/reviews")
+async def list_my_reviews(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_walker),
+):
+    from sqlalchemy import select
+    from app.apps.pettracker.models import WalkerReview
+    reviews = (await db.execute(
+        select(WalkerReview)
+        .where(WalkerReview.walker_id == user.id)
+        .order_by(WalkerReview.created_at.desc())
+    )).scalars().all()
+    return [ReviewWithReplyResponse.model_validate(r) for r in reviews]
+
+
+@router.post("/reviews/{review_id}/reply")
+async def reply_to_review(
+    review_id: uuid.UUID,
+    body: ReviewReplyRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_walker),
+):
+    from datetime import datetime, timezone
+    from sqlalchemy import select
+    from app.apps.pettracker.models import WalkerReview
+    review = (await db.execute(
+        select(WalkerReview).where(WalkerReview.id == review_id)
+    )).scalar_one_or_none()
+    if not review:
+        raise HTTPException(404, "리뷰를 찾을 수 없습니다")
+    if review.walker_id != user.id:
+        raise HTTPException(403, "본인의 리뷰에만 답변할 수 있습니다")
+    if review.walker_reply:
+        raise HTTPException(400, "이미 답변을 등록했습니다")
+    review.walker_reply = body.reply
+    review.replied_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"message": "답변이 등록되었습니다"}
+
+
+@router.patch("/walks/{session_id}")
+async def update_walk_memo(
+    session_id: uuid.UUID,
+    body: WalkMemoUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_walker),
+):
+    from sqlalchemy import select
+    from app.apps.pettracker.models import WalkSession
+    session = (await db.execute(
+        select(WalkSession).where(WalkSession.id == session_id)
+    )).scalar_one_or_none()
+    if not session:
+        raise HTTPException(404, "산책 세션을 찾을 수 없습니다")
+    session.walker_memo = body.walker_memo
+    await db.commit()
+    return {"message": "메모가 저장되었습니다"}
 
 
 # ── Wallet ───────────────────────────────────────────────────────

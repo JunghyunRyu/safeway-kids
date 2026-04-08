@@ -5,6 +5,7 @@ export interface CcBooking {
   parent_id: string;
   caregiver_id: string | null;
   child_id: string;
+  child_name?: string;
   care_type: string;
   scheduled_at: string;
   duration_hours: number;

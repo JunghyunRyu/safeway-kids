@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, FlatList, ActivityIndicator, TextInput, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { startWalk, recordGps, endWalk } from '../../api/walks';
 import { listBookings, type Booking } from '../../api/bookings';
@@ -16,6 +17,8 @@ export default function WalkScreen() {
   const [confirmedBookings, setConfirmedBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [walkerMemo, setWalkerMemo] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gpsRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -203,11 +206,42 @@ export default function WalkScreen() {
             </Text>
           )}
 
+          {/* Walk memo input */}
+          <TextInput
+            style={styles.memoInput}
+            value={walkerMemo}
+            onChangeText={setWalkerMemo}
+            placeholder="산책 메모를 입력하세요"
+            placeholderTextColor={Colors.textDisabled}
+            multiline
+          />
+
           {/* Photo FAB — large button for one-handed use */}
-          <Pressable style={styles.photoFab}>
+          <Pressable style={styles.photoFab} onPress={() => {
+            Alert.alert('사진 추가', '방법을 선택하세요', [
+              { text: '카메라', onPress: async () => {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') { Alert.alert('권한 필요', '카메라 권한이 필요합니다'); return; }
+                const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+                if (!result.canceled && result.assets[0]) { setPhotoUri(result.assets[0].uri); }
+              }},
+              { text: '갤러리', onPress: async () => {
+                const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
+                if (!result.canceled && result.assets[0]) { setPhotoUri(result.assets[0].uri); }
+              }},
+              { text: '취소', style: 'cancel' },
+            ]);
+          }}>
             <Ionicons name="camera" size={32} color={Colors.textInverse} />
             <Text style={styles.photoLabel}>사진</Text>
           </Pressable>
+
+          {photoUri && (
+            <View style={styles.photoPreview}>
+              <Image source={{ uri: photoUri }} style={styles.photoThumb} />
+              <Text style={styles.photoStatus}>사진이 저장되었습니다 (업로드 준비 중)</Text>
+            </View>
+          )}
 
           <Pressable style={styles.endBtn} onPress={handleEnd}>
             <Ionicons name="stop" size={24} color={Colors.textInverse} />
@@ -222,7 +256,7 @@ export default function WalkScreen() {
           <Text style={styles.endedTitle}>산책 완료!</Text>
           <Text style={styles.endedStat}>시간: {formatTime(elapsed)}</Text>
           <Text style={styles.endedStat}>거리: {(distance / 1000).toFixed(1)}km</Text>
-          <Pressable style={styles.resetBtn} onPress={() => { setState('idle'); setElapsed(0); setDistance(0); setSelectedBooking(null); }}>
+          <Pressable style={styles.resetBtn} onPress={() => { setState('idle'); setElapsed(0); setDistance(0); setSelectedBooking(null); setWalkerMemo(''); setPhotoUri(null); }}>
             <Text style={styles.resetText}>확인</Text>
           </Pressable>
         </View>
@@ -290,6 +324,16 @@ const styles = StyleSheet.create({
   },
   endedTitle: { fontSize: Typography.sizes.xxl, fontWeight: Typography.weights.bold, color: Colors.success, marginTop: Spacing.lg },
   endedStat: { fontSize: Typography.sizes.lg, color: Colors.textSecondary, marginTop: Spacing.sm },
+  memoInput: {
+    width: '90%', backgroundColor: Colors.surface, borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    fontSize: Typography.sizes.base, color: Colors.textPrimary,
+    borderWidth: 1, borderColor: Colors.borderLight, marginBottom: Spacing.md,
+    minHeight: 44, textAlignVertical: 'top' as const,
+  },
+  photoPreview: { alignItems: 'center', marginBottom: Spacing.md },
+  photoThumb: { width: 80, height: 80, borderRadius: Radius.md, marginBottom: 4 },
+  photoStatus: { fontSize: Typography.sizes.xs, color: Colors.success },
   resetBtn: { marginTop: Spacing.xxl, backgroundColor: Colors.primary, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.md, borderRadius: Radius.md },
   resetText: { color: Colors.textInverse, fontWeight: Typography.weights.bold, fontSize: Typography.sizes.md },
 });

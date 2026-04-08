@@ -8,7 +8,7 @@ const TRUST_BADGES = [
   { key: 'has_background_check' as const, label: '신원조회 완료', icon: 'shield-checkmark' as const },
   { key: 'has_child_abuse_check' as const, label: '아동학대 이력 없음', icon: 'shield-checkmark' as const },
   { key: 'has_sex_offense_check' as const, label: '성범죄 이력 없음', icon: 'shield-checkmark' as const },
-  { key: 'has_cpr_cert' as const, label: 'CPR 자격증 보유', icon: 'medkit' as const },
+  { key: 'has_cpr_cert' as const, label: '심폐소생술 자격증 보유', icon: 'medkit' as const },
   { key: 'has_insurance' as const, label: '배상책임보험', icon: 'shield-checkmark' as const },
   { key: 'approval_status' as const, label: '본인인증 완료', icon: 'person-circle' as const },
 ];

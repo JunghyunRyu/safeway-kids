@@ -182,3 +182,29 @@ class WalkerSearchParams(BaseModel):
     longitude: float = Field(..., ge=-180, le=180)
     date: date
     radius_km: float = Field(default=3.0, gt=0, le=50)
+
+
+# ── Review Reply Schemas ─────────────────────────────────────────
+
+class ReviewReplyRequest(BaseModel):
+    reply: str = Field(..., min_length=1, max_length=1000)
+
+
+class ReviewWithReplyResponse(BaseModel):
+    id: uuid.UUID
+    booking_id: uuid.UUID
+    reviewer_id: uuid.UUID
+    walker_id: uuid.UUID
+    rating: int
+    comment: str | None
+    walker_reply: str | None
+    replied_at: datetime | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ── Walk Memo Update Schema ──────────────────────────────────────
+
+class WalkMemoUpdate(BaseModel):
+    walker_memo: str | None = Field(None, max_length=2000)

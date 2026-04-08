@@ -12,6 +12,8 @@ const DEFAULT_LNG = 126.978;
 export default function SearchScreen({ navigation }: any) {
   const [results, setResults] = useState<WalkerSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [sizeFilter, setSizeFilter] = useState<'all' | 'small' | 'medium' | 'large'>('all');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [userLat, setUserLat] = useState(DEFAULT_LAT);
   const [userLng, setUserLng] = useState(DEFAULT_LNG);
@@ -39,6 +41,7 @@ export default function SearchScreen({ navigation }: any) {
     try {
       const data = await searchWalkers(userLat, userLng, date);
       setResults(data);
+      setHasSearched(true);
     } catch {
       Alert.alert('오류', '검색에 실패했습니다');
     }
@@ -100,6 +103,16 @@ export default function SearchScreen({ navigation }: any) {
           <Ionicons name="search" size={20} color={Colors.textInverse} />
         </Pressable>
       </View>
+
+      {/* Size Filter Chips */}
+      <View style={styles.filterRow}>
+        {([['all', '전체'], ['small', '소형 (<10kg)'], ['medium', '중형 (10-25kg)'], ['large', '대형 (>25kg)']] as const).map(([key, label]) => (
+          <Pressable key={key} style={[styles.filterChip, sizeFilter === key && styles.filterChipActive]} onPress={() => setSizeFilter(key)}>
+            <Text style={[styles.filterChipText, sizeFilter === key && styles.filterChipTextActive]}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
       {loading ? (
         <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
       ) : (
@@ -110,8 +123,12 @@ export default function SearchScreen({ navigation }: any) {
           contentContainerStyle={{ padding: Spacing.base }}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="search-outline" size={48} color={Colors.textDisabled} />
-              <Text style={styles.emptyText}>검색 버튼을 눌러 주변 도우미를 찾아보세요</Text>
+              <Ionicons name={hasSearched ? 'alert-circle-outline' : 'search-outline'} size={48} color={Colors.textDisabled} />
+              <Text style={styles.emptyText}>
+                {hasSearched
+                  ? '해당 조건에 맞는 도우미가 없습니다.\n날짜나 지역을 변경해보세요'
+                  : '검색 버튼을 눌러 주변 도우미를 찾아보세요'}
+              </Text>
             </View>
           }
         />
@@ -147,6 +164,11 @@ const styles = StyleSheet.create({
   badge: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   badgeText: { fontSize: Typography.sizes.xs, color: Colors.textSecondary },
   bio: { fontSize: Typography.sizes.sm, color: Colors.textSecondary, marginTop: 4 },
+  filterRow: { flexDirection: 'row', paddingHorizontal: Spacing.base, marginBottom: Spacing.sm, gap: 6, flexWrap: 'wrap' },
+  filterChip: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surface },
+  filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  filterChipText: { fontSize: Typography.sizes.xs, color: Colors.textSecondary },
+  filterChipTextActive: { color: '#fff', fontWeight: Typography.weights.medium as any },
   empty: { alignItems: 'center', marginTop: 60 },
-  emptyText: { fontSize: Typography.sizes.base, color: Colors.textDisabled, marginTop: Spacing.md },
+  emptyText: { fontSize: Typography.sizes.base, color: Colors.textDisabled, marginTop: Spacing.md, textAlign: 'center' as const },
 });

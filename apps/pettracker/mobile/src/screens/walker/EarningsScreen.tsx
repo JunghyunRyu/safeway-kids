@@ -62,10 +62,28 @@ export default function EarningsScreen() {
         </Pressable>
       </View>
 
+      {/* Monthly Summary */}
+      {transactions.length > 0 && (() => {
+        const now = new Date();
+        const monthTxs = transactions.filter(t => {
+          const d = new Date(t.created_at);
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && t.tx_type === 'earning';
+        });
+        const gross = monthTxs.reduce((s, t) => s + Math.abs(t.amount), 0);
+        const fee = Math.round(gross * commissionRate / 100);
+        return gross > 0 ? (
+          <View style={styles.monthCard}>
+            <Text style={styles.monthLabel}>이번 달 수입</Text>
+            <Text style={styles.monthAmount}>{(gross - fee).toLocaleString()}원</Text>
+            <Text style={styles.monthDetail}>총 {gross.toLocaleString()}원 (수수료 {fee.toLocaleString()}원)</Text>
+          </View>
+        ) : null;
+      })()}
+
       {/* Commission Rate Info */}
       <View style={styles.commissionInfo}>
         <Ionicons name="information-circle-outline" size={16} color={Colors.textSecondary} />
-        <Text style={styles.commissionText}>플랫폼 수수료: {commissionRate}%</Text>
+        <Text style={styles.commissionText}>수수료 {commissionRate}% | 정산: 영업일 D+1</Text>
       </View>
 
       <Text style={styles.sectionTitle}>거래 내역</Text>
@@ -123,6 +141,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceElevated, borderRadius: Radius.sm,
   },
   commissionText: { fontSize: Typography.sizes.sm, color: Colors.textSecondary },
+  monthCard: {
+    marginHorizontal: Spacing.base, marginTop: Spacing.md, padding: Spacing.base,
+    backgroundColor: Colors.infoLight || Colors.surfaceElevated, borderRadius: Radius.md, gap: 4,
+  },
+  monthLabel: { fontSize: Typography.sizes.sm, color: Colors.info || Colors.textSecondary, fontWeight: Typography.weights.medium as any },
+  monthAmount: { fontSize: Typography.sizes.xl, fontWeight: Typography.weights.bold as any, color: Colors.textPrimary },
+  monthDetail: { fontSize: Typography.sizes.xs, color: Colors.textSecondary },
   sectionTitle: {
     fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.textPrimary,
     paddingHorizontal: Spacing.base, marginTop: Spacing.xl, marginBottom: Spacing.md,

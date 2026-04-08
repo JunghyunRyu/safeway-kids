@@ -108,6 +108,45 @@ async def set_availability(body: AvailabilityCreate, db: AsyncSession = Depends(
     return {"message": "가용 시간이 등록되었습니다"}
 
 
+
+
+@router.get("/caregivers/availability")
+async def list_availability(db: AsyncSession = Depends(get_db), user: User = Depends(require_caregiver)):
+    from datetime import date as dt_date
+    from app.apps.careconnect.models import CaregiverAvailability
+    from sqlalchemy import select
+    today = dt_date.today()
+    slots = (await db.execute(
+        select(CaregiverAvailability)
+        .where(CaregiverAvailability.caregiver_id == user.id, CaregiverAvailability.available_date >= today)
+        .order_by(CaregiverAvailability.available_date)
+    )).scalars().all()
+    return [
+        {
+            "id": str(s.id),
+            "available_date": s.available_date.isoformat(),
+            "start_time": s.start_time.strftime("%H:%M"),
+            "end_time": s.end_time.strftime("%H:%M"),
+            "status": s.status,
+        }
+        for s in slots
+    ]
+
+
+@router.delete("/caregivers/availability/{avail_id}", status_code=204)
+async def delete_availability(avail_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(require_caregiver)):
+    from app.apps.careconnect.models import CaregiverAvailability
+    from sqlalchemy import select
+    from fastapi import HTTPException
+    slot = (await db.execute(
+        select(CaregiverAvailability).where(CaregiverAvailability.id == avail_id, CaregiverAvailability.caregiver_id == user.id)
+    )).scalar_one_or_none()
+    if not slot:
+        raise HTTPException(404, "가용 시간을 찾을 수 없습니다")
+    await db.delete(slot)
+    await db.commit()
+
+
 # ── Bookings ─────────────────────────────────────────────────────
 
 @router.post("/bookings", response_model=CcBookingResponse, status_code=201)

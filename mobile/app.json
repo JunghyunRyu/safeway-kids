@@ -47,7 +47,7 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiBaseUrl": "https://kinematical-carole-bursate.ngrok-free.dev/api/v1",
+      "apiBaseUrl": "http://192.168.0.104:8000/api/v1",
       "kakaoMapApiKey": "600dbaa6ce3c2fb2111e12aebb60257f",
       "eas": {
         "projectId": "a767dc5e-cd24-4841-9e0d-1f14af2004a8"

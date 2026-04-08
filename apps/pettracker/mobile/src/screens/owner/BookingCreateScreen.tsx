@@ -74,7 +74,7 @@ export default function BookingCreateScreen({ route, navigation }: any) {
         pickup_address: address || '서울',
         price: duration.price,
       });
-      Alert.alert('예약 완료', '산책 예약이 생성되었습니다!', [
+      Alert.alert('예약 완료', '산책 예약이 생성되었습니다!\n\n상태: 대기중 - 산책사 수락 대기\n산책사가 수락하면 알림을 보내드립니다', [
         { text: '확인', onPress: () => navigation.navigate('Bookings') },
       ]);
     } catch { Alert.alert('오류', '예약에 실패했습니다'); }
@@ -174,7 +174,7 @@ export default function BookingCreateScreen({ route, navigation }: any) {
           <Text style={styles.summaryLabel}>결제 금액</Text>
           <Text style={styles.summaryPrice}>{duration.price.toLocaleString()}원</Text>
         </View>
-        <Text style={styles.escrowNote}>서비스 완료 후 결제가 확정됩니다 (에스크로)</Text>
+        <Text style={styles.escrowNote}>산책 완료 후 안심 결제가 확정됩니다</Text>
       </View>
 
       <Pressable style={styles.bookBtn} onPress={handleBook} disabled={loading}>

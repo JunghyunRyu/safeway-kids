@@ -17,6 +17,14 @@ export interface CaregiverProfile {
   distance_km?: number;
 }
 
+export interface AvailabilitySlot {
+  id: string;
+  available_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+}
+
 export async function searchCaregivers(lat: number, lon: number, date: string, radiusKm = 5): Promise<CaregiverProfile[]> {
   return (await apiClient.get('/cc/caregivers/search', { params: { latitude: lat, longitude: lon, date, radius_km: radiusKm } })).data;
 }
@@ -31,6 +39,14 @@ export async function submitQualification(data: Record<string, unknown>): Promis
 
 export async function setAvailability(data: { available_date: string; start_time: string; end_time: string }): Promise<void> {
   await apiClient.post('/cc/caregivers/availability', data);
+}
+
+export async function listAvailability(): Promise<AvailabilitySlot[]> {
+  return (await apiClient.get('/cc/caregivers/availability')).data;
+}
+
+export async function deleteAvailability(availId: string): Promise<void> {
+  await apiClient.delete(`/cc/caregivers/availability/${availId}`);
 }
 
 export async function getQualificationStatus(): Promise<{ approval_status: string }> {

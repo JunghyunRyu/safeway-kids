@@ -63,6 +63,7 @@ export default function BookingRequestScreen({ navigation }: any) {
               <Text style={styles.cardDate}>{new Date(item.scheduled_at).toLocaleString('ko-KR')}</Text>
               <Text style={styles.cardType}>{item.duration_hours}시간 방문돌봄</Text>
             </View>
+            {item.child_name && <Text style={styles.childName}>아동: {item.child_name}</Text>}
             <Text style={styles.cardPrice}>{(item.hourly_rate * item.duration_hours).toLocaleString()}원</Text>
             {item.care_address && <Text style={styles.cardAddr}>{item.care_address}</Text>}
             <View style={styles.actions}>
@@ -90,6 +91,7 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   cardDate: { fontSize: Typography.sizes.base, fontWeight: Typography.weights.medium, color: Colors.textPrimary },
   cardType: { fontSize: Typography.sizes.sm, color: Colors.textSecondary },
+  childName: { fontSize: Typography.sizes.base, fontWeight: Typography.weights.medium, color: Colors.textPrimary, marginBottom: 4 },
   cardPrice: { fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.primary, marginBottom: 4 },
   cardAddr: { fontSize: Typography.sizes.sm, color: Colors.textDisabled, marginBottom: Spacing.md },
   actions: { flexDirection: 'row', gap: Spacing.md },

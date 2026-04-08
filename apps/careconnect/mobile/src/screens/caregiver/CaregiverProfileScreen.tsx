@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { getQualificationStatus } from '../../api/caregivers';
+import { getMe } from '@safeway/core-mobile/api/auth';
 
 const APPROVAL_LABELS: Record<string, { label: string; color: string }> = {
   approved: { label: '승인 완료', color: Colors.success },
@@ -13,6 +14,7 @@ const APPROVAL_LABELS: Record<string, { label: string; color: string }> = {
 
 export default function CaregiverProfileScreen() {
   const [qualStatus, setQualStatus] = useState<string>('not_submitted');
+  const [userName, setUserName] = useState<string>('돌봄자');
 
   useEffect(() => {
     getQualificationStatus()
@@ -20,6 +22,9 @@ export default function CaregiverProfileScreen() {
       .catch(() => {
         Alert.alert('오류', '데이터를 불러올 수 없습니다');
       });
+    getMe()
+      .then((me) => setUserName(me.name || '돌봄자'))
+      .catch(() => {});
   }, []);
 
   const statusInfo = APPROVAL_LABELS[qualStatus] || APPROVAL_LABELS.not_submitted;
@@ -50,7 +55,7 @@ export default function CaregiverProfileScreen() {
         <View style={styles.avatar}>
           <Ionicons name="person-circle" size={72} color={Colors.primary} />
         </View>
-        <Text style={styles.name}>돌봄자</Text>
+        <Text style={styles.name}>{userName}</Text>
         <Text style={styles.role}>케어커넥트 돌봄자</Text>
       </View>
 

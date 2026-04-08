@@ -203,7 +203,7 @@ export default function BookingCreateScreen({ route, navigation }: any) {
         </View>
         <View style={styles.escrowBadge}>
           <Ionicons name="lock-closed" size={14} color={Colors.info} />
-          <Text style={styles.escrowNote}>에스크로 결제 - 돌봄 완료 후 결제가 확정됩니다</Text>
+          <Text style={styles.escrowNote}>안심 결제 - 돌봄 완료 후 결제가 확정됩니다</Text>
         </View>
       </View>
 

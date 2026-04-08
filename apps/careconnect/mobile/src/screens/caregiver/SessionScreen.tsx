@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, TextInput, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { checkin, addActivity, checkout, saveSessionMemo } from '../../api/sessions';
 import { listBookings, type CcBooking } from '../../api/bookings';
@@ -21,6 +22,8 @@ export default function SessionScreen({ navigation }: any) {
   const [state, setState] = useState<SessionState>('idle');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [childAllergies, setChildAllergies] = useState<string | null>(null);
   const [activitiesCount, setActivitiesCount] = useState(0);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [memo, setMemo] = useState('');
@@ -188,11 +191,13 @@ export default function SessionScreen({ navigation }: any) {
 
       {state === 'checked_in' && (
         <View style={styles.center}>
-          {/* Allergy Warning Banner */}
-          <View style={styles.allergyBanner}>
-            <Ionicons name="warning" size={18} color={Colors.danger} />
-            <Text style={styles.allergyText}>알레르기 정보를 확인하세요</Text>
-          </View>
+          {/* Allergy Warning Banner — show only if allergies exist */}
+          {childAllergies ? (
+            <View style={styles.allergyBanner}>
+              <Ionicons name="warning" size={18} color={Colors.danger} />
+              <Text style={styles.allergyText}>알레르기: {childAllergies}</Text>
+            </View>
+          ) : null}
 
           {/* Timer */}
           <View style={styles.timerCircle}>
@@ -222,10 +227,30 @@ export default function SessionScreen({ navigation }: any) {
           )}
 
           {/* Photo Button */}
-          <Pressable style={styles.photoFab}>
+          <Pressable style={styles.photoFab} onPress={() => {
+            Alert.alert('사진 추가', '방법을 선택하세요', [
+              { text: '카메라', onPress: async () => {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') { Alert.alert('권한 필요', '카메라 권한이 필요합니다'); return; }
+                const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+                if (!result.canceled && result.assets[0]) { setPhotoUri(result.assets[0].uri); }
+              }},
+              { text: '갤러리', onPress: async () => {
+                const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
+                if (!result.canceled && result.assets[0]) { setPhotoUri(result.assets[0].uri); }
+              }},
+              { text: '취소', style: 'cancel' },
+            ]);
+          }}>
             <Ionicons name="camera" size={32} color={Colors.textInverse} />
             <Text style={styles.photoLabel}>사진</Text>
           </Pressable>
+          {photoUri && (
+            <View style={{ alignItems: 'center', marginBottom: Spacing.md }}>
+              <Image source={{ uri: photoUri }} style={{ width: 80, height: 80, borderRadius: Radius.md, marginBottom: 4 }} />
+              <Text style={{ fontSize: Typography.sizes.xs, color: Colors.success }}>사진이 저장되었습니다 (업로드 준비 중)</Text>
+            </View>
+          )}
 
           <Pressable style={styles.endBtn} onPress={handleCheckout}>
             <Ionicons name="stop" size={24} color={Colors.textInverse} />

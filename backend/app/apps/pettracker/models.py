@@ -77,6 +77,9 @@ class WalkerQualification(Base):
     approval_status: Mapped[str] = mapped_column(String(20), default="pending")
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approved_by: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("users.id"))
+    has_insurance: Mapped[bool] = mapped_column(Boolean, default=False)
+    insurance_expiry: Mapped[date | None] = mapped_column(Date)
+    profile_photo_url: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -91,10 +94,12 @@ class WalkerAvailability(Base):
     start_time: Mapped[time] = mapped_column(Time, nullable=False)
     end_time: Mapped[time] = mapped_column(Time, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="available")  # available, booked, cancelled
+    recurrence_type: Mapped[str | None] = mapped_column(String(20))  # none, daily, weekly, biweekly
+    recurrence_end_date: Mapped[date | None] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
-        UniqueConstraint("walker_id", "available_date", name="uq_walker_avail_date"),
+        UniqueConstraint("walker_id", "available_date", "start_time", name="uq_walker_avail_date_time"),
     )
 
 
@@ -198,6 +203,8 @@ class WalkerReview(Base):
     walker_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
     rating: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-5
     comment: Mapped[str | None] = mapped_column(Text)
+    walker_reply: Mapped[str | None] = mapped_column(Text)
+    replied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
