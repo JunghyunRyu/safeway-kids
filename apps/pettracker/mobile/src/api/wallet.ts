@@ -32,3 +32,11 @@ export async function requestWithdrawal(amount: number): Promise<{ tx_id: string
   const resp = await apiClient.post('/pt/wallet/withdraw', { amount });
   return resp.data;
 }
+
+export async function exportTransactionsCsv(month: string): Promise<string> {
+  const resp = await apiClient.get('/pt/wallet/export', {
+    params: { month },
+    responseType: 'text',
+  });
+  return typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+}

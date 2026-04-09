@@ -8,6 +8,7 @@ import { getWalkReport } from '../../api/walks';
 export default function LiveTrackScreen({ route, navigation }: any) {
   const { sessionId } = route?.params || {};
   const [walkerPosition, setWalkerPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [routePoints, setRoutePoints] = useState<Array<[number, number]>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [startedAt, setStartedAt] = useState<Date | null>(null);
@@ -22,8 +23,12 @@ export default function LiveTrackScreen({ route, navigation }: any) {
       const report = await getWalkReport(sessionId);
       // Use the latest GPS point from the route polyline if available
       if (report.route_polyline && report.route_polyline.length > 0) {
-        const last = report.route_polyline[report.route_polyline.length - 1];
-        if (Array.isArray(last) && last.length >= 2) {
+        const validPoints = (report.route_polyline as any[])
+          .filter((p) => Array.isArray(p) && p.length >= 2 && typeof p[0] === 'number' && typeof p[1] === 'number')
+          .map((p) => [p[0], p[1]] as [number, number]);
+        setRoutePoints(validPoints);
+        if (validPoints.length > 0) {
+          const last = validPoints[validPoints.length - 1];
           setWalkerPosition({ lat: last[0], lng: last[1] });
         }
       }
@@ -91,7 +96,37 @@ export default function LiveTrackScreen({ route, navigation }: any) {
     ? `${walkerPosition.lat.toFixed(4)}, ${walkerPosition.lng.toFixed(4)}`
     : '위치 수신 대기';
 
-  const mapHtml = `
+  const centerLat = walkerPosition?.lat ?? 37.5665;
+  const centerLng = walkerPosition?.lng ?? 126.978;
+  const routeJson = JSON.stringify(routePoints);
+  const hasRoute = routePoints.length >= 2;
+
+  const mapHtml = hasRoute ? `
+    <!DOCTYPE html>
+    <html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>html,body,#map{height:100%;margin:0;padding:0}</style>
+    </head><body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      var points = ${routeJson};
+      var map = L.map('map').setView([${centerLat}, ${centerLng}], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+      if (points.length >= 2) {
+        var line = L.polyline(points, { color: '#EF4444', weight: 4, opacity: 0.8 }).addTo(map);
+        var start = points[0];
+        var end = points[points.length - 1];
+        L.circleMarker(start, { radius: 8, color: '#10B981', fillColor: '#10B981', fillOpacity: 1 }).addTo(map).bindPopup('출발');
+        L.marker(end).addTo(map).bindPopup('현재 위치');
+        map.fitBounds(line.getBounds(), { padding: [30, 30] });
+      }
+    </script>
+    </body></html>
+  ` : `
     <!DOCTYPE html>
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>body{margin:0}#map{width:100%;height:100vh;background:#e8f4f4;display:flex;justify-content:center;align-items:center;font-family:sans-serif}</style>
@@ -130,6 +165,8 @@ export default function LiveTrackScreen({ route, navigation }: any) {
           source={{ html: mapHtml }}
           style={styles.map}
           scrollEnabled={false}
+          javaScriptEnabled
+          domStorageEnabled
         />
       )}
 

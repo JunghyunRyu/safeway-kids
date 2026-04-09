@@ -308,6 +308,53 @@ async def list_transactions(db: AsyncSession = Depends(get_db), user: User = Dep
     ]
 
 
+@router.get("/wallet/export")
+async def export_cc_transactions_csv(
+    month: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_caregiver),
+):
+    """Export CareConnect wallet transactions as CSV for the given month."""
+    from fastapi.responses import StreamingResponse
+    from fastapi import HTTPException
+    from sqlalchemy import select
+    from app.apps.careconnect.models import CaregiverWallet
+    from app.core.models import WalletTransaction
+    import io
+    import csv
+    try:
+        year, mon = month.split('-')
+        y = int(year)
+        m = int(mon)
+    except Exception:
+        raise HTTPException(400, "month must be YYYY-MM")
+    wallet = (await db.execute(select(CaregiverWallet).where(CaregiverWallet.user_id == user.id))).scalar_one_or_none()
+    commission_rate = 20
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["날짜", "구분", "총 금액", "수수료", "실수령", "상태"])
+    if wallet:
+        txs = (await db.execute(
+            select(WalletTransaction).where(WalletTransaction.wallet_id == wallet.id).order_by(WalletTransaction.created_at)
+        )).scalars().all()
+        for t in txs:
+            dt = t.created_at
+            if dt.year != y or dt.month != m:
+                continue
+            gross = t.amount
+            fee = 0
+            if t.tx_type == "earning":
+                gross = round(t.amount / (1 - commission_rate / 100))
+                fee = gross - t.amount
+            writer.writerow([dt.strftime("%Y-%m-%d"), t.tx_type, gross, fee, t.amount, t.status])
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue().encode('utf-8-sig')]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="cc-transactions-{month}.csv"'},
+    )
+
+
 # ── Admin ────────────────────────────────────────────────────────
 
 @router.get("/admin/dashboard")

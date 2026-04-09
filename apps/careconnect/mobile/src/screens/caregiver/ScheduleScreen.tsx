@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Alert } from 'r
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { setAvailability, listAvailability, deleteAvailability, type AvailabilitySlot } from '../../api/caregivers';
+import { DatePickerModal } from '@safeway/core-mobile';
 
 export default function ScheduleScreen() {
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [newDate, setNewDate] = useState('');
   const [newStart, setNewStart] = useState('09:00');
   const [newEnd, setNewEnd] = useState('18:00');
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
 
   const loadSlots = async () => {
     try {
@@ -57,13 +59,25 @@ export default function ScheduleScreen() {
       </View>
 
       <View style={styles.addRow}>
-        <TextInput style={styles.input} value={newDate} onChangeText={setNewDate} placeholder="날짜 (YYYY-MM-DD)" placeholderTextColor={Colors.textDisabled} />
+        <Pressable style={styles.input} onPress={() => setDatePickerVisible(true)}>
+          <Text style={{ color: newDate ? Colors.textPrimary : Colors.textDisabled }}>
+            {newDate || '날짜 선택'}
+          </Text>
+        </Pressable>
         <TextInput style={[styles.input, { width: 80 }]} value={newStart} onChangeText={setNewStart} placeholder="시작" placeholderTextColor={Colors.textDisabled} />
         <TextInput style={[styles.input, { width: 80 }]} value={newEnd} onChangeText={setNewEnd} placeholder="종료" placeholderTextColor={Colors.textDisabled} />
         <Pressable style={styles.addBtn} onPress={addSlot}>
           <Ionicons name="add" size={22} color={Colors.textInverse} />
         </Pressable>
       </View>
+
+      <DatePickerModal
+        visible={datePickerVisible}
+        value={newDate}
+        onSelect={setNewDate}
+        onClose={() => setDatePickerVisible(false)}
+        primaryColor={Colors.primary}
+      />
 
       <FlatList
         data={slots}

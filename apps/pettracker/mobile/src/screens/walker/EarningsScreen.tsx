@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
-import { getWallet, listTransactions, requestWithdrawal, type Wallet, type WalletTransaction } from '../../api/wallet';
+import { getWallet, listTransactions, requestWithdrawal, exportTransactionsCsv, type Wallet, type WalletTransaction } from '../../api/wallet';
 
 const TX_TYPE_LABELS: Record<string, string> = {
   earning: '수입', withdrawal: '출금', refund: '환불', adjustment: '조정',
@@ -48,6 +50,27 @@ export default function EarningsScreen() {
 
   const commissionRate = wallet?.commission_rate ?? 15;
 
+  const handleExport = async () => {
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    try {
+      const csv = await exportTransactionsCsv(month);
+      if (!csv || csv.trim().split('\n').length <= 1) {
+        Alert.alert('알림', '해당 월에 거래 내역이 없습니다');
+        return;
+      }
+      const fileUri = `${FileSystem.cacheDirectory}pt-transactions-${month}.csv`;
+      await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType.UTF8 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'text/csv', dialogTitle: 'CSV 내보내기' });
+      } else {
+        Alert.alert('완료', `저장됨: ${fileUri}`);
+      }
+    } catch {
+      Alert.alert('오류', 'CSV 내보내기에 실패했습니다');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -86,7 +109,13 @@ export default function EarningsScreen() {
         <Text style={styles.commissionText}>수수료 {commissionRate}% | 정산: 영업일 D+1</Text>
       </View>
 
-      <Text style={styles.sectionTitle}>거래 내역</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.base, marginTop: Spacing.xl, marginBottom: Spacing.md }}>
+        <Text style={[styles.sectionTitle, { paddingHorizontal: 0, marginTop: 0, marginBottom: 0 }]}>거래 내역</Text>
+        <Pressable onPress={handleExport} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: Spacing.sm, paddingVertical: 6 }}>
+          <Ionicons name="download-outline" size={16} color={Colors.primary} />
+          <Text style={{ fontSize: Typography.sizes.sm, color: Colors.primary }}>CSV 내보내기</Text>
+        </Pressable>
+      </View>
       <FlatList
         data={transactions}
         keyExtractor={(item) => item.id}

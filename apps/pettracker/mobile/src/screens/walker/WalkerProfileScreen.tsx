@@ -1,17 +1,35 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { getMe } from '@safeway/core-mobile/api/auth';
 
 export default function WalkerProfileScreen() {
   const [name, setName] = useState('산책 도우미');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   useEffect(() => {
     getMe()
       .then((me) => setName(me.name || '산책 도우미'))
       .catch(() => {});
   }, []);
+
+  const handlePhotoChange = () => {
+    Alert.alert('프로필 사진', '사진 선택 방법', [
+      { text: '카메라', onPress: async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') { Alert.alert('권한 필요', '카메라 권한이 필요합니다'); return; }
+        const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
+        if (!result.canceled && result.assets[0]) { setPhotoUri(result.assets[0].uri); }
+      }},
+      { text: '갤러리', onPress: async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
+        if (!result.canceled && result.assets[0]) { setPhotoUri(result.assets[0].uri); }
+      }},
+      { text: '취소', style: 'cancel' },
+    ]);
+  };
 
   const menuItems = [
     { icon: 'document-text' as const, label: '자격증/서류 관리', onPress: () => {} },
@@ -24,9 +42,16 @@ export default function WalkerProfileScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Ionicons name="person-circle" size={72} color={Colors.accent} />
-        </View>
+        <Pressable onPress={handlePhotoChange} style={styles.avatar}>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={styles.avatarImg} />
+          ) : (
+            <Ionicons name="person-circle" size={80} color={Colors.accent} />
+          )}
+          <View style={styles.cameraBadge}>
+            <Ionicons name="camera" size={14} color="#fff" />
+          </View>
+        </Pressable>
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.role}>펫트래커 산책사</Text>
       </View>
@@ -52,7 +77,14 @@ export default function WalkerProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: { alignItems: 'center', paddingTop: 60, paddingBottom: Spacing.xl },
-  avatar: { marginBottom: Spacing.sm },
+  avatar: { marginBottom: Spacing.sm, position: 'relative' as const },
+  avatarImg: { width: 80, height: 80, borderRadius: 40 },
+  cameraBadge: {
+    position: 'absolute' as const, right: 0, bottom: 0,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: Colors.primary, justifyContent: 'center' as const, alignItems: 'center' as const,
+    borderWidth: 2, borderColor: '#fff',
+  },
   name: { fontSize: Typography.sizes.xl, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
   role: { fontSize: Typography.sizes.base, color: Colors.textSecondary, marginTop: 4 },
   menu: { backgroundColor: Colors.surface, marginHorizontal: Spacing.base, borderRadius: Radius.lg, ...Shadows.sm },

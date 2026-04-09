@@ -386,6 +386,53 @@ async def list_transactions(
     return results
 
 
+@router.get("/wallet/export")
+async def export_transactions_csv(
+    month: str = Query(..., description="YYYY-MM"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_walker),
+):
+    """Export PetTracker wallet transactions as CSV for the given month."""
+    from datetime import datetime
+    from fastapi.responses import StreamingResponse
+    import io
+    import csv
+    try:
+        year, mon = month.split('-')
+        y = int(year)
+        m = int(mon)
+    except Exception:
+        raise HTTPException(400, "month must be YYYY-MM")
+    txs = await service.list_transactions(db, user.id)
+    commission_rate = 15
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["날짜", "구분", "총 금액", "수수료", "실수령", "상태"])
+    for t in txs:
+        dt = t.created_at
+        if dt.year != y or dt.month != m:
+            continue
+        gross = t.amount
+        fee = 0
+        if t.tx_type == "earning":
+            gross = round(t.amount / (1 - commission_rate / 100))
+            fee = gross - t.amount
+        writer.writerow([
+            dt.strftime("%Y-%m-%d"),
+            t.tx_type,
+            gross,
+            fee,
+            t.amount,
+            t.status,
+        ])
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue().encode('utf-8-sig')]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="pt-transactions-{month}.csv"'},
+    )
+
+
 @router.post("/wallet/withdraw")
 async def request_withdrawal(
     body: WithdrawRequest,

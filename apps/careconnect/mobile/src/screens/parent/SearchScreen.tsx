@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { searchCaregivers, type CaregiverProfile } from '../../api/caregivers';
+import { DatePickerModal } from '@safeway/core-mobile';
 
 const TRUST_BADGES = [
   { key: 'has_background_check' as const, label: '신원조회', icon: 'shield-checkmark' as const },
@@ -32,6 +33,7 @@ export default function SearchScreen({ navigation }: any) {
   const [userLat, setUserLat] = useState(37.5665);
   const [userLon, setUserLon] = useState(126.978);
   const [locationLoaded, setLocationLoaded] = useState(false);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -134,7 +136,19 @@ export default function SearchScreen({ navigation }: any) {
             <Text style={[styles.dateBtnSub, date === opt.value && { color: Colors.primary }]}>{opt.value.slice(5)}</Text>
           </Pressable>
         ))}
+        <Pressable style={styles.dateBtn} onPress={() => setDatePickerVisible(true)}>
+          <Ionicons name="calendar-outline" size={18} color={Colors.textSecondary} />
+          <Text style={styles.dateBtnSub}>직접 선택</Text>
+        </Pressable>
       </View>
+
+      <DatePickerModal
+        visible={datePickerVisible}
+        value={date}
+        onSelect={setDate}
+        onClose={() => setDatePickerVisible(false)}
+        primaryColor={Colors.primary}
+      />
 
       <Pressable style={styles.searchBtn} onPress={doSearch}>
         <Ionicons name="search" size={20} color={Colors.textInverse} />

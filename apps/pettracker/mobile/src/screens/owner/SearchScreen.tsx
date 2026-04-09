@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { searchWalkers, type WalkerSearchResult } from '../../api/walkers';
+import { DatePickerModal, formatKorean } from '@safeway/core-mobile';
 
 // 서울 시청 기본 좌표 (위치 권한 거부 시 폴백)
 const DEFAULT_LAT = 37.5665;
@@ -14,6 +15,7 @@ export default function SearchScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [sizeFilter, setSizeFilter] = useState<'all' | 'small' | 'medium' | 'large'>('all');
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [userLat, setUserLat] = useState(DEFAULT_LAT);
   const [userLng, setUserLng] = useState(DEFAULT_LNG);
@@ -92,17 +94,22 @@ export default function SearchScreen({ navigation }: any) {
         </View>
       )}
       <View style={styles.searchBar}>
-        <TextInput
-          style={styles.dateInput}
-          value={date}
-          onChangeText={setDate}
-          placeholder="날짜 (YYYY-MM-DD)"
-          placeholderTextColor={Colors.textDisabled}
-        />
+        <Pressable style={styles.dateInput} onPress={() => setDatePickerVisible(true)}>
+          <Ionicons name="calendar-outline" size={18} color={Colors.textSecondary} />
+          <Text style={styles.dateText}>{formatKorean(date)}</Text>
+        </Pressable>
         <Pressable style={styles.searchBtn} onPress={doSearch}>
           <Ionicons name="search" size={20} color={Colors.textInverse} />
         </Pressable>
       </View>
+
+      <DatePickerModal
+        visible={datePickerVisible}
+        value={date}
+        onSelect={setDate}
+        onClose={() => setDatePickerVisible(false)}
+        primaryColor={Colors.primary}
+      />
 
       {/* Size Filter Chips */}
       <View style={styles.filterRow}>
@@ -145,10 +152,12 @@ const styles = StyleSheet.create({
   locationNoticeText: { fontSize: Typography.sizes.xs, color: Colors.textSecondary, flex: 1 },
   searchBar: { flexDirection: 'row', paddingHorizontal: Spacing.base, marginBottom: Spacing.md },
   dateInput: {
-    flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.md, paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md, fontSize: Typography.sizes.base, color: Colors.textPrimary,
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: Colors.surface, borderRadius: Radius.md, paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md, minHeight: 48,
     borderWidth: 1, borderColor: Colors.borderLight,
   },
+  dateText: { flex: 1, fontSize: Typography.sizes.base, color: Colors.textPrimary },
   searchBtn: {
     width: 48, height: 48, backgroundColor: Colors.primary, borderRadius: Radius.md,
     justifyContent: 'center', alignItems: 'center', marginLeft: Spacing.sm,

@@ -10,3 +10,7 @@ export async function requestWithdrawal(amount: number): Promise<{ tx_id: string
 export async function listTransactions(): Promise<CcTransaction[]> {
   return (await apiClient.get('/cc/wallet/transactions')).data;
 }
+export async function exportTransactionsCsv(month: string): Promise<string> {
+  const resp = await apiClient.get('/cc/wallet/export', { params: { month }, responseType: 'text' });
+  return typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+}
