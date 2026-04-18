@@ -3,7 +3,7 @@ date: 2026-04-17
 business: SafeWay Kids
 topic: 이의림 변호사 미팅 어젠다 (lawyer-meeting-agenda.md) 페르소나 재검토
 status: REVIEW COMPLETE — 조력자 관점 페르소나 5명 신설, 미팅 어젠다 결함 진단 + 보강 권고
-owner: 류재훈 (㈜루넨랩스)
+owner: 류정현 (사업자 등록 단계)
 reviewed_draft: artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.md
 ---
 
@@ -76,7 +76,7 @@ reviewed_draft: artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.m
   - **선례 인용 정밀도** (20): ㈜스쿨버스 선례 활용 정도·정확성
 - **실행 방식**: 어젠다를 주면 5축 채점 + **선례 대비 보강 사항 3개** 권고.
 
-#### P-C4. ㈜루넨랩스 내부 이사회 시뮬레이터 (가상 투자자/COO)
+#### P-C4. 신청사 내부 이사회 시뮬레이터 (가상 투자자/COO)
 - **배경**: 1인 창업의 이사회가 실질적으로 존재하지 않지만, 50만원 단위 지출 결정 + 미팅 ROI 평가가 필요한 시점의 **self-check 페르소나**
 - **마인드셋**:
   - "이 미팅에 투입되는 시간·비용(준비 40시간 + 교통·자료 + 변호사 자문 50~75만원)이 정당한 ROI를 가지는가"
@@ -130,7 +130,7 @@ reviewed_draft: artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.m
 **기대 밖 추가 질문 2개 (사용자가 미리 준비해야 할 질문)**
 
 **AI-1**: **"법인 설립 시기·형태가 실증 승인에 영향을 주는가?"**
-> 현재 ㈜루넨랩스 설립 중 → 신청 접수 시점의 법인 상태가 심사 요건인지 확인 필요.
+> 현재 사업자 등록 단계 → 신청 접수 시점의 법인 상태가 심사 요건인지 확인 필요.
 
 **AI-2**: **"사업자의 재정 능력 증빙 서식·기준"**
 > 첨부 서류 No.2 "재정적·기술적 능력 설명 자료"의 **실제 기준**. 시드 라운드 자금 약정 증빙인지, 통장 잔고 수준인지.

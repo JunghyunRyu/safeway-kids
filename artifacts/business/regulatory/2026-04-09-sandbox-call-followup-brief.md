@@ -4,7 +4,7 @@ business: SafeWay Kids
 topic: ICT 규제 샌드박스 후속 미팅 대비 종합 브리핑
 status: ACTIVE — 그쪽 이메일 회신 대기 중
 next_meeting: 2026-04-23 ±경 (Q&A only, 데모 없음, 과기정통부 ICT 샌드박스)
-owner: 류재훈 (㈜루넨랩스)
+owner: 류정현 (사업자 등록 단계)
 ---
 
 # SafeWay Kids ICT 규제 샌드박스 후속 대응 브리핑

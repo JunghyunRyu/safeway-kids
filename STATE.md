@@ -5,23 +5,27 @@
 > For point-in-time milestone snapshots see `artifacts/reports/`.
 > For historical session records see `artifacts/handoffs/`.
 
-**Last updated**: 2026-04-17
-**Current phase**: Phase 5 — Implementation (ICT 샌드박스 후속 대응 — v2.0.1 병합 완료, 변호사 자문 대기)
+**Last updated**: 2026-04-18
+**Current phase**: Phase 5 — Implementation (v2.0.2 개정 완료, 외부 자문 대기)
 **Active workstream**: SafeWay Kids 규제 샌드박스 2026-05-07 미팅 준비
 **Active brief**: [artifacts/business/regulatory/2026-04-09-sandbox-call-followup-brief.md](artifacts/business/regulatory/2026-04-09-sandbox-call-followup-brief.md)
-**Active draft (v2.0.1)**: [artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md](artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md)
-**Next gate**: 변호사 유료 자문 실시(목표 2026-04-22, 1.5h) → v2.1 확정본 2026-04-28 이의림 변호사 사전 전달 → 2026-05-07 미팅
+**Active draft (v2.0.2)**: [artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md](artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md)
+**Next gate**: 변호사 유료 자문 실시(목표 2026-04-22, 1.5h, **Q17 공백 #6 법리 타당성** 신설 예정) → v2.1 확정본 2026-04-28 대한상공회의소 규제샌드박스 지원센터 사전 전달 → 2026-05-07 미팅
 
 ## Blockers / Waiting On
 - ✅ ~~과기정통부 ICT 샌드박스 후속 이메일~~ → 04-10 이의림 변호사 검토 의견 수신
 - ✅ ~~이메일 회신~~ → 04-10 발송 완료
 - ✅ ~~신청서 v2.0 초안 작성~~ → 2026-04-17 완료 (5명 페르소나 리뷰 88/100 통과)
-- ✅ ~~추가 법령 7종 스캔·병합~~ → 2026-04-17 v2.0.1 완료 (AI 기본법·자배법·교특법·영유아보육법·유아교육법 추가)
-- 🟡 변호사 유료 자문 예약·실시 (D+5 = 2026-04-22, **1.5시간 권장**, Q1~Q16, 예산 50~75만원)
+- ✅ ~~추가 법령 7종 스캔·병합~~ → 2026-04-17 v2.0.1 완료
+- ✅ ~~기능 전수조사 + 공백 #6 신설~~ → 2026-04-18 v2.0.2 완료 (routing_engine/VRP-TW 누락 식별, §2.8 신설)
+- ✅ ~~신청 사업자 표기 개정~~ → 2026-04-18 완료 (㈜루넨랩스 → 사업자 등록 단계)
+- ✅ ~~대한상공회의소 응답 형식 개정~~ → 2026-04-18 완료 (외부 5개 문서에서 개인명 제거)
+- ✅ ~~담당자 이름 개정~~ → 2026-04-18 완료 (류재훈 → 류정현)
+- 🟡 변호사 유료 자문 예약·실시 (D+4 = 2026-04-22, **1.5시간**, Q1~Q16 + **Q17 신설 (공백 #6 법리 타당성)**, 예산 50~75만원)
 - 🟡 AI 기본법 §33 고영향 AI 확인 요청 초안 작성 (실증 개시 전 과기정통부 제출)
-- 🟡 파일럿 협력 학원 1곳 컨택 (D+10 = 2026-04-27 목표)
-- 🟡 v2.1 확정본 이의림 변호사에게 전달 (2026-04-28 목표)
-- 🟡 이의림 변호사 일정 확인 회신 대기 (5/6~8 중 확정 예상)
+- 🟡 파일럿 협력 학원 1곳 컨택 (D+9 = 2026-04-27 목표)
+- 🟡 v2.1 확정본 대한상공회의소 규제샌드박스 지원센터 전달 (2026-04-28 목표)
+- 🟡 대한상공회의소 규제샌드박스 지원센터 일정 확인 회신 대기 (5/6~8 중 확정 예상)
 
 ## Latest Handoff
 - [artifacts/handoffs/2026-04-17-session-final-handoff.md](artifacts/handoffs/2026-04-17-session-final-handoff.md)
@@ -39,7 +43,7 @@
 ## Active Artifacts (quick reference)
 | 파일 | 용도 |
 |---|---|
-| `artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md` | **[NEW]** 신청서 v2.0.1 보정본 markdown (규제 공백 **5개** + §4.6 AI 거버넌스 + §7 부처 9개 + Ultra Think 교정 4종) |
+| `artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md` | **[UPDATED 2026-04-18]** 신청서 **v2.0.2** markdown — 규제 공백 **6개** (#5 AI 기본법 + **#6 동적 배차 책임 귀속** 신설 §2.8), §1.1 **5개 기능 + 부가 기능**, 표기 개정(담당자·신청사·응답 기관) 완료 |
 | `artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0.1-preview.docx` | **[NEW]** 신청서 v2.0.1 **docx preview** (66KB / 299 paragraphs / 21 tables). 이의림 변호사 4/28 사전 전달용 |
 | `.claude/scripts/md-to-docx.py` | **[NEW]** Markdown → DOCX 변환 스크립트 (한글 폰트·표·인용 지원). 재사용 가능 |
 | `artifacts/business/regulatory/2026-04-17-lawyer-consult-questions.md` | **[NEW]** 변호사 유료 자문 질문지 **Q1~Q16** (1.5시간) |
