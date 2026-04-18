@@ -242,14 +242,15 @@ cd site && npm run dev
 > 기계 판독용 상태는 루트의 `STATE.md`에 있고, 두 파일은 `/session-start`·`/session-end` 스킬로 정합성이 유지된다.
 > 상단 "프로젝트 진행 현황 (2026-03-20 기준)"은 **과거 스냅샷**이고, 이 섹션은 **현재 라이브 포인터**다. 혼동 금지.
 
-**Active workstream**: SafeWay Kids ICT 규제 샌드박스 후속 대응 — v2.0.3 (3-agent + 5-persona 통합 리뷰 반영, Critical 10건 수정 완료)
-**Current phase**: Phase 6 — Verification (v2.0.3 내부 품질 게이트 통과, 사용자 결정 3건 대기)
+**Active workstream**: SafeWay Kids ICT 규제 샌드박스 후속 대응 — v2.0.4 (사용자 결정 3건 + 약정 법률 리스크 해소)
+**Current phase**: Phase 6 — Verification (v2.0.4 내부 품질 게이트 통과, 변호사 자문 대기)
 **Active brief**: [`artifacts/business/regulatory/2026-04-09-sandbox-call-followup-brief.md`](artifacts/business/regulatory/2026-04-09-sandbox-call-followup-brief.md)
-**Active draft (v2.0.3)**: [`artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md`](artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md) — **v2.0.3 pre-lawyer final** (§6.1 특례 E·F 신설, §4.6 §34 ③ 재구성, §2.8 톤 조정, 임베딩 보관기간 동기화 등)
+**Active draft (v2.0.4)**: [`artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md`](artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md) — **v2.0.4** (B-1 ㈜루넨랩스 2026 Q2 설립 예정 명시 + B-2 §4.4·§4.5·§4.6 약정 3건 법적 리스크 해소 + B-3 3개 학원 조사 단계)
 **Consolidated review**: [`artifacts/reviews/2026-04-19-v2.0.2-consolidated-review.md`](artifacts/reviews/2026-04-19-v2.0.2-consolidated-review.md) — 3 agents (legal·business·tech-spec) + 5 personas
-**Extended lawyer questions**: [`artifacts/business/regulatory/2026-04-19-lawyer-q17-plus-extended-questions.md`](artifacts/business/regulatory/2026-04-19-lawyer-q17-plus-extended-questions.md) — Q17-b~Q21 신설
+**Legal risk check**: [`artifacts/business/regulatory/2026-04-19-약정-법률리스크-체크.md`](artifacts/business/regulatory/2026-04-19-약정-법률리스크-체크.md) — §4.4·§4.5·§4.6 RISKY 3건 → 대체 문구 v2.0.4 반영
+**Extended lawyer questions**: [`artifacts/business/regulatory/2026-04-19-lawyer-q17-plus-extended-questions.md`](artifacts/business/regulatory/2026-04-19-lawyer-q17-plus-extended-questions.md) — Q17-b~Q22 신설 (**Q22**: 약정 법적 지위)
 **Meeting agenda (5/7)**: [`artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.md`](artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.md)
-**Next gate**: (a) **사용자 결정 3건** (B-1 법인 설립 타임라인, B-2 이행 약정 수위, B-3 파일럿 LOI) → (b) 변호사 유료 자문 2026-04-22 **2h** (Q1~Q16 + Q17 + Q17-b~Q21) 예산 60~90만원 → v2.1 확정본 2026-04-28 대한상공회의소 전달
+**Next gate**: 변호사 유료 자문 2026-04-22 **2h** (Q1~Q16 + Q17 + Q17-b~Q22) 예산 60~90만원 → v2.1 확정본 2026-04-28 대한상공회의소 전달
 **Latest handoff**: [`artifacts/handoffs/2026-04-19-session-handoff.md`](artifacts/handoffs/2026-04-19-session-handoff.md)
 **Next meeting**: 2026-05-07 (±, 대한상공회의소 이의림 변호사 — 수정본 검토 미팅)
 
@@ -257,11 +258,8 @@ cd site && npm run dev
 - ✅ ~~신청서 v2.0 초안 작성 + 추가 법령 7종 병합~~ (2026-04-17 완료, 규제 공백 5개 구조)
 - ✅ ~~기능 전수조사 + 공백 #6 신설 + 신청사·담당자·응답기관 표기 개정~~ (2026-04-18 완료, v2.0.2)
 - ✅ ~~3-agent + 5-persona 통합 리뷰 → v2.0.3 Critical 10건 반영~~ (2026-04-19 완료)
-- 🔴 **사용자 결정 3건 대기** (v2.1 확정 전제):
-  - B-1 법인 설립 타임라인 확정
-  - B-2 §4.4·§4.5·§4.6 이행 불가 약정 재설계 수위
-  - B-3 파일럿 학원 LOI 1장 확보 or 조건 이관
-- 🟡 변호사 유료 자문 예약·실시 (D+3 = 2026-04-22 목표, **2h Q1~Q16 + Q17 + Q17-b·Q18·Q19·Q20·Q21**, 예산 60~90만원)
+- ✅ ~~사용자 결정 3건 + 약정 법률 체크 → v2.0.4 반영~~ (2026-04-19 완료, B-1 루넨랩스 2026 Q2 설립 예정 / B-2 RISKY 3건 대체 / B-3 3개 학원 조사)
+- 🟡 변호사 유료 자문 예약·실시 (D+3 = 2026-04-22 목표, **2h Q1~Q16 + Q17 + Q17-b·Q18·Q19·Q20·Q21·Q22**, 예산 60~90만원)
 - 🟡 AI 기본법 §33 고영향 AI 확인 요청 초안 작성 (실증 개시 전)
 - 🟡 파일럿 협력 학원 1곳 컨택 시도 (D+8 = 2026-04-27 목표)
 - 🟡 v2.1 확정본 대한상공회의소 규제샌드박스 지원센터 전달 (2026-04-28 목표)
