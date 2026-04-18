@@ -249,7 +249,7 @@ cd site && npm run dev
 **Additional review**: [`artifacts/business/regulatory/2026-04-17-additional-legal-review.md`](artifacts/business/regulatory/2026-04-17-additional-legal-review.md)
 **Meeting agenda (5/7)**: [`artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.md`](artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.md) — 이의림 변호사는 **조력자**(지원센터). Q-L1~Q-L20 도움 요청 질문 (외부 제출본에서는 "대한상공회의소 규제샌드박스 지원센터"로 기관화)
 **Next gate**: 변호사 유료 자문 실시(목표 2026-04-22, **1.5시간, Q1~Q16 + Q17 신설(공백 #6 법리 타당성)**) → v2.1 확정본 2026-04-28 대한상공회의소 규제샌드박스 지원센터 사전 전달
-**Latest handoff**: [`artifacts/handoffs/2026-04-17-session-final-handoff.md`](artifacts/handoffs/2026-04-17-session-final-handoff.md)
+**Latest handoff**: [`artifacts/handoffs/2026-04-19-session-handoff.md`](artifacts/handoffs/2026-04-19-session-handoff.md)
 **Next meeting**: 2026-05-07 (±, 대한상공회의소 이의림 변호사 — 수정본 검토 미팅)
 
 **Blockers / Waiting On**:

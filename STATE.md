@@ -28,7 +28,8 @@
 - 🟡 대한상공회의소 규제샌드박스 지원센터 일정 확인 회신 대기 (5/6~8 중 확정 예상)
 
 ## Latest Handoff
-- [artifacts/handoffs/2026-04-17-session-final-handoff.md](artifacts/handoffs/2026-04-17-session-final-handoff.md)
+- [artifacts/handoffs/2026-04-19-session-handoff.md](artifacts/handoffs/2026-04-19-session-handoff.md)
+- (이전) [artifacts/handoffs/2026-04-17-session-final-handoff.md](artifacts/handoffs/2026-04-17-session-final-handoff.md)
 
 ## 04-10 수신 이의림 변호사 검토 의견 5가지 — v2.0 반영 현황
 | # | 쟁점 | 위험도 | v2.0 반영 위치 |
