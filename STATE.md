@@ -5,12 +5,14 @@
 > For point-in-time milestone snapshots see `artifacts/reports/`.
 > For historical session records see `artifacts/handoffs/`.
 
-**Last updated**: 2026-04-18
-**Current phase**: Phase 5 — Implementation (v2.0.2 개정 완료, 외부 자문 대기)
+**Last updated**: 2026-04-19
+**Current phase**: Phase 6 — Verification (v2.0.3 통합 리뷰 반영 완료, 사용자 결정 3건 대기)
 **Active workstream**: SafeWay Kids 규제 샌드박스 2026-05-07 미팅 준비
 **Active brief**: [artifacts/business/regulatory/2026-04-09-sandbox-call-followup-brief.md](artifacts/business/regulatory/2026-04-09-sandbox-call-followup-brief.md)
-**Active draft (v2.0.2)**: [artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md](artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md)
-**Next gate**: 변호사 유료 자문 실시(목표 2026-04-22, 1.5h, **Q17 공백 #6 법리 타당성** 신설 예정) → v2.1 확정본 2026-04-28 대한상공회의소 규제샌드박스 지원센터 사전 전달 → 2026-05-07 미팅
+**Active draft (v2.0.3)**: [artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md](artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md) — **v2.0.3 pre-lawyer final** (Critical 10건 반영)
+**Consolidated review**: [artifacts/reviews/2026-04-19-v2.0.2-consolidated-review.md](artifacts/reviews/2026-04-19-v2.0.2-consolidated-review.md) — 3 agents + 5 personas
+**Extended lawyer questions**: [artifacts/business/regulatory/2026-04-19-lawyer-q17-plus-extended-questions.md](artifacts/business/regulatory/2026-04-19-lawyer-q17-plus-extended-questions.md) — Q17-b~Q21 신설
+**Next gate**: (a) 사용자 결정 3건 (B-1 법인 설립 타임라인, B-2 이행 약정 수위, B-3 파일럿 LOI) → (b) 변호사 유료 자문 2026-04-22 목표 **2h** (Q1~Q16 + Q17 + Q17-b~Q21) 예산 60~90만원 → v2.1 확정본 2026-04-28 대한상공회의소 규제샌드박스 지원센터 전달 → 2026-05-07 미팅
 
 ## Blockers / Waiting On
 - ✅ ~~과기정통부 ICT 샌드박스 후속 이메일~~ → 04-10 이의림 변호사 검토 의견 수신
@@ -21,7 +23,12 @@
 - ✅ ~~신청 사업자 표기 개정~~ → 2026-04-18 완료 (㈜루넨랩스 → 사업자 등록 단계)
 - ✅ ~~대한상공회의소 응답 형식 개정~~ → 2026-04-18 완료 (외부 5개 문서에서 개인명 제거)
 - ✅ ~~담당자 이름 개정~~ → 2026-04-18 완료 (류재훈 → 류정현)
-- 🟡 변호사 유료 자문 예약·실시 (D+4 = 2026-04-22, **1.5시간**, Q1~Q16 + **Q17 신설 (공백 #6 법리 타당성)**, 예산 50~75만원)
+- ✅ ~~3-agent + 5-persona 통합 리뷰~~ → 2026-04-19 완료 (72→85/100 목표, Critical 10건 반영하여 v2.0.3 생성)
+- 🔴 **사용자 결정 3건 대기** (v2.1 확정 전제):
+  - B-1 법인 설립 타임라인 확정 (가/나/다 선택)
+  - B-2 §4.4·§4.5·§4.6 이행 불가 약정 재설계 수위
+  - B-3 파일럿 학원 LOI 1장 확보 or §10 No.5 조건 이관
+- 🟡 변호사 유료 자문 예약·실시 (D+3 = 2026-04-22, **2시간**, Q1~Q16 + Q17 + **Q17-b·Q18·Q19·Q20·Q21 신설**, 예산 60~90만원)
 - 🟡 AI 기본법 §33 고영향 AI 확인 요청 초안 작성 (실증 개시 전 과기정통부 제출)
 - 🟡 파일럿 협력 학원 1곳 컨택 (D+9 = 2026-04-27 목표)
 - 🟡 v2.1 확정본 대한상공회의소 규제샌드박스 지원센터 전달 (2026-04-28 목표)
