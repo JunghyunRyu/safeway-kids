@@ -236,6 +236,44 @@ cd site && npm run dev
 - 최신 핸드오프: `artifacts/handoffs/2026-03-20-session-final-handoff.md`
 - 진행 현황 보고서: `artifacts/reports/2026-03-20-project-progress-report.md`
 
+## Active Work (Live)
+
+> **Live pointer** — 이 섹션은 "지금 무엇이 진행 중인가"의 human-readable mirror.
+> 기계 판독용 상태는 루트의 `STATE.md`에 있고, 두 파일은 `/session-start`·`/session-end` 스킬로 정합성이 유지된다.
+> 상단 "프로젝트 진행 현황 (2026-03-20 기준)"은 **과거 스냅샷**이고, 이 섹션은 **현재 라이브 포인터**다. 혼동 금지.
+
+**Active workstream**: SafeWay Kids ICT 규제 샌드박스 후속 대응 — v2.0.1 (추가 법령 7종 스캔 병합) 완료
+**Current phase**: Phase 5 — Implementation (수정본 v2.0.1 완료, 변호사 자문 대기)
+**Active brief**: [`artifacts/business/regulatory/2026-04-09-sandbox-call-followup-brief.md`](artifacts/business/regulatory/2026-04-09-sandbox-call-followup-brief.md)
+**Active draft (v2.0.1)**: [`artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md`](artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md)
+**Additional review**: [`artifacts/business/regulatory/2026-04-17-additional-legal-review.md`](artifacts/business/regulatory/2026-04-17-additional-legal-review.md)
+**Meeting agenda (5/7)**: [`artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.md`](artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.md) — 이의림 변호사는 **조력자**(지원센터). Q-L1~Q-L20 도움 요청 질문
+**Next gate**: 변호사 유료 자문 실시(목표 2026-04-22, **1.5시간, Q1~Q16**) → v2.1 확정본 2026-04-28 이의림 변호사 사전 전달
+**Latest handoff**: [`artifacts/handoffs/2026-04-17-session-final-handoff.md`](artifacts/handoffs/2026-04-17-session-final-handoff.md)
+**Next meeting**: 2026-05-07 (±, 대한상공회의소 이의림 변호사 — 수정본 검토 미팅)
+
+**Blockers / Waiting On**:
+- ✅ ~~신청서 v2.0 초안 작성 + 추가 법령 7종 병합~~ (2026-04-17 완료, 규제 공백 5개 구조)
+- 🟡 변호사 유료 자문 예약·실시 (D+5 = 2026-04-22 목표, **1.5h Q1~Q16**, 예산 50~75만원)
+- 🟡 AI 기본법 §33 고영향 AI 확인 요청 초안 작성 (실증 개시 전)
+- 🟡 파일럿 협력 학원 1곳 컨택 시도 (D+10 = 2026-04-27 목표)
+- 🟡 v2.1 확정본 이의림 변호사 전달 (2026-04-28 목표)
+- 🟡 이의림 변호사 일정 확인 회신 대기 (5/6~8 중 확정 예상)
+
+### Session bootstrap
+| 시점 | 명령 |
+|---|---|
+| 새 세션 시작 | `/session-start` 또는 자연어 "작업 이어갈게" |
+| 세션 종료 | `/session-end` 또는 자연어 "마무리하자" |
+| 샌드박스 상세 작업 | `/sandbox-followup [email\|prep\|status\|review]` |
+| 상세 상태 파일 | `STATE.md` (루트) |
+
+### Specialist pool (user-level agents)
+- `business-operations-manager` — 사업 전반 (CFO+COO+CSO 통합)
+- `korea-regulatory-counsel` — 한국 규제·법무 1차 자문
+- `korea-tax-accounting-advisor` — 한국 세무·회계
+- `korea-fundraising-strategist` — 정부지원사업 + 초기 VC IR
+
 ## References
 - `@docs/framework-reference.md`
 - `@docs/customization.md`
