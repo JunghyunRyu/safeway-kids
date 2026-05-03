@@ -1,5 +1,6 @@
 """PetTracker service layer — business logic for pets, walkers, bookings, walks, wallets."""
 
+import json
 import logging
 import math
 import uuid
@@ -12,6 +13,8 @@ from app.apps.pettracker.models import (
     Pet,
     PtBooking,
     PtBookingStatus,
+    PtPayment,
+    PtPaymentStatus,
     WalkGpsHistory,
     WalkSession,
     WalkerAvailability,
@@ -138,6 +141,9 @@ async def get_walker_profile(db: AsyncSession, walker_id: uuid.UUID) -> dict:
         "avg_rating": round(float(avg_rating), 1) if avg_rating else None,
         "total_walks": total_walks,
         "total_reviews": total_reviews or 0,
+        "has_insurance": qual.has_insurance if qual else False,
+        "insurance_expiry": qual.insurance_expiry if qual else None,
+        "profile_photo_url": qual.profile_photo_url if qual else None,
     }
 
 
@@ -422,7 +428,12 @@ async def end_walk(db: AsyncSession, session_id: uuid.UUID, walker_id: uuid.UUID
 
 
 async def record_gps(db: AsyncSession, session_id: uuid.UUID, point: GpsPoint) -> None:
-    """Record a single GPS point for a walk session."""
+    """Record a single GPS point for a walk session.
+
+    DB 영속 후 Redis pub/sub 채널 `pt:walk:{session_id}:updates`에 발행.
+    Publish 실패는 영속을 깨지 않음 (fail-soft).
+    Gap Note: artifacts/gap-notes/2026-04-30-record-gps-publish-missing.md
+    """
     gps = WalkGpsHistory(
         session_id=session_id,
         latitude=point.latitude,
@@ -434,6 +445,26 @@ async def record_gps(db: AsyncSession, session_id: uuid.UUID, point: GpsPoint) -
     )
     db.add(gps)
     await db.flush()
+
+    try:
+        import asyncio
+        from app.redis import redis_client
+        payload = json.dumps({
+            "type": "gps",
+            "session_id": str(session_id),
+            "lat": point.latitude,
+            "lng": point.longitude,
+            "heading": point.heading,
+            "speed": point.speed,
+            "recorded_at": point.recorded_at.isoformat(),
+        })
+        # Short timeout so missing redis (test/dev) does not block GPS persistence.
+        await asyncio.wait_for(
+            redis_client.publish(f"pt:walk:{session_id}:updates", payload),
+            timeout=1.0,
+        )
+    except Exception as e:
+        logger.warning("PT GPS publish failed (session=%s): %s", session_id, e)
 
 
 async def get_walk_report(db: AsyncSession, session_id: uuid.UUID) -> WalkSession:
@@ -526,3 +557,209 @@ async def list_transactions(db: AsyncSession, user_id: uuid.UUID) -> list[Wallet
         .limit(50)
     )
     return list((await db.execute(stmt)).scalars().all())
+
+
+# ── Payment Service (PortOne v2) ─────────────────────────────────
+
+def _build_merchant_uid(booking_id: uuid.UUID) -> str:
+    """`pt_<booking_short>_<unix_ts>` 형태의 가맹점 주문번호 생성."""
+    ts = int(datetime.now(UTC).timestamp())
+    return f"pt_{booking_id.hex[:12]}_{ts}"
+
+
+async def prepare_payment(
+    db: AsyncSession,
+    owner_id: uuid.UUID,
+    booking_id: uuid.UUID,
+) -> PtPayment:
+    """결제 prepare — PortOne 결제창 호출 직전 백엔드에 merchant_uid 발급/저장.
+
+    호출 시점: 워커 수락 직후 ~ 산책 시작 전. booking 상태가 in_progress / completed면 차단.
+    동일 booking에 PAID payment가 이미 있으면 중복 방지.
+    """
+    booking = await db.get(PtBooking, booking_id)
+    if not booking:
+        raise NotFoundError(detail="예약을 찾을 수 없습니다")
+    if booking.owner_id != owner_id:
+        raise ForbiddenError(detail="본인의 예약에 대해서만 결제할 수 있습니다")
+    if booking.status in (PtBookingStatus.IN_PROGRESS, PtBookingStatus.COMPLETED, PtBookingStatus.CANCELLED, PtBookingStatus.EXPIRED):
+        raise ValidationError(detail=f"현재 상태({booking.status})에서는 결제할 수 없습니다")
+
+    existing_paid = (await db.execute(
+        select(PtPayment)
+        .where(PtPayment.booking_id == booking_id)
+        .where(PtPayment.status == PtPaymentStatus.PAID)
+    )).scalar_one_or_none()
+    if existing_paid:
+        return existing_paid
+
+    payment = PtPayment(
+        booking_id=booking_id,
+        amount=booking.price,
+        currency="KRW",
+        pg_provider="portone",
+        merchant_uid=_build_merchant_uid(booking_id),
+        status=PtPaymentStatus.PENDING,
+    )
+    db.add(payment)
+    await db.flush()
+    return payment
+
+
+async def confirm_payment(
+    db: AsyncSession,
+    owner_id: uuid.UUID,
+    imp_uid: str,
+    merchant_uid: str,
+) -> PtPayment:
+    """결제 confirm — PortOne 결제창 종료 후 백엔드에서 결제 상태/금액 검증.
+
+    Idempotent: 이미 PAID 상태이고 imp_uid도 같으면 그대로 반환.
+    """
+    from app.modules.billing.providers.portone import portone_provider
+
+    payment = (await db.execute(
+        select(PtPayment).where(PtPayment.merchant_uid == merchant_uid)
+    )).scalar_one_or_none()
+    if not payment:
+        raise NotFoundError(detail="결제 정보를 찾을 수 없습니다")
+
+    booking = await db.get(PtBooking, payment.booking_id)
+    if not booking or booking.owner_id != owner_id:
+        raise ForbiddenError(detail="본인의 결제만 확인할 수 있습니다")
+
+    if payment.status == PtPaymentStatus.PAID and payment.imp_uid == imp_uid:
+        return payment
+
+    if payment.status not in (PtPaymentStatus.PENDING, PtPaymentStatus.PAID):
+        raise ValidationError(detail=f"결제 상태({payment.status})에서는 confirm할 수 없습니다")
+
+    pg_resp = await portone_provider.confirm_payment(
+        payment_key=imp_uid,
+        order_id=merchant_uid,
+        amount=payment.amount,
+    )
+    pg_status = pg_resp.get("status")
+    if pg_status not in ("PAID", "VIRTUAL_ACCOUNT_ISSUED"):
+        raise ValidationError(detail=f"PG 결제 상태가 비정상입니다: {pg_status}")
+
+    payment.imp_uid = imp_uid
+    payment.status = PtPaymentStatus.PAID
+    payment.paid_at = datetime.now(UTC)
+    await db.flush()
+    return payment
+
+
+async def cancel_payment(
+    db: AsyncSession,
+    owner_id: uuid.UUID,
+    payment_id: uuid.UUID,
+    reason: str,
+    cancel_amount: int | None = None,
+) -> PtPayment:
+    """결제 취소/환불.
+
+    - cancel_amount=None 또는 amount와 같으면 전액 취소 (CANCELLED)
+    - 부분 취소면 REFUNDED, 잔액은 cancel_amount 컬럼에 누적.
+    """
+    from app.modules.billing.providers.portone import portone_provider
+
+    payment = await db.get(PtPayment, payment_id)
+    if not payment:
+        raise NotFoundError(detail="결제 정보를 찾을 수 없습니다")
+
+    booking = await db.get(PtBooking, payment.booking_id)
+    if not booking or booking.owner_id != owner_id:
+        raise ForbiddenError(detail="본인의 결제만 취소할 수 있습니다")
+
+    if payment.status != PtPaymentStatus.PAID:
+        raise ValidationError(detail=f"결제 상태({payment.status})에서는 취소할 수 없습니다")
+
+    if not payment.imp_uid:
+        raise ValidationError(detail="PG 결제 식별자(imp_uid)가 없어 취소할 수 없습니다")
+
+    if cancel_amount is not None and cancel_amount > payment.amount:
+        raise ValidationError(detail="취소 금액이 결제 금액을 초과합니다")
+
+    await portone_provider.cancel_payment(
+        payment_key=payment.imp_uid,
+        cancel_reason=reason,
+        cancel_amount=cancel_amount,
+    )
+
+    payment.cancel_amount = cancel_amount if cancel_amount is not None else payment.amount
+    payment.cancel_reason = reason
+    payment.cancelled_at = datetime.now(UTC)
+    payment.status = (
+        PtPaymentStatus.CANCELLED
+        if cancel_amount is None or cancel_amount == payment.amount
+        else PtPaymentStatus.REFUNDED
+    )
+    await db.flush()
+    return payment
+
+
+async def handle_portone_webhook_event(
+    db: AsyncSession,
+    payload: dict,
+) -> dict:
+    """PortOne v2 webhook 상태 sync.
+
+    Payload 예시 (V2): {"type": "Transaction.Paid", "data": {"paymentId": "...", "status": "PAID", ...}}
+    또는 V1: {"imp_uid": "...", "merchant_uid": "...", "status": "paid"}.
+    Payment row가 없으면 조용히 200 반환 (확장 결제 흐름 또는 다른 가맹점 noise).
+    """
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+    imp_uid = data.get("paymentId") or data.get("imp_uid")
+    merchant_uid = data.get("orderId") or data.get("merchant_uid")
+    pg_status = (data.get("status") or "").upper()
+
+    if not imp_uid and not merchant_uid:
+        logger.warning("PortOne webhook: paymentId/merchant_uid 모두 없음 — 무시")
+        return {"status": "ignored", "reason": "missing identifiers"}
+
+    stmt = select(PtPayment)
+    if imp_uid and merchant_uid:
+        stmt = stmt.where(
+            (PtPayment.imp_uid == imp_uid) | (PtPayment.merchant_uid == merchant_uid)
+        )
+    elif imp_uid:
+        stmt = stmt.where(PtPayment.imp_uid == imp_uid)
+    else:
+        stmt = stmt.where(PtPayment.merchant_uid == merchant_uid)
+
+    payment = (await db.execute(stmt)).scalar_one_or_none()
+    if not payment:
+        logger.info("PortOne webhook: 일치하는 PtPayment 없음 imp_uid=%s merchant_uid=%s", imp_uid, merchant_uid)
+        return {"status": "ignored", "reason": "no matching payment"}
+
+    if imp_uid and not payment.imp_uid:
+        payment.imp_uid = imp_uid
+
+    if pg_status == "PAID" and payment.status != PtPaymentStatus.PAID:
+        payment.status = PtPaymentStatus.PAID
+        payment.paid_at = payment.paid_at or datetime.now(UTC)
+    elif pg_status in ("CANCELLED", "PARTIAL_CANCELLED"):
+        cancel_amount_raw = data.get("cancelAmount") or data.get("cancel_amount")
+        if isinstance(cancel_amount_raw, dict):
+            cancel_amount_raw = cancel_amount_raw.get("total")
+        try:
+            cancel_amount = int(cancel_amount_raw) if cancel_amount_raw is not None else None
+        except (TypeError, ValueError):
+            cancel_amount = None
+        payment.cancelled_at = payment.cancelled_at or datetime.now(UTC)
+        payment.cancel_amount = cancel_amount if cancel_amount is not None else payment.amount
+        payment.status = (
+            PtPaymentStatus.CANCELLED
+            if pg_status == "CANCELLED" or cancel_amount is None or cancel_amount == payment.amount
+            else PtPaymentStatus.REFUNDED
+        )
+    elif pg_status == "FAILED":
+        payment.status = PtPaymentStatus.PENDING
+
+    await db.flush()
+    return {
+        "status": "applied",
+        "payment_id": str(payment.id),
+        "new_status": payment.status,
+    }

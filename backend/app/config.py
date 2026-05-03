@@ -37,6 +37,17 @@ class Settings(BaseSettings):
     toss_payments_client_key: str = ""
     toss_payments_webhook_secret: str = ""
 
+    # PortOne v2 (PT/CC)
+    portone_api_secret: str = ""
+    portone_webhook_secret: str = ""
+    portone_store_id: str = ""
+
+    # AWS S3 (PT/CC photo upload)
+    aws_region: str = "ap-northeast-2"
+    s3_bucket: str = ""
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+
     # Edge AI Gateway
     edge_api_key: str = ""  # env: EDGE_API_KEY
 
@@ -59,7 +70,7 @@ class Settings(BaseSettings):
     dev_login_secret: str = "change-me-dev"
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://192.168.44.128:5173", "http://192.168.44.128:5174"]
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:8081", "http://192.168.44.128:5173", "http://192.168.44.128:5174", "http://192.168.44.128:8081", "https://e41b-175-114-67-73.ngrok-free.app"]
 
     # Rate limiting
     rate_limit_auth: str = "30/minute"

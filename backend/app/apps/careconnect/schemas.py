@@ -83,7 +83,9 @@ class CcBookingResponse(BaseModel):
     id: uuid.UUID
     parent_id: uuid.UUID
     caregiver_id: uuid.UUID | None
+    caregiver_name: str | None = None
     child_id: uuid.UUID
+    child_name: str | None = None
     care_type: str
     scheduled_at: datetime
     duration_hours: float

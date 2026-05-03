@@ -2,8 +2,16 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, Linking, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
+import { useWebSocket } from '@safeway/core-mobile/hooks/useWebSocket';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { getWalkReport } from '../../api/walks';
+
+type GpsMsg = {
+  type?: string;
+  lat?: number;
+  lng?: number;
+  recorded_at?: string;
+};
 
 export default function LiveTrackScreen({ route, navigation }: any) {
   const { sessionId } = route?.params || {};
@@ -16,12 +24,11 @@ export default function LiveTrackScreen({ route, navigation }: any) {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Polling: fetch walker location every 5 seconds
+  // ── HTTP fetch (initial load + polling fallback) ────────────────
   const fetchLocation = useCallback(async () => {
     if (!sessionId) return;
     try {
       const report = await getWalkReport(sessionId);
-      // Use the latest GPS point from the route polyline if available
       if (report.route_polyline && report.route_polyline.length > 0) {
         const validPoints = (report.route_polyline as any[])
           .filter((p) => Array.isArray(p) && p.length >= 2 && typeof p[0] === 'number' && typeof p[1] === 'number')
@@ -37,26 +44,55 @@ export default function LiveTrackScreen({ route, navigation }: any) {
       }
       setIsLoading(false);
     } catch {
-      // Silently fail on poll — position will update on next attempt
       setIsLoading(false);
     }
   }, [sessionId, startedAt]);
 
-  // Start polling and timer on mount
+  // ── WebSocket: real-time GPS stream ─────────────────────────────
+  // Backend C-12 publishes to `pt:walk:{session_id}:updates`
+  // Hook auto-reconnects; on permanent fail we resume HTTP polling.
+  const { status: wsStatus } = useWebSocket({
+    path: sessionId ? `/pt/ws/walks/${sessionId}` : '/pt/ws/walks/none',
+    enabled: Boolean(sessionId),
+    onMessage: (msg: unknown) => {
+      const data = msg as GpsMsg;
+      if (data?.type !== 'gps' || typeof data.lat !== 'number' || typeof data.lng !== 'number') {
+        return;
+      }
+      const point: [number, number] = [data.lat, data.lng];
+      setRoutePoints((prev) => [...prev, point]);
+      setWalkerPosition({ lat: data.lat, lng: data.lng });
+      setIsLoading(false);
+    },
+  });
+
+  // ── Initial load + polling fallback when WS fails ───────────────
   useEffect(() => {
     fetchLocation();
-    pollRef.current = setInterval(fetchLocation, 5000);
-
-    // Elapsed time counter (1 second interval)
     timerRef.current = setInterval(() => {
       setElapsedSeconds((prev) => prev + 1);
     }, 1000);
 
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
+      if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [fetchLocation]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Toggle HTTP polling based on WS health.
+  useEffect(() => {
+    if (wsStatus === 'failed') {
+      if (!pollRef.current) {
+        pollRef.current = setInterval(fetchLocation, 5000);
+      }
+    } else {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    }
+  }, [wsStatus, fetchLocation]);
 
   const formatElapsed = (s: number) => {
     const m = Math.floor(s / 60);
@@ -148,10 +184,20 @@ export default function LiveTrackScreen({ route, navigation }: any) {
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>실시간 추적</Text>
-        <View style={styles.liveBadge}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>LIVE</Text>
-        </View>
+        {wsStatus === 'open' ? (
+          <View style={styles.liveBadge}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>LIVE</Text>
+          </View>
+        ) : wsStatus === 'failed' ? (
+          <View style={[styles.liveBadge, { backgroundColor: Colors.borderLight }]}>
+            <Text style={[styles.liveText, { color: Colors.textSecondary }]}>POLLING</Text>
+          </View>
+        ) : (
+          <View style={[styles.liveBadge, { backgroundColor: Colors.borderLight }]}>
+            <Text style={[styles.liveText, { color: Colors.textSecondary }]}>연결중</Text>
+          </View>
+        )}
       </View>
 
       {isLoading && !walkerPosition ? (

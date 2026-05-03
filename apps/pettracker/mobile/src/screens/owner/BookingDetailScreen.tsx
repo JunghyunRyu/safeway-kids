@@ -73,7 +73,17 @@ export default function BookingDetailScreen({ route, navigation }: any) {
       {/* Action Buttons */}
       <View style={styles.actions}>
         {canTrack && (
-          <Pressable style={styles.actionBtn} onPress={() => navigation.navigate('LiveTrack', { sessionId: 'todo' })}>
+          <Pressable
+            style={styles.actionBtn}
+            onPress={() => {
+              const sid = (booking as any).session_id;
+              if (!sid) {
+                Alert.alert('알림', '활성 산책 세션을 찾을 수 없습니다');
+                return;
+              }
+              navigation.navigate('LiveTrack', { sessionId: sid });
+            }}
+          >
             <Ionicons name="map" size={20} color={Colors.textInverse} />
             <Text style={styles.actionText}>실시간 추적</Text>
           </Pressable>

@@ -242,28 +242,73 @@ cd site && npm run dev
 > 기계 판독용 상태는 루트의 `STATE.md`에 있고, 두 파일은 `/session-start`·`/session-end` 스킬로 정합성이 유지된다.
 > 상단 "프로젝트 진행 현황 (2026-03-20 기준)"은 **과거 스냅샷**이고, 이 섹션은 **현재 라이브 포인터**다. 혼동 금지.
 
-**Active workstream**: SafeWay Kids ICT 규제 샌드박스 후속 대응 — v2.0.4 (사용자 결정 3건 + 약정 법률 리스크 해소)
-**Current phase**: Phase 6 — Verification (v2.0.4 내부 품질 게이트 통과, 변호사 자문 대기)
-**Active brief**: [`artifacts/business/regulatory/2026-04-09-sandbox-call-followup-brief.md`](artifacts/business/regulatory/2026-04-09-sandbox-call-followup-brief.md)
-**Active draft (v2.0.4)**: [`artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md`](artifacts/business/regulatory/2026-04-17-sandbox-application-v2.0-draft.md) — **v2.0.4** (B-1 ㈜루넨랩스 2026 Q2 설립 예정 명시 + B-2 §4.4·§4.5·§4.6 약정 3건 법적 리스크 해소 + B-3 3개 학원 조사 단계)
-**Consolidated review**: [`artifacts/reviews/2026-04-19-v2.0.2-consolidated-review.md`](artifacts/reviews/2026-04-19-v2.0.2-consolidated-review.md) — 3 agents (legal·business·tech-spec) + 5 personas
-**Legal risk check**: [`artifacts/business/regulatory/2026-04-19-약정-법률리스크-체크.md`](artifacts/business/regulatory/2026-04-19-약정-법률리스크-체크.md) — §4.4·§4.5·§4.6 RISKY 3건 → 대체 문구 v2.0.4 반영
-**Extended lawyer questions**: [`artifacts/business/regulatory/2026-04-19-lawyer-q17-plus-extended-questions.md`](artifacts/business/regulatory/2026-04-19-lawyer-q17-plus-extended-questions.md) — Q17-b~Q22 신설 (**Q22**: 약정 법적 지위)
-**Meeting agenda (5/7)**: [`artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.md`](artifacts/business/regulatory/2026-04-17-lawyer-meeting-agenda.md)
-**Next gate**: 변호사 유료 자문 2026-04-22 **2h** (Q1~Q16 + Q17 + Q17-b~Q22) 예산 60~90만원 → v2.1 확정본 2026-04-28 대한상공회의소 전달
-**Latest handoff**: [`artifacts/handoffs/2026-04-19-session-handoff.md`](artifacts/handoffs/2026-04-19-session-handoff.md)
-**Next meeting**: 2026-05-07 (±, 대한상공회의소 이의림 변호사 — 수정본 검토 미팅)
+**Active workstream**: PetTracker V1.0 출시 + 모두의 창업 2026 신청 (Track 1 신청서 + Track 2 AI 구현 분리)
+**Current phase**: **Phase 4 → Phase 5 진입 직전** (Track 1 신청서 우선 4/30~5/15, Track 2 AI 구현 5/16~6/9)
+**Active brief**: [`artifacts/specs/2026-04-29-pt-ai-differentiation-brief.md`](artifacts/specs/2026-04-29-pt-ai-differentiation-brief.md) (AI 차별화 8축) + [`artifacts/specs/2026-04-24-pettracker-careconnect-quality-uplift-plan.md`](artifacts/specs/2026-04-24-pettracker-careconnect-quality-uplift-plan.md) (PT V1.0 baseline)
+**Final Tech Spec**: [`artifacts/specs/2026-04-29-pt-ai-differentiation-final-tech-spec.md`](artifacts/specs/2026-04-29-pt-ai-differentiation-final-tech-spec.md) — 21 섹션, 사용자 결정 D-1=5축 / D-2=TTcare 추상화 / D-7=글로벌 출처 삭제 + Consensus 자동 반영 15건
+**Todo Plan**: [`artifacts/plans/2026-04-30-pt-ai-differentiation-todo-plan.md`](artifacts/plans/2026-04-30-pt-ai-differentiation-todo-plan.md) — Track 1 (4/30~5/15 신청서) + Track 2 (5/16~6/9 AI 5축 구현)
+**Consensus matrix**: [`artifacts/reviews/2026-04-29-pt-ai-differentiation-consensus.md`](artifacts/reviews/2026-04-29-pt-ai-differentiation-consensus.md) — 3 reviewer (backend-dev 6/10 / product-manager 6/10 / korea-fundraising-strategist 7/10), 점수 회복 +9~13 → **79~86점 진입**
+**보강 산출물**: [`artifacts/business/fundraising/2026-04-30-pt-differentiation-moat-bm-deepening.md`](artifacts/business/fundraising/2026-04-30-pt-differentiation-moat-bm-deepening.md) — 차별화 3 layer + Moat 5종 + BMC 9 blocks + Unit Economics 3 시나리오 (LTV/CAC 6.16 기본) + 면접 답변 4건
+**Cross-check (5/3 신규)**: [`artifacts/business/fundraising/2026-04-30-modoo-eval-guide-crosscheck.md`](artifacts/business/fundraising/2026-04-30-modoo-eval-guide-crosscheck.md) — 1차 출처 100% (`/intro` + 공고문 PDF + 공식 FAQ 답변) / 평가 5축 (가능성·구체성·기대효과·차별성·효과성) / cross-check 5변경 / 신청서 7개 항목별 inject 가이드
+**신청서 본문 v1 (5/3 신규)**: [`artifacts/business/fundraising/2026-04-30-modoo-startup-pt-application-v1.md`](artifacts/business/fundraising/2026-04-30-modoo-startup-pt-application-v1.md) — 26KB / 362행 / 본문 ~2,967자 / 5축 매트릭스 30/30 cell / 자체 채점 36/50 (72%) / placeholder 6건 (가입자 1 + LOI 5명) / 약점 Top 3 보강 가이드 / D-15 사전 작성 +9일 buffer
+**Latest verification**: [`artifacts/verification/2026-04-30-c14-livetrack-ws-verification.md`](artifacts/verification/2026-04-30-c14-livetrack-ws-verification.md) — C-13/C-14 선행 완료. PT jest **20 passed** (15 → 20, +5 useWebSocket), TS **0 errors** (PT/core-mobile 동시), 전체 persona 시나리오 **22 passed in 4.83s**. C-13: `packages/core-mobile/hooks/useWebSocket.ts` (지수 백오프 재연결 + first-message auth). C-14: `LiveTrackScreen.tsx` WS 통합 + polling fallback. Gap-fix: `record_gps`에 Redis publish 추가 (1초 timeout fail-soft).
+**Next gate**: **Track 1 — 5/8 D-7 strong-go/no-go 게이트** (가입자 ≥30 + LOI ≥3 + 5/7 변호사 미팅 회수) → **5/9 placeholder 6건 inject로 v2 즉시 생성** (가입자 1 + LOI 5명) → 5/10 1차 채점 (`evaluator-rubric-reviewer` 5 페르소나) → 5/13 v3 80점 목표 → 5/14 운영기관 최종 선택 (서울 AC 5개) → **5/15 16:00 K-Startup 포털 제출** → 5/16 Track 2 시작 (T2.0 `pip check` 첫 단계)
+**Latest handoff**: [`artifacts/handoffs/2026-05-03-session-handoff.md`](artifacts/handoffs/2026-05-03-session-handoff.md) — **modoo.or.kr 평가 가이드 cross-check + 신청서 본문 v1 D-15 사전 작성 완료 (5축 anchor 30/30 / 자체 36/50 / placeholder 6건 / +9일 buffer)** (이전: 4/30 오후 — 동기 174건 + V2.0 6축 / 4/30 오전 — AI 차별화 Phase 0~4 + 옵션 A 채택). (이전: 4/29 P0 5건 / 4/27 트랙션 매핑 / 4/24 베이스라인)
+**PT 출시 타깃**: **2026-06-09 ±2d** (옵션 A: 신청서 우선 → AI 5축 5/16부터 시작, 기존 6/4 → 6/9)
+**Open Gap Notes**:
+- [`artifacts/gap-notes/2026-04-27-storage-contract-divergence.md`](artifacts/gap-notes/2026-04-27-storage-contract-divergence.md) — Storage FR-3.x ↔ deployed code 4 divergence (V1.1 해소)
 
-**Blockers / Waiting On**:
-- ✅ ~~신청서 v2.0 초안 작성 + 추가 법령 7종 병합~~ (2026-04-17 완료, 규제 공백 5개 구조)
-- ✅ ~~기능 전수조사 + 공백 #6 신설 + 신청사·담당자·응답기관 표기 개정~~ (2026-04-18 완료, v2.0.2)
-- ✅ ~~3-agent + 5-persona 통합 리뷰 → v2.0.3 Critical 10건 반영~~ (2026-04-19 완료)
-- ✅ ~~사용자 결정 3건 + 약정 법률 체크 → v2.0.4 반영~~ (2026-04-19 완료, B-1 루넨랩스 2026 Q2 설립 예정 / B-2 RISKY 3건 대체 / B-3 3개 학원 조사)
-- 🟡 변호사 유료 자문 예약·실시 (D+3 = 2026-04-22 목표, **2h Q1~Q16 + Q17 + Q17-b·Q18·Q19·Q20·Q21·Q22**, 예산 60~90만원)
-- 🟡 AI 기본법 §33 고영향 AI 확인 요청 초안 작성 (실증 개시 전)
-- 🟡 파일럿 협력 학원 1곳 컨택 시도 (D+8 = 2026-04-27 목표)
-- 🟡 v2.1 확정본 대한상공회의소 규제샌드박스 지원센터 전달 (2026-04-28 목표)
-- 🟡 이의림 변호사 일정 확인 회신 대기 (5/6~8 중 확정 예상)
+**Blockers / Waiting On (PT 워크스트림)**:
+- ✅ ~~Phase 0 Baseline~~ → 145 passed, TS/jest/vitest all pass
+- ✅ ~~Milestone A 잔여 5건~~ → 보험 UI / Handover 데이터 / 신원조회 stub 완료, 145 passed (회귀 0)
+- ✅ ~~Milestone B 모바일 테스트 인프라~~ → PT jest 7 suites · 12 tests, Firebase Auth 미들웨어 + Alembic firebase_uid 완료
+- ✅ ~~Milestone C-1/3 PG provider 추상화 + PortOne v2 provider~~ → import smoke OK
+- ✅ ~~Milestone C-Pay~~ → C-4 PtPayment 모델 + manual Alembic, C-5 `/pt/payments/{prepare,confirm,{id}/cancel}`, C-6 `/billing/webhook/portone` (HMAC fail-closed). 145 passed.
+- ✅ ~~Milestone C-Storage 백엔드~~ → C-7 storage 모듈 (S3/Local fallback) + `/api/v1/storage/upload-url`
+- ✅ ~~Milestone C-WS 백엔드~~ → C-11 `ws_auth.py` (DI 주입), C-12 `/pt/ws/walks/{session_id}` (`pt:walk:{id}:updates`)
+- ✅ ~~Milestone C-9 useImageUpload~~ → core-mobile hook + PT jest 3 cases (presigned PUT + FR-3.3 prefix). 15 passed.
+- ✅ ~~Milestone C-10 PT 사진 업로드 UI~~ → WalkerProfileScreen + WalkScreen 통합. 백엔드 persistence는 Gap Note D-3/D-4 (V1.1 이연).
+- 🟡 **Track 2 AI 구현 트랙 (5/16 시작)** — Phase 4 Todo Plan T2.0~T2.6:
+  - T2.0 `pip check` 의존성 호환 검증 (anthropic+openai+firebase-admin+aioboto3) — **첫 단계 의무**
+  - T2.1 Milestone C 잔여 (C-13/14 ✅ **2026-04-30 선행 완료**) + AI 인프라 (LLM client + Redis cost counter + WalkPhoto migration 잔여)
+  - T2.2 Milestone D + 축 A 사고 신고 LLM 분류 (비동기 BackgroundTasks, NFR-5 보호) + 축 D 모더레이션
+  - T2.3 축 B 사진 자동 캡션 + Empathic 리포트 + 축 F 컨디션 (B에 통합)
+  - T2.4 축 E GPS 이상 탐지 (Redis ZSET + 워커 자동 check-in)
+  - T2.5 Milestone F 통합 테스트 + 회귀 매트릭스 (백엔드 165+ / PT jest 22+ / TS 0 errors)
+  - T2.6 Milestone G Pre-launch QA + EAS Build → **6/9 V1.0 출시**
+
+**External (사용자 작업 필요)** — Track 1·2 분리:
+
+**Track 1 (4/30~5/15 신청서 critical path)**:
+- 🔴 **4/30 critical path 6건 (5.5h)**: 랜딩·인센티브·PIPA·LOI 4건·카톡 50명·SNS 활성화
+- 🔴 **5/8 D-7 strong-go 게이트**: 가입자 ≥30 + LOI ≥3 (미달 시 K-Startup 초기창업패키지 7월 전환)
+- 🟡 **EXT-6 변호사 자문 Q-L2·Q-L3** (보험사 가맹 가능성) — 5/8 게이트 전 회신 권장
+- 🔴 **5/15 16:00 K-Startup 포털 제출**
+
+**Track 2 (5/16 시작 AI 구현 외부 작업)**:
+- 🟡 EXT-9 AWS 계정 + IAM + S3 버킷 (Track 2 시작 전)
+- 🟡 EXT-10 Firebase 프로젝트 + Admin SDK service account JSON
+- 🟡 EXT-11 Anthropic API key + OpenAI API key (Track 2 T2.0 전)
+- 🟡 EXT-12 PortOne 가맹점 계약 + API key/secret (Track 2 T2.5 전)
+- 🟡 EXT-7 보험사 가맹 1차 접촉 (출시 +1~2개월), EXT-8 Beachhead 지역 결정 (5/15 후)
+
+**완료**: ✅ ~~모두의 창업 2026 P0 5건 산출물 작성~~ (4/29) — `artifacts/business/fundraising/2026-04-29-modoo-startup-pt-*.md` + `budget-guide-summary.md`
+
+**Known Issues (PT 출시 critical path 무관)**:
+- KI-2 `TOSS_WEBHOOK_SECRET` 미설정 → Toss webhook 3 fail (Milestone F 처리)
+- KI-3 health endpoint `degraded` → 1 fail (Milestone F 처리)
+- KI-4 m4_websocket teardown race → 1 error (test_ws_accepts_valid_token_query_param). C-11 refactor로 1 error 해소, 잔존 1은 pytest unraisable hook 캡처 (인프라). Milestone F.
+
+---
+
+### Parallel Workstream — SafeWay Kids 규제 샌드박스 (별도 진행)
+**Phase**: Phase 5 — Implementation (v2.1 양길모 변호사 KISED #32399 의견서 반영 완료, 5/7 cross-check 대기)
+**Active draft**: [`artifacts/business/regulatory/2026-05-03-sandbox-application-v2.1-draft.md`](artifacts/business/regulatory/2026-05-03-sandbox-application-v2.1-draft.md) — v2.1 (911 라인 / 110KB)
+**Legal opinion anchor**: [`artifacts/business/regulatory/2026-04-29-yangkilmo-legal-opinion-detailed.pdf`](artifacts/business/regulatory/2026-04-29-yangkilmo-legal-opinion-detailed.pdf) — 양길모 변호사 (법무법인 조율, KISED #32399, 2026-05-02 승인)
+**v2.1 핵심 변경**: §2.3 변호사 의견 anchor + §2.7·§4.6 "고영향 AI 미해당 + 자발적 거버넌스 이중 트랙" + §4.7 신설 (정통망법 §44의2 적용 외) + §6.1 행 E "별개 진행"
+**Next gate (샌드박스)**: 양길모 인용 사전 동의 통화 (5/3~5/4) → 5/7 이의림 변호사 cross-check → 5/8~5/13 페르소나 검토 → 5/13 v2.2 확정 → 5/14 운영기관 사전 전달
+**Last handoff (샌드박스)**: [`artifacts/handoffs/2026-04-19-session-handoff.md`](artifacts/handoffs/2026-04-19-session-handoff.md)
+**Next meeting**: 2026-05-07 (대한상공회의소 이의림 변호사)
 
 ### Session bootstrap
 | 시점 | 명령 |

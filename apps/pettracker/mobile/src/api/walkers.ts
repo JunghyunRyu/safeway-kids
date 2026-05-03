@@ -11,6 +11,9 @@ export interface WalkerProfile {
   total_walks: number;
   total_reviews: number;
   distance_km?: number;
+  has_insurance?: boolean;
+  insurance_expiry?: string | null;
+  profile_photo_url?: string | null;
 }
 
 export interface WalkerSearchResult extends WalkerProfile {

@@ -1,31 +1,65 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Image } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { getMe } from '@safeway/core-mobile/api/auth';
+import { useImageUpload } from '@safeway/core-mobile/hooks/useImageUpload';
 
 export default function WalkerProfileScreen() {
   const [name, setName] = useState('산책 도우미');
+  const [userId, setUserId] = useState<string | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const { upload: uploadImage, uploading: photoUploading } = useImageUpload();
 
   useEffect(() => {
     getMe()
-      .then((me) => setName(me.name || '산책 도우미'))
+      .then((me) => {
+        setName(me.name || '산책 도우미');
+        setUserId(me.id);
+      })
       .catch(() => {});
   }, []);
 
+  const uploadPicked = useCallback(
+    async (localUri: string, mimeType: string | undefined) => {
+      if (!userId) {
+        Alert.alert('오류', '사용자 정보를 불러오지 못했습니다');
+        return;
+      }
+      try {
+        const res = await uploadImage({
+          fileUri: localUri,
+          contentType: mimeType ?? 'image/jpeg',
+          entityType: 'walker_profile',
+          userId,
+        });
+        setPhotoUri(res.downloadUrl);
+      } catch {
+        Alert.alert('업로드 실패', '프로필 사진 업로드에 실패했습니다. 다시 시도해 주세요.');
+      }
+    },
+    [userId, uploadImage],
+  );
+
   const handlePhotoChange = () => {
+    if (photoUploading) return;
     Alert.alert('프로필 사진', '사진 선택 방법', [
       { text: '카메라', onPress: async () => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') { Alert.alert('권한 필요', '카메라 권한이 필요합니다'); return; }
         const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
-        if (!result.canceled && result.assets[0]) { setPhotoUri(result.assets[0].uri); }
+        if (!result.canceled && result.assets[0]) {
+          setPhotoUri(result.assets[0].uri);
+          uploadPicked(result.assets[0].uri, result.assets[0].mimeType);
+        }
       }},
       { text: '갤러리', onPress: async () => {
         const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
-        if (!result.canceled && result.assets[0]) { setPhotoUri(result.assets[0].uri); }
+        if (!result.canceled && result.assets[0]) {
+          setPhotoUri(result.assets[0].uri);
+          uploadPicked(result.assets[0].uri, result.assets[0].mimeType);
+        }
       }},
       { text: '취소', style: 'cancel' },
     ]);
@@ -47,6 +81,11 @@ export default function WalkerProfileScreen() {
             <Image source={{ uri: photoUri }} style={styles.avatarImg} />
           ) : (
             <Ionicons name="person-circle" size={80} color={Colors.accent} />
+          )}
+          {photoUploading && (
+            <View style={styles.avatarOverlay}>
+              <ActivityIndicator color="#fff" />
+            </View>
           )}
           <View style={styles.cameraBadge}>
             <Ionicons name="camera" size={14} color="#fff" />
@@ -79,6 +118,10 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', paddingTop: 60, paddingBottom: Spacing.xl },
   avatar: { marginBottom: Spacing.sm, position: 'relative' as const },
   avatarImg: { width: 80, height: 80, borderRadius: 40 },
+  avatarOverlay: {
+    position: 'absolute' as const, top: 0, left: 0, width: 80, height: 80, borderRadius: 40,
+    backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center' as const, alignItems: 'center' as const,
+  },
   cameraBadge: {
     position: 'absolute' as const, right: 0, bottom: 0,
     width: 26, height: 26, borderRadius: 13,

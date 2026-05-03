@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, FlatList, ActivityIndicator, TextInput, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -6,6 +6,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { startWalk, recordGps, endWalk } from '../../api/walks';
 import { listBookings, type Booking } from '../../api/bookings';
+import { getMe } from '@safeway/core-mobile/api/auth';
+import { useImageUpload } from '@safeway/core-mobile/hooks/useImageUpload';
 
 type WalkState = 'idle' | 'walking' | 'ended';
 
@@ -19,8 +21,38 @@ export default function WalkScreen() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [walkerMemo, setWalkerMemo] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoDownloadUrl, setPhotoDownloadUrl] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const { upload: uploadImage, uploading: photoUploading } = useImageUpload();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gpsRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    getMe()
+      .then((me) => setUserId(me.id))
+      .catch(() => {});
+  }, []);
+
+  const uploadWalkPhoto = useCallback(
+    async (localUri: string, mimeType: string | undefined) => {
+      if (!userId) {
+        Alert.alert('오류', '사용자 정보를 불러오지 못했습니다');
+        return;
+      }
+      try {
+        const res = await uploadImage({
+          fileUri: localUri,
+          contentType: mimeType ?? 'image/jpeg',
+          entityType: 'walk_photo',
+          userId,
+        });
+        setPhotoDownloadUrl(res.downloadUrl);
+      } catch {
+        Alert.alert('업로드 실패', '사진 업로드에 실패했습니다. 다시 시도해 주세요.');
+      }
+    },
+    [userId, uploadImage],
+  );
 
   // Load confirmed bookings for today
   const loadBookings = async () => {
@@ -217,29 +249,49 @@ export default function WalkScreen() {
           />
 
           {/* Photo FAB — large button for one-handed use */}
-          <Pressable style={styles.photoFab} onPress={() => {
-            Alert.alert('사진 추가', '방법을 선택하세요', [
-              { text: '카메라', onPress: async () => {
-                const { status } = await ImagePicker.requestCameraPermissionsAsync();
-                if (status !== 'granted') { Alert.alert('권한 필요', '카메라 권한이 필요합니다'); return; }
-                const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
-                if (!result.canceled && result.assets[0]) { setPhotoUri(result.assets[0].uri); }
-              }},
-              { text: '갤러리', onPress: async () => {
-                const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
-                if (!result.canceled && result.assets[0]) { setPhotoUri(result.assets[0].uri); }
-              }},
-              { text: '취소', style: 'cancel' },
-            ]);
-          }}>
+          <Pressable
+            style={[styles.photoFab, photoUploading && styles.photoFabDisabled]}
+            disabled={photoUploading}
+            onPress={() => {
+              Alert.alert('사진 추가', '방법을 선택하세요', [
+                { text: '카메라', onPress: async () => {
+                  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                  if (status !== 'granted') { Alert.alert('권한 필요', '카메라 권한이 필요합니다'); return; }
+                  const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+                  if (!result.canceled && result.assets[0]) {
+                    setPhotoUri(result.assets[0].uri);
+                    setPhotoDownloadUrl(null);
+                    uploadWalkPhoto(result.assets[0].uri, result.assets[0].mimeType);
+                  }
+                }},
+                { text: '갤러리', onPress: async () => {
+                  const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
+                  if (!result.canceled && result.assets[0]) {
+                    setPhotoUri(result.assets[0].uri);
+                    setPhotoDownloadUrl(null);
+                    uploadWalkPhoto(result.assets[0].uri, result.assets[0].mimeType);
+                  }
+                }},
+                { text: '취소', style: 'cancel' },
+              ]);
+            }}>
             <Ionicons name="camera" size={32} color={Colors.textInverse} />
             <Text style={styles.photoLabel}>사진</Text>
           </Pressable>
 
           {photoUri && (
             <View style={styles.photoPreview}>
-              <Image source={{ uri: photoUri }} style={styles.photoThumb} />
-              <Text style={styles.photoStatus}>사진이 저장되었습니다 (업로드 준비 중)</Text>
+              <Image source={{ uri: photoDownloadUrl ?? photoUri }} style={styles.photoThumb} />
+              {photoUploading ? (
+                <View style={styles.photoStatusRow}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text style={styles.photoStatus}>업로드 중...</Text>
+                </View>
+              ) : photoDownloadUrl ? (
+                <Text style={styles.photoStatusOk}>업로드 완료</Text>
+              ) : (
+                <Text style={styles.photoStatus}>사진이 저장되었습니다</Text>
+              )}
             </View>
           )}
 
@@ -256,7 +308,7 @@ export default function WalkScreen() {
           <Text style={styles.endedTitle}>산책 완료!</Text>
           <Text style={styles.endedStat}>시간: {formatTime(elapsed)}</Text>
           <Text style={styles.endedStat}>거리: {(distance / 1000).toFixed(1)}km</Text>
-          <Pressable style={styles.resetBtn} onPress={() => { setState('idle'); setElapsed(0); setDistance(0); setSelectedBooking(null); setWalkerMemo(''); setPhotoUri(null); }}>
+          <Pressable style={styles.resetBtn} onPress={() => { setState('idle'); setElapsed(0); setDistance(0); setSelectedBooking(null); setWalkerMemo(''); setPhotoUri(null); setPhotoDownloadUrl(null); }}>
             <Text style={styles.resetText}>확인</Text>
           </Pressable>
         </View>
@@ -317,6 +369,7 @@ const styles = StyleSheet.create({
     width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.primary,
     justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.xxl,
   },
+  photoFabDisabled: { opacity: 0.6 },
   photoLabel: { color: '#fff', fontSize: Typography.sizes.xs, marginTop: 2 },
   endBtn: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.danger,
@@ -333,7 +386,9 @@ const styles = StyleSheet.create({
   },
   photoPreview: { alignItems: 'center', marginBottom: Spacing.md },
   photoThumb: { width: 80, height: 80, borderRadius: Radius.md, marginBottom: 4 },
-  photoStatus: { fontSize: Typography.sizes.xs, color: Colors.success },
+  photoStatus: { fontSize: Typography.sizes.xs, color: Colors.textSecondary },
+  photoStatusOk: { fontSize: Typography.sizes.xs, color: Colors.success },
+  photoStatusRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 },
   resetBtn: { marginTop: Spacing.xxl, backgroundColor: Colors.primary, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.md, borderRadius: Radius.md },
   resetText: { color: Colors.textInverse, fontWeight: Typography.weights.bold, fontSize: Typography.sizes.md },
 });

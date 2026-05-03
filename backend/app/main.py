@@ -342,6 +342,9 @@ def create_app() -> FastAPI:
     application.include_router(messaging_router, prefix="/api/v1/messages", tags=["messages"])
     application.include_router(edge_router, prefix="/api/v1/edge", tags=["edge-ai"])
 
+    from app.modules.storage.router import router as storage_router
+    application.include_router(storage_router, prefix="/api/v1/storage", tags=["storage"])
+
     # ── Multi-app routers ────────────────────────────────────────
     from app.apps.pettracker.router import router as pt_router
     application.include_router(pt_router, prefix="/api/v1", tags=["pettracker"])

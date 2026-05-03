@@ -71,6 +71,9 @@ class WalkerProfileResponse(BaseModel):
     avg_rating: float | None = None
     total_walks: int = 0
     total_reviews: int = 0
+    has_insurance: bool = False
+    insurance_expiry: date | None = None
+    profile_photo_url: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -113,6 +116,8 @@ class BookingResponse(BaseModel):
     pet_weight_kg: float | None = None
     pet_special_needs: str | None = None
     owner_name: str | None = None
+    # Active walk session id (populated when status=in_progress)
+    session_id: uuid.UUID | None = None
 
     model_config = {"from_attributes": True}
 
@@ -208,3 +213,42 @@ class ReviewWithReplyResponse(BaseModel):
 
 class WalkMemoUpdate(BaseModel):
     walker_memo: str | None = Field(None, max_length=2000)
+
+
+# ── Payment Schemas (PortOne v2) ─────────────────────────────────
+
+class PaymentPrepareRequest(BaseModel):
+    booking_id: uuid.UUID
+
+
+class PaymentPrepareResponse(BaseModel):
+    payment_id: uuid.UUID
+    merchant_uid: str
+    amount: int
+    currency: str = "KRW"
+    pg_provider: str = "portone"
+
+
+class PaymentConfirmRequest(BaseModel):
+    imp_uid: str = Field(..., min_length=1, max_length=100)
+    merchant_uid: str = Field(..., min_length=1, max_length=100)
+
+
+class PaymentConfirmResponse(BaseModel):
+    payment_id: uuid.UUID
+    status: str
+    amount: int
+    paid_at: datetime | None
+    imp_uid: str | None
+
+
+class PaymentCancelRequest(BaseModel):
+    reason: str = Field(..., min_length=1, max_length=200)
+    cancel_amount: int | None = Field(None, gt=0)
+
+
+class PaymentCancelResponse(BaseModel):
+    payment_id: uuid.UUID
+    status: str
+    cancel_amount: int | None
+    cancelled_at: datetime | None

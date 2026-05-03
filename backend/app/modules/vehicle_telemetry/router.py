@@ -11,8 +11,8 @@ from app.config import settings
 from app.database import async_session_factory, get_db
 from app.middleware.auth import get_current_user
 from app.middleware.rbac import require_roles
+from app.middleware.ws_auth import authenticate_jwt_token, negotiate_ws_auth
 from app.modules.auth.models import User, UserRole
-from app.modules.auth.service import decode_token
 from app.modules.vehicle_telemetry import service
 from app.modules.vehicle_telemetry.schemas import (
     GpsLocationResponse,
@@ -167,66 +167,24 @@ async def get_vehicle_location(
     return await service.get_latest_gps(redis_client, vehicle_id)
 
 
-async def _authenticate_token(token: str) -> User | None:
-    """Validate JWT and return the authenticated User, or None."""
-    try:
-        payload = decode_token(token)
-        if payload.get("type") != "access":
-            return None
-
-        user_id_str = payload.get("sub")
-        if not user_id_str:
-            return None
-
-        async with async_session_factory() as db:
-            stmt = select(User).where(
-                User.id == uuid.UUID(user_id_str),
-                User.deleted_at.is_(None),
-                User.is_active.is_(True),
-            )
-            result = await db.execute(stmt)
-            return result.scalar_one_or_none()
-    except Exception:
-        return None
-
-
 @router.websocket("/ws/vehicles/{vehicle_id}")
 async def vehicle_location_ws(websocket: WebSocket, vehicle_id: uuid.UUID) -> None:
     """차량 위치 실시간 WebSocket 스트림 — JWT 인증 + 인가 필수"""
-    # 1) query param 방식 (deprecated, 호환 유지)
-    token = websocket.query_params.get("token")
-
-    if token:
-        logger.warning("Deprecated: JWT via query param. Use first-message auth.")
-        user = await _authenticate_token(token)
-        if not user:
-            await websocket.close(code=4001, reason="Unauthorized")
-            return
-        await websocket.accept()
-    else:
-        # 2) first-message auth
-        await websocket.accept()
-        try:
-            data = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
-            token = data.get("token")
-            if not token:
-                await websocket.close(code=4001, reason="Missing token")
-                return
-            user = await _authenticate_token(token)
-            if not user:
-                await websocket.close(code=4001, reason="Unauthorized")
-                return
-            await websocket.send_json({"type": "auth_ok"})
-        except asyncio.TimeoutError:
-            await websocket.close(code=4001, reason="Auth timeout")
-            return
-        except Exception:
-            await websocket.close(code=4001, reason="Auth error")
-            return
+    user = await negotiate_ws_auth(
+        websocket,
+        lambda t: authenticate_jwt_token(t, session_factory=async_session_factory),
+    )
+    if not user:
+        return
 
     # 인가: 사용자가 해당 차량에 접근 권한이 있는지 확인
-    async with async_session_factory() as auth_db:
-        has_access = await service.check_vehicle_access(auth_db, user, vehicle_id)
+    try:
+        async with async_session_factory() as auth_db:
+            has_access = await service.check_vehicle_access(auth_db, user, vehicle_id)
+    except (ValueError, RuntimeError) as e:
+        # Test teardown race: aiosqlite/asyncpg connection이 미리 닫힌 경우 흡수
+        logger.debug("WS auth_db teardown race (vehicle=%s): %s", vehicle_id, e)
+        return
     if not has_access:
         logger.warning("WebSocket authorization denied: vehicle=%s user=%s role=%s", vehicle_id, user.id, user.role)
         await websocket.close(code=4003, reason="Forbidden")
