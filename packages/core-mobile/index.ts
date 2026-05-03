@@ -15,3 +15,30 @@ export * from './api/auth';
 
 // Components
 export { InfoRow, SOSButton, DatePickerModal, formatKorean } from './components';
+
+// Hooks (PT/CC shared)
+export {
+  useFirebaseAuth,
+  setFirebaseAuthAdapter,
+} from './hooks/useFirebaseAuth';
+export type {
+  FirebaseAuthUser,
+  FirebaseAuthState,
+  FirebaseAuthActions,
+  FirebaseAuthAdapter,
+} from './hooks/useFirebaseAuth';
+
+export { useImageUpload } from './hooks/useImageUpload';
+export type {
+  ImageUploadEntityType,
+  ImageUploadParams,
+  ImageUploadResult,
+  UseImageUpload,
+} from './hooks/useImageUpload';
+
+export { useWebSocket } from './hooks/useWebSocket';
+export type {
+  WebSocketStatus,
+  UseWebSocketOptions,
+  UseWebSocketReturn,
+} from './hooks/useWebSocket';

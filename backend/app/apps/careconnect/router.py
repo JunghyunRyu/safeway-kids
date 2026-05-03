@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.apps.careconnect import service
+from app.apps.careconnect.models import CcBooking, CcChild
+from app.common.security import decrypt_value
 from app.apps.careconnect.schemas import (
     ActivityLogCreate,
     AvailabilityCreate,
@@ -149,18 +151,33 @@ async def delete_availability(avail_id: uuid.UUID, db: AsyncSession = Depends(ge
 
 # ── Bookings ─────────────────────────────────────────────────────
 
+async def _booking_with_names(db: AsyncSession, booking: CcBooking) -> CcBookingResponse:
+    base = CcBookingResponse.model_validate(booking).model_dump()
+    if booking.child_id:
+        child = await db.get(CcChild, booking.child_id)
+        if child and child.name_encrypted:
+            try:
+                base["child_name"] = decrypt_value(child.name_encrypted)
+            except Exception:
+                base["child_name"] = None
+    if booking.caregiver_id:
+        cg = await db.get(User, booking.caregiver_id)
+        base["caregiver_name"] = cg.name if cg else None
+    return CcBookingResponse(**base)
+
+
 @router.post("/bookings", response_model=CcBookingResponse, status_code=201)
 async def create_booking(body: CcBookingCreate, db: AsyncSession = Depends(get_db), user: User = Depends(require_cc_parent)):
     booking = await service.create_cc_booking(db, user.id, body)
     await db.commit()
-    return CcBookingResponse.model_validate(booking)
+    return await _booking_with_names(db, booking)
 
 
 @router.post("/bookings/{booking_id}/accept", response_model=CcBookingResponse)
 async def accept_booking(booking_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(require_caregiver)):
     booking = await service.accept_cc_booking(db, booking_id, user.id)
     await db.commit()
-    return CcBookingResponse.model_validate(booking)
+    return await _booking_with_names(db, booking)
 
 
 @router.post("/bookings/{booking_id}/cancel")
@@ -175,7 +192,7 @@ async def list_bookings(status: str | None = Query(None), db: AsyncSession = Dep
     role_str = user.role.value if hasattr(user.role, "value") else user.role
     # CareConnect PARENT role uses "parent" value
     bookings = await service.list_cc_bookings(db, user.id, role_str, status)
-    return [CcBookingResponse.model_validate(b) for b in bookings]
+    return [await _booking_with_names(db, b) for b in bookings]
 
 
 # ── Sessions (Geofence Check-in) ─────────────────────────────────

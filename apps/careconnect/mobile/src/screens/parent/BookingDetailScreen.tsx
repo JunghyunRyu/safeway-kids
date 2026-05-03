@@ -98,7 +98,12 @@ export default function BookingDetailScreen({ route, navigation }: any) {
         {canHandover && (
           <Pressable
             style={[styles.actionBtn, { backgroundColor: Colors.success }]}
-            onPress={() => navigation.navigate('Handover', { sessionId: booking.id, bookingId: booking.id })}
+            onPress={() => navigation.navigate('Handover', {
+              sessionId: booking.id,
+              bookingId: booking.id,
+              childName: booking.child_name,
+              caregiverName: booking.caregiver_name,
+            })}
           >
             <Ionicons name="hand-left" size={20} color={Colors.textInverse} />
             <Text style={styles.actionText}>인수 확인</Text>

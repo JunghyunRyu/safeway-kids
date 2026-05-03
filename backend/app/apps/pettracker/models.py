@@ -38,6 +38,13 @@ class WalkerApprovalStatus(enum.StrEnum):
     REJECTED = "rejected"
 
 
+class PtPaymentStatus(enum.StrEnum):
+    PENDING = "pending"
+    PAID = "paid"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+
 # ── Pets ─────────────────────────────────────────────────────────
 
 class Pet(Base):
@@ -209,4 +216,40 @@ class WalkerReview(Base):
 
     __table_args__ = (
         Index("ix_walker_reviews_walker_time", "walker_id", "created_at"),
+    )
+
+
+# ── PetTracker Payments (PortOne v2) ─────────────────────────────
+
+class PtPayment(Base):
+    """PortOne v2 결제 기록 — Tech Spec FR-1.1.
+
+    SafeWay Kids `payments` 테이블과 격리: 컬럼 academy_id 등 도메인 강결합 회피.
+    pg_provider 컬럼으로 향후 다른 PG 추가 가능 (현재는 "portone" 단일).
+    """
+
+    __tablename__ = "pt_payments"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    booking_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("pt_bookings.id"), nullable=False, index=True
+    )
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)  # KRW (정수)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="KRW")
+    pg_provider: Mapped[str] = mapped_column(String(20), nullable=False, default="portone")
+    imp_uid: Mapped[str | None] = mapped_column(String(100), unique=True, index=True)
+    merchant_uid: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancel_amount: Mapped[int | None] = mapped_column(Integer)
+    cancel_reason: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    booking: Mapped["PtBooking"] = relationship(lazy="joined")
+
+    __table_args__ = (
+        Index("ix_pt_payments_booking_status", "booking_id", "status"),
     )

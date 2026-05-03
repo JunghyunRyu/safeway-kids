@@ -5,7 +5,7 @@ import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/th
 import { confirmHandover } from '../../api/sessions';
 
 export default function HandoverScreen({ route, navigation }: any) {
-  const { sessionId, totalMinutes, activitiesCount } = route?.params || {};
+  const { sessionId, totalMinutes, activitiesCount, childName, caregiverName } = route?.params || {};
   const [loading, setLoading] = useState(false);
 
   const hours = Math.floor((totalMinutes || 0) / 60);
@@ -44,6 +44,24 @@ export default function HandoverScreen({ route, navigation }: any) {
       {/* Session Summary */}
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>돌봄 요약</Text>
+        {(childName || caregiverName) && (
+          <View style={styles.peopleRow}>
+            {childName && (
+              <View style={styles.personItem}>
+                <Ionicons name="happy-outline" size={18} color={Colors.textSecondary} />
+                <Text style={styles.personLabel}>아이</Text>
+                <Text style={styles.personName}>{childName}</Text>
+              </View>
+            )}
+            {caregiverName && (
+              <View style={styles.personItem}>
+                <Ionicons name="person-outline" size={18} color={Colors.textSecondary} />
+                <Text style={styles.personLabel}>돌봄자</Text>
+                <Text style={styles.personName}>{caregiverName}</Text>
+              </View>
+            )}
+          </View>
+        )}
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
             <Ionicons name="time-outline" size={28} color={Colors.primary} />
@@ -87,7 +105,11 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.base, backgroundColor: Colors.surface,
     borderRadius: Radius.lg, padding: Spacing.xl, ...Shadows.sm,
   },
-  summaryTitle: { fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.textPrimary, textAlign: 'center', marginBottom: Spacing.xl },
+  summaryTitle: { fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.textPrimary, textAlign: 'center', marginBottom: Spacing.lg },
+  peopleRow: { flexDirection: 'row', justifyContent: 'space-around', paddingBottom: Spacing.lg, marginBottom: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
+  personItem: { alignItems: 'center', gap: 4 },
+  personLabel: { fontSize: Typography.sizes.xs, color: Colors.textSecondary },
+  personName: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
   summaryRow: { flexDirection: 'row', alignItems: 'center' },
   summaryItem: { flex: 1, alignItems: 'center' },
   summaryValue: { fontSize: Typography.sizes.xl, fontWeight: Typography.weights.bold, color: Colors.textPrimary, marginTop: Spacing.sm },

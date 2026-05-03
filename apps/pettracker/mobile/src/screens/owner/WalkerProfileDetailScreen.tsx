@@ -16,10 +16,28 @@ export default function WalkerProfileDetailScreen({ route, navigation }: any) {
     return <View style={styles.container}><Text style={styles.loading}>로딩 중...</Text></View>;
   }
 
+  const insuranceBadge = (() => {
+    if (!profile.has_insurance) return null;
+    if (!profile.insurance_expiry) {
+      return { icon: 'umbrella' as const, label: '보험 가입', color: Colors.success };
+    }
+    const expiry = new Date(profile.insurance_expiry);
+    const now = new Date();
+    const daysLeft = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysLeft < 0) {
+      return { icon: 'alert-circle' as const, label: '보험 만료', color: Colors.danger ?? '#DC2626' };
+    }
+    if (daysLeft <= 30) {
+      return { icon: 'umbrella' as const, label: `보험 ${daysLeft}일 남음`, color: Colors.warning ?? '#F59E0B' };
+    }
+    return { icon: 'umbrella' as const, label: '보험 가입', color: Colors.success };
+  })();
+
   const badges = [
     profile.approval_status === 'approved' && { icon: 'shield-checkmark' as const, label: '본인인증', color: Colors.success },
     profile.certification_type && { icon: 'ribbon' as const, label: profile.certification_type, color: Colors.info },
     profile.total_walks >= 10 && { icon: 'walk' as const, label: `${profile.total_walks}회 완료`, color: Colors.accent },
+    insuranceBadge,
   ].filter(Boolean) as Array<{ icon: keyof typeof Ionicons.glyphMap; label: string; color: string }>;
 
   return (

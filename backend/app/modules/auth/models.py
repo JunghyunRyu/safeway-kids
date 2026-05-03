@@ -53,6 +53,8 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(255))
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     kakao_id: Mapped[str | None] = mapped_column(String(100))
+    firebase_uid: Mapped[str | None] = mapped_column(String(128), unique=True)
+    portone_customer_uid: Mapped[str | None] = mapped_column(String(128))
     fcm_token: Mapped[str | None] = mapped_column(String(500))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     app_context: Mapped[str] = mapped_column(

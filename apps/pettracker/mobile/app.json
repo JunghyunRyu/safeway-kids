@@ -31,7 +31,7 @@
     },
     "extra": {
       "appContext": "pettracker",
-      "apiBaseUrl": "http://localhost:8000/api/v1",
+      "apiBaseUrl": "https://e41b-175-114-67-73.ngrok-free.app/api/v1",
       "eas": {
         "projectId": ""
       }

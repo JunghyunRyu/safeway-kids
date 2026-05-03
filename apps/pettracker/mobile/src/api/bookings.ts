@@ -20,6 +20,8 @@ export interface Booking {
   pet_weight_kg?: number | null;
   pet_special_needs?: string | null;
   owner_name?: string | null;
+  // Active walk session id (populated by backend when status=in_progress)
+  session_id?: string | null;
 }
 
 export interface BookingCreateData {

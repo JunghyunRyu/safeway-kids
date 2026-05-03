@@ -305,3 +305,46 @@ async def toss_webhook(
     )
     await db.commit()
     return result
+
+
+@router.post("/webhook/portone")
+async def portone_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """PortOne v2 webhook 수신 — PT/CC 결제 상태 비동기 sync.
+
+    Tech Spec FR-1.3 — Toss와 격리된 별도 라우터.
+    HMAC-SHA256 서명 검증 fail-closed (S-06). 검증 실패 시 즉시 403,
+    Payment row 미일치 시 200 (재시도 방지 + 정보 노출 회피).
+    """
+    import json
+
+    from app.apps.pettracker.service import handle_portone_webhook_event
+    from app.common.exceptions import ForbiddenError
+    from app.modules.billing.providers.portone import portone_provider
+
+    body_bytes = await request.body()
+    sig_header = (
+        request.headers.get("webhook-signature")
+        or request.headers.get("Webhook-Signature")
+        or request.headers.get("X-PortOne-Signature")
+        or ""
+    )
+    if not sig_header:
+        logger.warning("PortOne webhook missing signature header")
+        raise ForbiddenError(detail="Missing webhook signature")
+
+    valid = await portone_provider.verify_webhook(body_bytes, sig_header)
+    if not valid:
+        logger.warning("PortOne webhook signature mismatch")
+        raise ForbiddenError(detail="Invalid webhook signature")
+
+    try:
+        payload = json.loads(body_bytes) if body_bytes else {}
+    except json.JSONDecodeError:
+        raise ValidationError(detail="Invalid JSON body")
+
+    result = await handle_portone_webhook_event(db, payload)
+    await db.commit()
+    return result

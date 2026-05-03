@@ -14,6 +14,10 @@
         "@modelcontextprotocol/server-filesystem@latest",
         "C:/jhryu/01_project/safeway_kids"
       ]
+    },
+    "korean-law": {
+      "type": "http",
+      "url": "https://korean-law-mcp.fly.dev/mcp?oc=safewaydev"
     }
   }
 }

@@ -27,7 +27,10 @@ export default function BookingsScreen({ navigation }: any) {
   const onRefresh = async () => { setRefreshing(true); await loadData(); setRefreshing(false); };
 
   const renderBooking = ({ item }: { item: Booking }) => (
-    <Pressable style={styles.card} onPress={() => {}}>
+    <Pressable
+      style={styles.card}
+      onPress={() => navigation.navigate('BookingDetail', { booking: item })}
+    >
       <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS_MAP[item.status] || Colors.neutral }]} />
       <View style={styles.cardContent}>
         <Text style={styles.cardDate}>{new Date(item.scheduled_at).toLocaleString('ko-KR')}</Text>

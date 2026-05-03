@@ -1,15 +1,26 @@
 """PetTracker API router — /api/v1/pt/"""
 
+import asyncio
+import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.apps.pettracker import service
+
+logger = logging.getLogger(__name__)
 from app.apps.pettracker.schemas import (
     BookingCreate,
     BookingResponse,
     GpsPoint,
+    PaymentCancelRequest,
+    PaymentCancelResponse,
+    PaymentConfirmRequest,
+    PaymentConfirmResponse,
+    PaymentPrepareRequest,
+    PaymentPrepareResponse,
     PetCreate,
     PetResponse,
     PetUpdate,
@@ -202,6 +213,19 @@ async def list_bookings(
 ) -> list[BookingResponse]:
     role_str = user.role.value if hasattr(user.role, "value") else user.role
     bookings = await service.list_bookings(db, user.id, role_str, status)
+
+    # Lookup session_id for in_progress bookings (1 query covers all)
+    from app.apps.pettracker.models import WalkSession
+    in_progress_ids = [b.id for b in bookings if b.status == "in_progress"]
+    session_map: dict = {}
+    if in_progress_ids:
+        rows = (await db.execute(
+            select(WalkSession.booking_id, WalkSession.id).where(
+                WalkSession.booking_id.in_(in_progress_ids)
+            )
+        )).all()
+        session_map = {row[0]: row[1] for row in rows}
+
     results = []
     for b in bookings:
         resp = BookingResponse.model_validate(b)
@@ -212,6 +236,8 @@ async def list_bookings(
             resp.pet_temperament = b.pet.temperament
             resp.pet_weight_kg = b.pet.weight_kg
             resp.pet_special_needs = b.pet.special_needs
+        if b.id in session_map:
+            resp.session_id = session_map[b.id]
         results.append(resp)
     return results
 
@@ -444,6 +470,64 @@ async def request_withdrawal(
     return {"message": f"{body.amount:,}원 출금 요청됨", "tx_id": str(tx.id)}
 
 
+# ── Payments (PortOne v2) ────────────────────────────────────────
+
+@router.post("/payments/prepare", response_model=PaymentPrepareResponse, status_code=201)
+async def prepare_payment(
+    body: PaymentPrepareRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_pet_owner),
+) -> PaymentPrepareResponse:
+    """결제 prepare — PortOne 결제창 호출 직전 merchant_uid 발급."""
+    payment = await service.prepare_payment(db, user.id, body.booking_id)
+    await db.commit()
+    return PaymentPrepareResponse(
+        payment_id=payment.id,
+        merchant_uid=payment.merchant_uid,
+        amount=payment.amount,
+        currency=payment.currency,
+        pg_provider=payment.pg_provider,
+    )
+
+
+@router.post("/payments/confirm", response_model=PaymentConfirmResponse)
+async def confirm_payment(
+    body: PaymentConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_pet_owner),
+) -> PaymentConfirmResponse:
+    """결제 confirm — PortOne 결제창 종료 후 백엔드에서 금액/상태 검증."""
+    payment = await service.confirm_payment(db, user.id, body.imp_uid, body.merchant_uid)
+    await db.commit()
+    return PaymentConfirmResponse(
+        payment_id=payment.id,
+        status=payment.status,
+        amount=payment.amount,
+        paid_at=payment.paid_at,
+        imp_uid=payment.imp_uid,
+    )
+
+
+@router.post("/payments/{payment_id}/cancel", response_model=PaymentCancelResponse)
+async def cancel_payment(
+    payment_id: uuid.UUID,
+    body: PaymentCancelRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_pet_owner),
+) -> PaymentCancelResponse:
+    """결제 취소/환불 (전액 또는 부분)."""
+    payment = await service.cancel_payment(
+        db, user.id, payment_id, body.reason, body.cancel_amount,
+    )
+    await db.commit()
+    return PaymentCancelResponse(
+        payment_id=payment.id,
+        status=payment.status,
+        cancel_amount=payment.cancel_amount,
+        cancelled_at=payment.cancelled_at,
+    )
+
+
 # ── Admin Dashboard ──────────────────────────────────────────────
 
 @router.get("/admin/dashboard")
@@ -484,5 +568,84 @@ async def admin_dashboard(
 
 
 # Need to import for type hints in select
-from sqlalchemy import select
 from app.apps.pettracker.models import WalkerQualification as _WQ
+
+
+# ── Realtime Walk Tracking (WebSocket) ───────────────────────────
+
+@router.websocket("/ws/walks/{session_id}")
+async def walk_session_ws(websocket: WebSocket, session_id: uuid.UUID) -> None:
+    """PT 산책 실시간 WebSocket — 토픽 `pt:walk:{session_id}:updates`.
+
+    인증: JWT(SafeWay 듀얼 미들웨어 패턴 — Firebase 전환은 Milestone B-7).
+    인가: WalkSession.walker_id == user.id 또는 booking.owner_id == user.id.
+    """
+    from app.config import settings
+    from app.database import async_session_factory
+    from app.middleware.ws_auth import authenticate_jwt_token, negotiate_ws_auth
+    from app.redis import redis_client
+    from app.apps.pettracker.models import PtBooking, WalkSession
+
+    user = await negotiate_ws_auth(
+        websocket,
+        lambda t: authenticate_jwt_token(t, session_factory=async_session_factory),
+    )
+    if not user:
+        return
+
+    # 인가: WalkSession + Booking 권한 확인
+    try:
+        async with async_session_factory() as auth_db:
+            ws_session = (await auth_db.execute(
+                select(WalkSession).where(WalkSession.id == session_id)
+            )).scalar_one_or_none()
+            if not ws_session:
+                await websocket.close(code=4404, reason="Walk session not found")
+                return
+            booking = await auth_db.get(PtBooking, ws_session.booking_id)
+            if not booking:
+                await websocket.close(code=4404, reason="Booking not found")
+                return
+            if user.id not in (booking.owner_id, ws_session.walker_id):
+                logger.warning(
+                    "PT WS authorization denied: session=%s user=%s",
+                    session_id, user.id,
+                )
+                await websocket.close(code=4003, reason="Forbidden")
+                return
+    except (ValueError, RuntimeError) as e:
+        # Test teardown race: 연결이 미리 닫힌 경우 흡수
+        logger.debug("PT WS auth_db teardown race (session=%s): %s", session_id, e)
+        return
+
+    logger.info("PT WS connected: session=%s user=%s", session_id, user.id)
+
+    pubsub = redis_client.pubsub()
+    channel = f"pt:walk:{session_id}:updates"
+    await pubsub.subscribe(channel)
+
+    async def ping_loop() -> None:
+        try:
+            while True:
+                await asyncio.sleep(settings.ws_ping_interval_seconds)
+                await websocket.send_json({"type": "ping"})
+        except WebSocketDisconnect:
+            logger.debug("PT WS ping loop: client disconnected, session=%s", session_id)
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.warning("PT WS ping loop error: session=%s error=%s", session_id, e)
+
+    ping_task = asyncio.create_task(ping_loop())
+
+    try:
+        async for message in pubsub.listen():
+            if message["type"] == "message":
+                await websocket.send_text(message["data"])
+    except (WebSocketDisconnect, asyncio.CancelledError):
+        pass
+    finally:
+        ping_task.cancel()
+        await pubsub.unsubscribe(channel)
+        await pubsub.aclose()
+        logger.info("PT WS disconnected: session=%s user=%s", session_id, user.id)

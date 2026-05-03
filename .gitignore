@@ -6,6 +6,7 @@ config/credentials.json
 *.key
 *.key.pub
 firebase-credentials.json
+.mcp.json
 
 # Python
 __pycache__/
@@ -21,14 +22,19 @@ node_modules/
 
 # Claude local overrides
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 CLAUDE.local.md
 
 # Local scratch output
 tmp/
+.tmp_drive_readmes/
 dist/
 build/
 coverage/
 *.log
+
+# Loose debug screenshots at repo root (move to artifacts/ if needed)
+/c14-*.png
 
 # ML model files (too large for GitHub)
 *.onnx
