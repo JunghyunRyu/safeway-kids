@@ -1,0 +1,202 @@
+<!doctype html>
+<!--
+  OG Image Template (1280x720 — Open Graph / Twitter / 카톡 미리보기 표준)
+
+  재생성 명령 (Windows PowerShell / Bash):
+    & "C:/Program Files/Google/Chrome/Application/chrome.exe" \
+      --headless=new --disable-gpu --hide-scrollbars --no-sandbox \
+      --window-size=1280,720 --virtual-time-budget=3000 \
+      --screenshot="lunenlabs/public/og-image.png" \
+      "file:///C:/jhryu/01_project/safeway_kids/lunenlabs/og-template.html"
+
+  본 HTML은 production 빌드(vite build)의 entry에 포함되지 않으므로
+  배포 산출물에 노출되지 않음. dev server에서만 /og-template.html로 접근 가능.
+-->
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>OG Template</title>
+    <link
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+        font-family: "Pretendard Variable", Pretendard, -apple-system,
+          BlinkMacSystemFont, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        letter-spacing: -0.012em;
+      }
+      .og {
+        position: relative;
+        width: 1280px;
+        height: 720px;
+        background:
+          radial-gradient(60% 50% at 80% 18%, rgba(0, 201, 176, 0.22) 0%, transparent 60%),
+          radial-gradient(50% 60% at 14% 86%, rgba(0, 201, 176, 0.14) 0%, transparent 70%),
+          linear-gradient(180deg, #06122e 0%, #0a1a3f 100%);
+        color: #fff;
+        overflow: hidden;
+        padding: 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .grid {
+        position: absolute;
+        inset: 0;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 48px 48px;
+        opacity: 0.6;
+      }
+      .top {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .logo {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0a1a3f 0%, #00c9b0 100%);
+        box-shadow: 0 4px 20px rgba(0, 201, 176, 0.3);
+      }
+      .brand {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .badge {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px;
+        border: 1px solid rgba(0, 201, 176, 0.4);
+        background: rgba(0, 201, 176, 0.1);
+        color: #00c9b0;
+        border-radius: 999px;
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #00c9b0;
+      }
+      .body {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+      .headline {
+        font-size: 92px;
+        font-weight: 800;
+        line-height: 1.04;
+      }
+      .accent {
+        background: linear-gradient(90deg, #00c9b0 0%, #e0faf5 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .sub {
+        font-size: 28px;
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 500;
+        max-width: 900px;
+        line-height: 1.4;
+      }
+      .bottom {
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 48px;
+      }
+      .products {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .pill {
+        padding: 10px 18px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 999px;
+        font-size: 18px;
+        color: rgba(255, 255, 255, 0.85);
+        font-weight: 500;
+      }
+      .pill.featured {
+        background: rgba(0, 201, 176, 0.2);
+        border-color: rgba(0, 201, 176, 0.5);
+        color: #fff;
+        font-weight: 700;
+      }
+      .url {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 22px;
+        color: #00c9b0;
+        font-weight: 600;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+      .url-arrow {
+        color: rgba(0, 201, 176, 0.6);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="og">
+      <div class="grid"></div>
+
+      <div class="top">
+        <div class="logo"></div>
+        <div class="brand">LunenLabs</div>
+        <div class="badge">
+          <span class="badge-dot"></span>
+          PetTracker · 2026.06 출시
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="headline">
+          더 안전한 일상을 위한<br />
+          <span class="accent">소프트웨어 스튜디오</span>
+        </div>
+        <div class="sub">
+          반려동물 · 아이 · 돌봄이 필요한 사람들의 일상을 지키는<br />
+          멀티앱 안심 플랫폼.
+        </div>
+      </div>
+
+      <div class="bottom">
+        <div class="products">
+          <span class="pill featured">PetTracker</span>
+          <span class="pill">SafeWay Kids</span>
+          <span class="pill">CareConnect</span>
+          <span class="pill">SDET Code</span>
+        </div>
+        <div class="url">
+          <span class="url-arrow">→</span> lunenlabs.com
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
