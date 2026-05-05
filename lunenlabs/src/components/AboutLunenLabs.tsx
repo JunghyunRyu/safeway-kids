@@ -1,8 +1,8 @@
 export default function AboutLunenLabs() {
   const principles = [
     {
-      title: "한 사람의 깊이",
-      desc: "1인 창업가가 직접 설계 · 개발 · 배포 · 고객 응대까지 책임집니다. 의사결정 속도와 책임 추적이 명확합니다.",
+      title: "책임이 추적되는 운영",
+      desc: "설계 · 개발 · 배포 · 고객 응대가 한 곳에서 책임지는 구조입니다. 의사결정 속도가 빠르고, 문제가 생겼을 때 책임 소재가 명확합니다.",
     },
     {
       title: "공유된 코어",

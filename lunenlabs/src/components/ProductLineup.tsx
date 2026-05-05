@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 type ProductStatus = "출시 임박" | "개발 중" | "운영 중" | "샌드박스 심사";
 
 const products: {
@@ -6,18 +8,20 @@ const products: {
   desc: string;
   status: ProductStatus;
   highlight?: boolean;
+  href?: string;
   bullets: string[];
 }[] = [
   {
     name: "PetTracker",
-    tag: "반려견 산책 매칭",
-    desc: "보호자가 산책 시간이 부족할 때 신원 확인된 펫시터에게 안전하게 위탁할 수 있는 플랫폼. AI 5축 차별화로 사고 신고·GPS 이상 탐지·컨디션 추적까지 자동화.",
+    tag: "강아지 일상 종합 케어",
+    desc: "반려동물의 산책 매칭 · 사고 자동 대응 · GPS 이상 탐지 · 컨디션 추적 · 추억 기록까지, 일상 전반을 같이 봐드리는 종합 케어 동반자입니다.",
     status: "출시 임박",
     highlight: true,
+    href: "/pet",
     bullets: [
       "2026년 6월 V1.0 출시",
       "AI 5축: 사고 신고 LLM · GPS 이상 · 사진 캡션 · 컨디션 · 모더레이션",
-      "신원조회 + 보험 + 실시간 추적 통합",
+      "산책 + 사고 대응 + 컨디션 + 추억 기록 통합",
     ],
   },
   {
@@ -50,7 +54,7 @@ const products: {
     bullets: [
       "해외 클라이언트 다수 운영",
       "B2C 라인업 R&D 자금원",
-      "1인 운영 multi-app 가능 기반",
+      "공유 코어 기반 multi-app 효율 운영",
     ],
   },
 ];
@@ -139,6 +143,19 @@ export default function ProductLineup() {
                   </li>
                 ))}
               </ul>
+
+              {p.href && (
+                <Link
+                  to={p.href}
+                  className={`inline-flex items-center gap-1.5 mt-6 text-sm font-semibold transition-colors ${
+                    p.highlight
+                      ? "text-aqua hover:text-aqua-light"
+                      : "text-aqua-dark hover:text-aqua"
+                  }`}
+                >
+                  PetTracker 자세히 보기 →
+                </Link>
+              )}
             </article>
           ))}
         </div>

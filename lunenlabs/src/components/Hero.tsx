@@ -22,7 +22,7 @@ export default function Hero() {
 
         <p className="text-white/75 text-lg sm:text-xl max-w-2xl leading-relaxed mb-10">
           루넨랩스(LunenLabs)는 반려동물·아이·돌봄이 필요한 사람들의 안전한 일상을
-          지키는 멀티앱 플랫폼을 개발하는 1인 창업 스튜디오입니다.
+          지키는 멀티앱 플랫폼을 만드는 한국의 소프트웨어 스튜디오입니다.
         </p>
 
         <div className="flex flex-wrap items-center gap-3 mb-14">
@@ -45,7 +45,7 @@ export default function Hero() {
             { value: "4", label: "개발 중인 제품 라인업" },
             { value: "18,500+", label: "프로덕션급 코드 (LOC)" },
             { value: "AI 5축", label: "PetTracker 차별화 영역" },
-            { value: "1인", label: "솔로 창업가 운영" },
+            { value: "법규 내장", label: "PIPA · 위치정보법 준수" },
           ].map((s) => (
             <div key={s.label}>
               <div className="text-aqua text-2xl sm:text-3xl font-bold mb-1">

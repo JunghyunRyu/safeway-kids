@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function PTSpotlight() {
   const aiAxes = [
     {
@@ -77,12 +79,20 @@ export default function PTSpotlight() {
               2026년 6월 V1.0 출시 시 가장 먼저 알려드립니다.
             </p>
           </div>
-          <a
-            href="#signup"
-            className="px-6 py-3 rounded-full bg-aqua text-navy-deep font-semibold hover:bg-aqua-light transition-colors"
-          >
-            사전가입 →
-          </a>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/pet"
+              className="px-6 py-3 rounded-full bg-white/10 text-white border border-white/30 font-semibold hover:bg-white/20 transition-colors"
+            >
+              PT 페이지 자세히 →
+            </Link>
+            <a
+              href="#signup"
+              className="px-6 py-3 rounded-full bg-aqua text-navy-deep font-semibold hover:bg-aqua-light transition-colors"
+            >
+              사전가입 →
+            </a>
+          </div>
         </div>
       </div>
     </section>

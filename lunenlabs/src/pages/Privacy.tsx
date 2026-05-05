@@ -99,7 +99,7 @@ export default function Privacy() {
           <Section title="7. 개인정보의 안전성 확보 조치">
             <ul className="list-disc pl-6 space-y-2">
               <li>전송 구간 암호화 (HTTPS · TLS 1.2 이상)</li>
-              <li>접근 권한의 최소화 (1인 운영자 단독 접근, 공동 접근 없음)</li>
+              <li>접근 권한 최소화 (운영 책임자 단독 접근, 외부 공유·공동 접근 없음)</li>
               <li>저장 데이터의 백업 시 암호화</li>
               <li>침해 사고 발생 시 72시간 이내 통지</li>
             </ul>

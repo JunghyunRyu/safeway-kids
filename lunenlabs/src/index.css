@@ -15,7 +15,24 @@
   --color-success: #2D9E6B;
   --color-danger: #D44C3E;
 
+  /* PetTracker 모바일 앱 톤 — warm orange/green (apps/pettracker/mobile/src/constants/theme.ts 동기화) */
+  --color-pt-orange: #F4A22D;
+  --color-pt-orange-dark: #C47D10;
+  --color-pt-orange-light: #FEF3DC;
+  --color-pt-green: #2D9E6B;
+  --color-pt-green-dark: #1E6B48;
+  --color-pt-green-light: #D4F2E7;
+  --color-pt-cream: #FFF8F0;
+  --color-pt-surface: #FFF0E0;
+  --color-pt-border: #E8D5B8;
+  --color-pt-ink: #2E1E0A;
+  --color-pt-ink-soft: #7A6A52;
+
   --font-family-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+
+  /* PT 페이지 heading 전용 — Hahmlet (modern serif, warm + 신뢰감) */
+  /* Tailwind 4 자동 생성 utility: font-pt-heading */
+  --font-pt-heading: "Hahmlet", "Pretendard Variable", serif;
 }
 
 html {
