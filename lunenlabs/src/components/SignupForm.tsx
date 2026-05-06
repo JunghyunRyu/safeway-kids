@@ -37,22 +37,9 @@ export default function SignupForm() {
     setForm((s) => ({ ...s, [k]: v }));
 
   const buildMailto = () => {
-    const subject = encodeURIComponent(`[PT 사전가입] ${form.name || "익명"}`);
-    const body = encodeURIComponent(
-      [
-        `이름: ${form.name}`,
-        `이메일: ${form.email}`,
-        `강아지 이름: ${form.petName || "-"}`,
-        `견종: ${form.petBreed || "-"}`,
-        `지역: ${form.area || "-"}`,
-        `산책 빈도: ${form.walkFreq || "-"}`,
-        `사용 의향: ${form.intent || "-"}`,
-        `마케팅 수신 동의: ${form.consentMarketing ? "Y" : "N"}`,
-        "",
-        "(본 신청은 lunenlabs.com 사전가입 폼에서 mailto fallback으로 전송됨)",
-      ].join("\n")
-    );
-    return `mailto:${FALLBACK_EMAIL}?subject=${subject}&body=${body}`;
+    // 개인정보보호법 §29: PII를 URL에 포함하지 않음 (브라우저 히스토리·Referer·프록시 access log 노출 방지)
+    const subject = encodeURIComponent("[PT 사전가입 fallback] 양식 내용 첨부 요망");
+    return `mailto:${FALLBACK_EMAIL}?subject=${subject}`;
   };
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {

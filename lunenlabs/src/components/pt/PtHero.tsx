@@ -143,7 +143,7 @@ function PtHeroVisual() {
           </div>
         </div>
         <div className="absolute top-5 right-5 px-3 py-1.5 rounded-full bg-pt-green text-white text-xs font-semibold shadow-md">
-          AI 캡션
+          오늘의 기록
         </div>
       </div>
     </div>

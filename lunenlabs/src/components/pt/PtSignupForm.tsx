@@ -39,22 +39,10 @@ export default function PtSignupForm() {
     setForm((s) => ({ ...s, [k]: v }));
 
   const buildMailto = () => {
-    const subject = encodeURIComponent(`[PT 사전가입 · /pet] ${form.name || "익명"}`);
-    const body = encodeURIComponent(
-      [
-        `이름: ${form.name}`,
-        `이메일: ${form.email}`,
-        `강아지 이름: ${form.petName || "-"}`,
-        `견종: ${form.petBreed || "-"}`,
-        `지역: ${form.area || "-"}`,
-        `산책 빈도: ${form.walkFreq || "-"}`,
-        `사용 의향: ${form.intent || "-"}`,
-        `마케팅 수신 동의: ${form.consentMarketing ? "Y" : "N"}`,
-        "",
-        "(본 신청은 lunenlabs.com/pet 사전가입 폼에서 mailto fallback으로 전송됨)",
-      ].join("\n")
-    );
-    return `mailto:${FALLBACK_EMAIL}?subject=${subject}&body=${body}`;
+    // 개인정보보호법 §29: PII를 URL에 포함하지 않음 (브라우저 히스토리·Referer·프록시 access log 노출 방지)
+    // 사용자가 메일 클라이언트에서 본문을 직접 입력하도록 안내
+    const subject = encodeURIComponent("[PT 사전가입 fallback] /pet 양식 내용 첨부 요망");
+    return `mailto:${FALLBACK_EMAIL}?subject=${subject}`;
   };
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -253,8 +241,7 @@ export default function PtSignupForm() {
       {status === "error" ? (
         <div className="space-y-3">
           <div className="p-4 rounded-xl bg-pt-orange-light border border-pt-orange/30 text-sm text-pt-ink">
-            잠깐, 자동 전송이 안 됐어요. 아래 버튼을 누르시면 본인의 이메일 앱으로
-            신청 내용이 자동 작성돼서 운영자에게 전달돼요.
+            잠깐, 자동 전송이 안 됐어요. 아래 버튼을 누르면 이메일 앱이 열려요. 본문에 이름·이메일·반려동물명·지역을 직접 적어 주시면 운영자에게 전달돼요. (개인정보 보호를 위해 자동으로 채우지 않아요.)
           </div>
           <a
             href={buildMailto()}
@@ -274,8 +261,23 @@ export default function PtSignupForm() {
       )}
 
       <p className="mt-4 text-xs text-pt-ink-soft text-center">
-        법적 구속력이 있는 신청이 아니에요. 출시 안내 외 목적으로 사용되지 않아요.
+        출시 안내 외 목적으로 사용되지 않아요.
       </p>
+
+      <div className="mt-8 pt-6 border-t border-pt-border">
+        <p className="text-sm font-semibold text-pt-ink mb-2">
+          산책 메이트(펫시터)로 함께하고 싶으세요?
+        </p>
+        <p className="text-xs text-pt-ink-soft leading-relaxed mb-3">
+          PT는 V1.0 출시(2026.06) 시점에 산책 메이트 1차 모집을 진행해요. 시급은 회당 14,000원~ (산책 60분 기준, 지역·경력별 조정), 정산은 산책 종료 후 7일 내 등록 계좌로 입금되며, 보험 가맹·자기소개 자동 검수·신원조회를 거쳐 활동을 시작해요. 모집 시작 시점에 알림을 받고 싶으시면 본문에 "메이트 지원 의향"을 적어주시거나 운영자 이메일로 연락 주세요.
+        </p>
+        <a
+          href="mailto:jhryu115@gmail.com?subject=PT%20%EC%82%B0%EC%B1%85%20%EB%A9%94%EC%9D%B4%ED%8A%B8%20%EC%A7%80%EC%9B%90%20%EB%AC%B8%EC%9D%98"
+          className="text-xs text-pt-orange-dark underline underline-offset-2 hover:text-pt-ink"
+        >
+          메이트 지원 문의 이메일 →
+        </a>
+      </div>
     </form>
   );
 }

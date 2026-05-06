@@ -46,10 +46,10 @@ export default function PtWhy() {
             왜 PetTracker일까요?
           </div>
           <h2 className="font-pt-heading text-pt-ink text-4xl sm:text-5xl font-bold mb-6 leading-tight">
-            우리 아이를 처음 보는 사람에게
+            우리 아이의 일상을
             <br />
             <span className="text-pt-orange">
-              맡기는 일은 쉽지 않습니다.
+              안심하고 맡길 수 있도록.
             </span>
           </h2>
           <p className="text-pt-ink-soft text-lg leading-relaxed">
@@ -84,7 +84,7 @@ export default function PtWhy() {
         <div className="mt-14 grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
           {[
             { v: "5가지", l: "AI 도우미", sub: "출시 첫날부터" },
-            { v: "100%", l: "메이트 검증", sub: "신원 · 이력 · 후기" },
+            { v: "3단계", l: "메이트 검증", sub: "신원 조회 · 이력 확인 · 자기소개 검수" },
             { v: "실시간", l: "GPS · 알림", sub: "보호자 ↔ 메이트" },
           ].map((s) => (
             <div
