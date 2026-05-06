@@ -25,7 +25,10 @@ const initialState: FormState = {
   consentMarketing: false,
 };
 
-const SIGNUP_ENDPOINT = "/api/v1/prelaunch/signup";
+// formsubmit.co AJAX endpoint — 무료 50건/월 + 계정 생성 불필요.
+// 첫 제출 시 jhryu115@gmail.com 으로 activation email 1회 발송됨 → 그 메일의 "Activate Form" 링크 클릭 후 모든 제출 자동 forwarding.
+// Activation 전 제출도 formsubmit 내부적으로 보관됨 (활성화 후 일괄 도착).
+const SIGNUP_ENDPOINT = "https://formsubmit.co/ajax/jhryu115@gmail.com";
 const FALLBACK_EMAIL = "jhryu115@gmail.com";
 
 export default function PtSignupForm() {
@@ -66,23 +69,36 @@ export default function PtSignupForm() {
     try {
       const res = await fetch(SIGNUP_ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          pet_name: form.petName,
-          pet_breed: form.petBreed,
-          area: form.area,
-          walk_freq: form.walkFreq,
-          intent: form.intent,
-          consent_marketing: form.consentMarketing,
-          source: "lunenlabs.com/pet",
+          이름: form.name,
+          이메일: form.email,
+          강아지_이름: form.petName || "-",
+          견종_나이: form.petBreed || "-",
+          거주_지역: form.area || "-",
+          산책_빈도: form.walkFreq || "-",
+          관심_사항: form.intent || "-",
+          마케팅_동의: form.consentMarketing ? "Y" : "N",
+          유입_경로: "lunenlabs.com/pet",
+          제출_시각: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
+          // formsubmit 메타 필드 (실제 회신 본문에는 표 형식으로 정리됨)
+          _subject: `[PT 사전가입] ${form.name || "익명"} (${form.area || "지역미입력"})`,
+          _template: "table",
+          _captcha: "false",
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = (await res.json().catch(() => ({}))) as { success?: string };
+      if (json.success !== "true" && json.success !== undefined) {
+        // formsubmit은 success: "true" 문자열로 응답. 미정의면 통과 처리.
+        throw new Error(`formsubmit response: ${JSON.stringify(json)}`);
+      }
       setStatus("success");
     } catch (err) {
-      console.warn("[pt-signup] backend not reachable, falling back to mailto", err);
+      console.warn("[pt-signup] formsubmit POST failed, falling back to mailto", err);
       setStatus("error");
     }
   };
