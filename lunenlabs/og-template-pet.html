@@ -1,0 +1,208 @@
+<!doctype html>
+<!--
+  PetTracker OG Image Template (1280x720)
+  카톡 / Facebook / Twitter 미리보기 표준 사이즈.
+  /pet 라우트 share 시 보여줄 PetTracker-branded preview.
+
+  재생성 명령 (Windows PowerShell):
+    & "C:/Program Files/Google/Chrome/Application/chrome.exe" `
+      --headless=new --disable-gpu --hide-scrollbars --no-sandbox `
+      --window-size=1280,720 --virtual-time-budget=3000 `
+      --screenshot="lunenlabs/public/og-image.png" `
+      "file:///C:/jhryu/01_project/safeway_kids/lunenlabs/og-template-pet.html"
+
+  ※ 파일명은 og-image.png 그대로 덮어씀 — meta 태그는 변경 불필요.
+  ※ LunenLabs root용 OG가 필요하면 og-template.html 사용 후 og-image-lunenlabs.png 등 별도 저장.
+-->
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>OG Template — PetTracker</title>
+    <link
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+        font-family: "Pretendard Variable", Pretendard, -apple-system,
+          BlinkMacSystemFont, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        letter-spacing: -0.014em;
+      }
+      .og {
+        position: relative;
+        width: 1280px;
+        height: 720px;
+        background:
+          radial-gradient(60% 50% at 80% 20%, rgba(244, 162, 45, 0.22) 0%, transparent 60%),
+          radial-gradient(50% 60% at 10% 90%, rgba(45, 158, 107, 0.16) 0%, transparent 70%),
+          linear-gradient(180deg, #fff8f0 0%, #fff0e0 100%);
+        color: #2a1d10;
+        overflow: hidden;
+        padding: 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .paw-pattern {
+        position: absolute;
+        inset: 0;
+        opacity: 0.05;
+        background-image: radial-gradient(
+          circle at 1px 1px,
+          rgba(196, 125, 16, 0.6) 1px,
+          transparent 0
+        );
+        background-size: 32px 32px;
+      }
+      .top {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 22px;
+        border: 1px solid rgba(244, 162, 45, 0.4);
+        background: rgba(244, 162, 45, 0.12);
+        color: #c47d10;
+        border-radius: 999px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .badge-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #f4a22d;
+        box-shadow: 0 0 8px rgba(244, 162, 45, 0.6);
+      }
+      .by-lunen {
+        margin-left: auto;
+        font-size: 16px;
+        color: rgba(42, 29, 16, 0.55);
+        font-weight: 500;
+      }
+      .by-lunen strong {
+        color: rgba(42, 29, 16, 0.85);
+        font-weight: 700;
+      }
+      .body {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+      .brand {
+        font-size: 36px;
+        font-weight: 800;
+        color: #c47d10;
+        letter-spacing: -0.02em;
+      }
+      .headline {
+        font-size: 88px;
+        font-weight: 800;
+        line-height: 1.04;
+        color: #2a1d10;
+      }
+      .accent {
+        background: linear-gradient(90deg, #f4a22d 0%, #2d9e6b 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .sub {
+        font-size: 26px;
+        color: rgba(42, 29, 16, 0.7);
+        font-weight: 500;
+        max-width: 1000px;
+        line-height: 1.45;
+      }
+      .bottom {
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 48px;
+      }
+      .features {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .pill {
+        padding: 10px 18px;
+        border: 1px solid rgba(196, 125, 16, 0.25);
+        background: rgba(255, 255, 255, 0.65);
+        border-radius: 999px;
+        font-size: 17px;
+        color: rgba(42, 29, 16, 0.85);
+        font-weight: 600;
+      }
+      .url {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 22px;
+        color: #2d9e6b;
+        font-weight: 700;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+      .url-arrow {
+        color: rgba(45, 158, 107, 0.65);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="og">
+      <div class="paw-pattern"></div>
+
+      <div class="top">
+        <div class="badge">
+          <span class="badge-dot"></span>
+          2026년 6월 출시 · 베타 사전가입 진행 중
+        </div>
+        <div class="by-lunen">
+          by <strong>LunenLabs</strong>
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="brand">PetTracker</div>
+        <div class="headline">
+          우리 아이의 하루를<br />
+          <span class="accent">같이 돌봐드려요.</span>
+        </div>
+        <div class="sub">
+          산책 · 사고 대응 · 컨디션 변화 · 추억 기록까지,<br />
+          반려동물의 일상 전반을 함께 봐드리는 동반자.
+        </div>
+      </div>
+
+      <div class="bottom">
+        <div class="features">
+          <span class="pill">🐾 산책</span>
+          <span class="pill">🚨 사고 자동 신고</span>
+          <span class="pill">💚 컨디션 케어</span>
+          <span class="pill">📸 추억 리포트</span>
+        </div>
+        <div class="url">
+          <span class="url-arrow">→</span> lunenlabs.com/pet
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
