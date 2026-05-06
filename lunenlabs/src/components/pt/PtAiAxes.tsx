@@ -84,7 +84,7 @@ const colorMap: Record<string, { bg: string; text: string; border: string; chip:
     bg: "bg-pt-cream",
     text: "text-pt-ink",
     border: "border-pt-border",
-    chip: "bg-pt-border/60 text-pt-ink",
+    chip: "bg-pt-border/15 text-pt-ink",
   },
 };
 
@@ -110,7 +110,7 @@ export default function PtAiAxes() {
           <h2 className="font-pt-heading text-pt-ink text-4xl sm:text-5xl font-bold mb-6 leading-tight">
             AI가 하는 일이
             <br />
-            <span className="text-pt-orange-dark">친근해졌어요.</span>
+            <span className="text-pt-orange-dark">친근해졌습니다.</span>
           </h2>
           <p className="text-pt-ink-soft text-lg leading-relaxed">
             "AI"라고 하면 어렵게 들리지만, PT의 AI는 결국 우리 아이를 더 잘 챙겨드리기
@@ -154,7 +154,7 @@ export default function PtAiAxes() {
 
                 <div className="md:border-l md:border-pt-border md:pl-6">
                   <div className={`text-[11px] font-semibold uppercase tracking-wider mb-1.5 ${c.text}`}>
-                    직접 써보시면
+                    이렇게 동작합니다
                   </div>
                   <div className="text-sm text-pt-ink leading-relaxed">
                     {a.detail}

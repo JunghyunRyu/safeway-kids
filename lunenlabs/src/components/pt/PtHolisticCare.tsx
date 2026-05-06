@@ -63,12 +63,12 @@ export default function PtHolisticCare() {
           <h2 className="font-pt-heading text-pt-ink text-4xl sm:text-5xl font-bold mb-6 leading-tight">
             우리 아이의 일상은 산책 한 번으로
             <br />
-            <span className="text-pt-orange">정리되지 않잖아요.</span>
+            <span className="text-pt-orange">정리되기 어렵습니다.</span>
           </h2>
           <p className="text-pt-ink-soft text-lg leading-relaxed">
             그래서 PetTracker는 <strong className="text-pt-ink">우리 아이의
-            하루 전체</strong>를 같이 들여다봐요. 일하는 동안에도, 외출 중에도,
-            잠든 밤에도 PT가 옆에서 같이 돌봐드릴 수 있게요.
+            하루 전체</strong>를 함께 들여다봐요. 일하는 동안에도, 외출 중에도,
+            잠든 밤에도 PT가 옆에서 돌봐드릴 수 있게요.
           </p>
         </div>
 
@@ -118,9 +118,9 @@ export default function PtHolisticCare() {
 
         <div className="mt-12 p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-pt-orange-light via-pt-cream to-pt-green-light border border-pt-border">
           <p className="text-pt-ink text-center text-base sm:text-lg leading-relaxed">
-            반려동물의 일상을 같이 만들어가는{" "}
-            <strong className="text-pt-green-dark">종합 케어 플랫폼</strong> — 그게
-            PetTracker가 그리고 있는 그림이에요.
+            반려동물의 일상을 함께 만들어가는{" "}
+            <strong className="text-pt-green-dark">종합 케어 플랫폼</strong> — 그것이
+            PetTracker가 그리고 있는 그림입니다.
           </p>
         </div>
       </div>

@@ -37,18 +37,18 @@ export default function PtHero() {
               우리 아이의 하루를
               <br />
               <span className="bg-gradient-to-r from-pt-orange to-pt-green bg-clip-text text-transparent">
-                같이 돌봐드려요.
+                함께 돌봅니다.
               </span>
             </h1>
 
             <p className="text-pt-ink-soft text-lg sm:text-xl max-w-xl leading-relaxed mb-3">
               PetTracker는 반려동물의
-              <strong className="text-pt-ink"> 일상 전반을 함께 봐드리는 동반자</strong>
-              예요.
+              <strong className="text-pt-ink"> 일상 전반을 함께 돌보는 동반자</strong>
+              입니다.
             </p>
             <p className="text-pt-ink-soft text-base sm:text-lg max-w-xl leading-relaxed mb-10">
               산책 · 사고 대응 · 컨디션 변화 · 추억 기록까지,
-              놓치기 쉬운 신호들을 옆에서 같이 챙겨드릴게요.
+              놓치기 쉬운 신호들을 옆에서 함께 챙겨드려요.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 mb-12">
@@ -56,13 +56,13 @@ export default function PtHero() {
                 onClick={() => scrollTo("pt-signup")}
                 className="px-7 py-3.5 rounded-full bg-pt-orange text-white font-semibold hover:bg-pt-orange-dark hover:scale-[1.02] transition-all shadow-lg shadow-pt-orange/30"
               >
-                지금 사전가입하고 첫 3개월 무료로 써보기 →
+                지금 사전가입하고 3개월 무료로 시작하기 →
               </button>
               <button
                 onClick={() => scrollTo("pt-care")}
                 className="px-7 py-3.5 rounded-full bg-white text-pt-ink border border-pt-border hover:bg-pt-orange-light transition-all"
               >
-                어떤 걸 도와드리는지 보기
+                PetTracker 기능 살펴보기
               </button>
             </div>
 

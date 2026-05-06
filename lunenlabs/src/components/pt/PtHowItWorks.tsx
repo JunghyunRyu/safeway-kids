@@ -43,7 +43,7 @@ export default function PtHowItWorks() {
           <h2 className="font-pt-heading text-pt-ink text-4xl sm:text-5xl font-bold mb-6 leading-tight">
             처음 써보시는 분도
             <br />
-            <span className="text-pt-green-dark">3분이면 시작할 수 있어요.</span>
+            <span className="text-pt-green-dark">3분이면 시작할 수 있습니다.</span>
           </h2>
           <p className="text-pt-ink-soft text-lg leading-relaxed">
             복잡한 가입 절차나 설정은 없어요. 우리 아이 정보만 가볍게 입력하면 PT가
@@ -76,7 +76,7 @@ export default function PtHowItWorks() {
         </div>
 
         <div className="mt-12 grid sm:grid-cols-2 gap-5">
-          <div className="p-6 rounded-2xl bg-pt-orange/10 border border-pt-orange/25">
+          <div className="p-6 rounded-2xl bg-pt-orange-light/70 border border-pt-orange/25">
             <div className="text-pt-orange-dark font-semibold text-sm mb-2">
               👤 보호자께
             </div>
@@ -85,7 +85,7 @@ export default function PtHowItWorks() {
               누구인지·뭘 했는지 전부 투명하게 보여드릴게요.
             </p>
           </div>
-          <div className="p-6 rounded-2xl bg-pt-green/10 border border-pt-green/25">
+          <div className="p-6 rounded-2xl bg-pt-green-light/70 border border-pt-green/25">
             <div className="text-pt-green-dark font-semibold text-sm mb-2">
               🐕 산책 메이트분께
             </div>

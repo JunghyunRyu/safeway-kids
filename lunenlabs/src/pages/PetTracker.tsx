@@ -19,7 +19,7 @@ export default function PetTracker() {
     if (meta) {
       meta.setAttribute(
         "content",
-        "PetTracker는 반려동물의 산책 · 사고 대응 · 컨디션 변화 · 추억 기록까지 일상 전반을 같이 챙겨드리는 종합 케어 동반자예요. 2026년 6월 V1.0 출시 예정."
+        "PetTracker는 반려동물의 산책 · 사고 대응 · 컨디션 변화 · 추억 기록까지 일상 전반을 함께 챙겨드리는 종합 케어 동반자입니다. 2026년 6월 V1.0 출시 예정."
       );
     }
 
@@ -41,14 +41,14 @@ export default function PetTracker() {
 
         <section
           id="pt-signup"
-          className="relative py-16 sm:py-24 bg-gradient-to-b from-pt-cream via-white to-pt-orange-light overflow-hidden"
+          className="relative py-14 sm:py-20 bg-gradient-to-b from-pt-cream via-white to-pt-orange-light overflow-hidden"
         >
           <div
-            className="absolute inset-0 opacity-50 pointer-events-none"
+            className="absolute inset-0 opacity-60 pointer-events-none"
             aria-hidden
             style={{
               background:
-                "radial-gradient(40% 40% at 80% 30%, rgba(244, 162, 45, 0.10) 0%, transparent 70%)",
+                "radial-gradient(45% 35% at 50% 45%, rgba(244, 162, 45, 0.14) 0%, transparent 70%), radial-gradient(40% 30% at 50% 70%, rgba(45, 158, 107, 0.10) 0%, transparent 70%)",
             }}
           />
           <div className="relative z-10 max-w-2xl mx-auto px-5 sm:px-8">
@@ -59,10 +59,10 @@ export default function PetTracker() {
               <h2 className="font-pt-heading text-pt-ink text-4xl sm:text-5xl font-bold mb-5 leading-tight">
                 지금 신청하시면
                 <br />
-                <span className="text-pt-orange-dark">첫 3개월 완전 무료예요.</span>
+                <span className="text-pt-orange-dark">첫 3개월 완전 무료입니다.</span>
               </h2>
               <p className="text-pt-ink-soft text-lg leading-relaxed">
-                2026년 6월 V1.0이 출시되면 가장 먼저 안내드릴게요.
+                2026년 6월 V1.0이 출시되면 가장 먼저 안내드립니다.
                 <br />약 1분이면 신청이 끝나요.
               </p>
             </div>

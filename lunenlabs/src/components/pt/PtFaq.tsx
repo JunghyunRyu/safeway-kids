@@ -37,7 +37,7 @@ export default function PtFaq() {
   return (
     <section
       id="pt-faq"
-      className="relative pt-14 pb-20 sm:pt-20 sm:pb-28 bg-white overflow-hidden"
+      className="relative pt-10 pb-20 sm:pt-14 sm:pb-28 bg-white overflow-hidden"
     >
       <div className="relative z-10 max-w-3xl mx-auto px-5 sm:px-8">
         <div className="text-center mb-14">

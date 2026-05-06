@@ -101,7 +101,7 @@ export default function PtSignupForm() {
 
   if (status === "success") {
     return (
-      <div className="bg-white border border-pt-orange/30 rounded-3xl p-10 text-center shadow-xl">
+      <div className="bg-white/80 backdrop-blur-2xl border border-pt-orange/30 rounded-3xl p-10 text-center shadow-xl">
         <div className="w-16 h-16 rounded-full bg-pt-orange-light flex items-center justify-center mx-auto mb-5">
           <svg
             viewBox="0 0 24 24"
@@ -142,7 +142,7 @@ export default function PtSignupForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="bg-white border border-pt-border rounded-3xl p-7 sm:p-10 shadow-xl"
+      className="bg-white/80 backdrop-blur-2xl border border-white/60 rounded-3xl p-7 sm:p-10 shadow-xl"
     >
       <h3 className="font-pt-heading text-pt-ink text-2xl sm:text-3xl font-bold mb-2">
         PetTracker 베타 사전가입
