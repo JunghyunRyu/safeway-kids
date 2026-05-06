@@ -41,7 +41,7 @@ export default function PetTracker() {
 
         <section
           id="pt-signup"
-          className="relative py-24 sm:py-32 bg-gradient-to-b from-pt-cream via-white to-pt-orange-light overflow-hidden"
+          className="relative py-16 sm:py-24 bg-gradient-to-b from-pt-cream via-white to-pt-orange-light overflow-hidden"
         >
           <div
             className="absolute inset-0 opacity-50 pointer-events-none"

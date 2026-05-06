@@ -1,97 +1,82 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
-interface ActivityItem {
-  id: string;
-  type: 'photo' | 'message' | 'status';
-  text: string;
-  time: string;
-  photoUrl?: string;
-}
-
-// Placeholder data — in production, fetched from WebSocket or API
-const MOCK_FEED: ActivityItem[] = [
-  { id: '1', type: 'status', text: '워커가 도착했습니다', time: '10:00' },
-  { id: '2', type: 'status', text: '산책이 시작되었습니다 🐾', time: '10:02' },
-  { id: '3', type: 'photo', text: '공원에�� 신나게 뛰고 있어요!', time: '10:15' },
-  { id: '4', type: 'message', text: '배변 처리 완료, 물 마시는 중이에요', time: '10:30' },
-  { id: '5', type: 'photo', text: '다른 강아지 친구를 만났어요 🐕', time: '10:40' },
-];
-
-export default function ActivityFeedScreen({ route, navigation }: any) {
-  const renderItem = ({ item }: { item: ActivityItem }) => (
-    <View style={styles.feedItem}>
-      <View style={styles.timeline}>
-        <View style={[styles.dot, item.type === 'photo' && styles.dotPhoto]} />
-        <View style={styles.line} />
-      </View>
-      <View style={styles.feedContent}>
-        <Text style={styles.feedTime}>{item.time}</Text>
-        {item.type === 'photo' && (
-          <View style={styles.photoPlaceholder}>
-            <Ionicons name="image" size={32} color={Colors.textDisabled} />
-            <Text style={styles.photoText}>사진</Text>
-          </View>
-        )}
-        <Text style={styles.feedText}>{item.text}</Text>
-      </View>
-    </View>
-  );
-
+// NOTE: This screen is not registered in OwnerStackNavigator as of V1.0.
+// The CTA navigate call is non-operational until V1.1 stack registration.
+// Mock placeholder data removed 2026-05-05 (modoo-deadline package F-1=A).
+// Track 2 T2.3 (사진 캡션 + Empathic 리포트) 완료 후 실 API 연결 예정 (V1.1 또는 V1.0 출시 6/9).
+export default function ActivityFeedScreen({ navigation }: any) {
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.title}>활동 피드</Text>
-        <View style={styles.liveBadge}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>실시간</Text>
-        </View>
+    <View style={styles.container} testID="activity-feed-placeholder">
+      <View style={styles.iconWrap}>
+        <Ionicons name="paw" size={64} color={Colors.primary} />
       </View>
-
-      <FlatList
-        data={MOCK_FEED}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={{ padding: Spacing.base }}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="camera-outline" size={48} color={Colors.textDisabled} />
-            <Text style={styles.emptyText}>아직 활동이 없어요</Text>
-          </View>
-        }
-      />
+      <Text style={styles.title}>활동 피드</Text>
+      <Text style={styles.body}>
+        {'실시간 산책 업데이트 기능이\n6월 정식 출시 예정입니다.'}
+      </Text>
+      <Text style={styles.subBody}>
+        예약 후 산책이 시작되면 사진과 메시지를 받아볼 수 있어요.
+      </Text>
+      <Pressable
+        style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+        onPress={() => navigation?.navigate?.('Bookings')}
+        accessibilityRole="button"
+        accessibilityLabel="예약 확인하기"
+        hitSlop={8}
+      >
+        <Text style={styles.ctaText}>예약 확인하기</Text>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    paddingHorizontal: Spacing.base, paddingTop: 60, paddingBottom: Spacing.md,
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
   },
-  title: { flex: 1, fontSize: Typography.sizes.xl, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
-  liveBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.successLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.success, marginRight: 4 },
-  liveText: { fontSize: Typography.sizes.xs, fontWeight: Typography.weights.bold, color: Colors.success },
-  feedItem: { flexDirection: 'row', marginBottom: Spacing.md },
-  timeline: { width: 24, alignItems: 'center' },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary, marginTop: 4 },
-  dotPhoto: { backgroundColor: Colors.accent },
-  line: { width: 2, flex: 1, backgroundColor: Colors.borderLight, marginTop: 4 },
-  feedContent: { flex: 1, marginLeft: Spacing.md, backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.md, ...Shadows.sm },
-  feedTime: { fontSize: Typography.sizes.xs, color: Colors.textDisabled, marginBottom: 4 },
-  feedText: { fontSize: Typography.sizes.base, color: Colors.textPrimary, lineHeight: 20 },
-  photoPlaceholder: {
-    height: 120, backgroundColor: Colors.surfaceElevated, borderRadius: Radius.sm,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
+  iconWrap: { marginBottom: Spacing.lg },
+  title: {
+    fontSize: Typography.sizes.xxl,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
   },
-  photoText: { fontSize: Typography.sizes.xs, color: Colors.textDisabled, marginTop: 4 },
-  empty: { alignItems: 'center', marginTop: 60 },
-  emptyText: { fontSize: Typography.sizes.base, color: Colors.textDisabled, marginTop: Spacing.md },
+  body: {
+    fontSize: Typography.sizes.base,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: Spacing.sm,
+  },
+  subBody: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.xl,
+  },
+  cta: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+    minWidth: 160,
+    alignItems: 'center',
+  },
+  ctaPressed: {
+    backgroundColor: Colors.primaryDark,
+    opacity: 0.95,
+  },
+  ctaText: {
+    color: Colors.textPrimary,
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.semibold,
+  },
 });

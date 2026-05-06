@@ -47,36 +47,44 @@ const aiAxes = [
   },
 ];
 
+/**
+ * 5개 도우미 카드 — farm palette(pt-orange/green/cream)만 사용해 5톤으로 분리.
+ *  danger  : 짙은 호박 (긴급, 사고)
+ *  info    : 따뜻한 그린 (안전 안내)
+ *  orange  : 살구 오렌지 (캐주얼, 사진)
+ *  green   : 모스 그린 (안정, 컨디션)
+ *  purple  : 모카 베이지 (신뢰·검수, 중립)
+ */
 const colorMap: Record<string, { bg: string; text: string; border: string; chip: string }> = {
   danger: {
-    bg: "bg-red-50",
-    text: "text-red-700",
-    border: "border-red-200",
-    chip: "bg-red-100 text-red-700",
+    bg: "bg-pt-orange/15",
+    text: "text-pt-orange-dark",
+    border: "border-pt-orange-dark/25",
+    chip: "bg-pt-orange-dark/15 text-pt-orange-dark",
   },
   info: {
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    border: "border-blue-200",
-    chip: "bg-blue-100 text-blue-700",
+    bg: "bg-pt-green/10",
+    text: "text-pt-green",
+    border: "border-pt-green/25",
+    chip: "bg-pt-green/15 text-pt-green-dark",
   },
   orange: {
     bg: "bg-pt-orange-light",
-    text: "text-pt-orange-dark",
-    border: "border-pt-orange/30",
-    chip: "bg-pt-orange/20 text-pt-orange-dark",
+    text: "text-pt-orange",
+    border: "border-pt-orange/25",
+    chip: "bg-pt-orange/15 text-pt-orange-dark",
   },
   green: {
     bg: "bg-pt-green-light",
     text: "text-pt-green-dark",
-    border: "border-pt-green/30",
-    chip: "bg-pt-green/20 text-pt-green-dark",
+    border: "border-pt-green-dark/25",
+    chip: "bg-pt-green-dark/15 text-pt-green-dark",
   },
   purple: {
-    bg: "bg-purple-50",
-    text: "text-purple-700",
-    border: "border-purple-200",
-    chip: "bg-purple-100 text-purple-700",
+    bg: "bg-pt-cream",
+    text: "text-pt-ink",
+    border: "border-pt-border",
+    chip: "bg-pt-border/60 text-pt-ink",
   },
 };
 
@@ -84,7 +92,7 @@ export default function PtAiAxes() {
   return (
     <section
       id="pt-ai"
-      className="relative py-24 sm:py-32 bg-pt-cream overflow-hidden"
+      className="relative py-14 sm:py-20 bg-pt-cream overflow-hidden"
     >
       <div
         className="absolute inset-0 opacity-50 pointer-events-none"

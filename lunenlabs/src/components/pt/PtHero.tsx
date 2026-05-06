@@ -104,35 +104,47 @@ export default function PtHero() {
  */
 function PtHeroVisual() {
   return (
-    <div className="relative aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl shadow-pt-orange-dark/20 bg-gradient-to-br from-pt-orange-light via-white to-pt-green-light border border-pt-border">
-      <div className="absolute inset-0 flex items-center justify-center">
-        <svg
-          viewBox="0 0 200 200"
-          className="w-3/5 h-3/5 opacity-90"
-          aria-hidden
-        >
-          <defs>
-            <linearGradient id="pawg" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#F4A22D" />
-              <stop offset="100%" stopColor="#2D9E6B" />
-            </linearGradient>
-          </defs>
-          {/* Stylized paw print */}
-          <ellipse cx="100" cy="130" rx="42" ry="32" fill="url(#pawg)" opacity="0.85" />
-          <ellipse cx="60" cy="80" rx="16" ry="20" fill="url(#pawg)" opacity="0.85" />
-          <ellipse cx="140" cy="80" rx="16" ry="20" fill="url(#pawg)" opacity="0.85" />
-          <ellipse cx="35" cy="115" rx="13" ry="17" fill="url(#pawg)" opacity="0.85" />
-          <ellipse cx="165" cy="115" rx="13" ry="17" fill="url(#pawg)" opacity="0.85" />
-        </svg>
-      </div>
-      <div className="absolute bottom-5 left-5 right-5 px-4 py-3 rounded-2xl bg-white/90 backdrop-blur-sm border border-pt-border shadow-lg">
-        <div className="text-pt-ink-soft text-xs mb-1">오늘의 산책 리포트</div>
-        <div className="text-pt-ink font-semibold text-sm leading-snug">
-          "오늘은 콩이가 평소보다 좀 더 활발했어요. 잔디밭에서 신나게 뛰어놀았답니다."
+    <div className="relative">
+      {/* Behind blobs — 글래스 카드가 통과시킬 컬러 레이어 */}
+      <div
+        className="absolute -inset-8 -z-10 pointer-events-none"
+        aria-hidden
+        style={{
+          background:
+            "radial-gradient(45% 40% at 30% 35%, rgba(244, 162, 45, 0.55) 0%, transparent 65%), radial-gradient(40% 45% at 75% 70%, rgba(45, 158, 107, 0.40) 0%, transparent 70%)",
+          filter: "blur(24px)",
+        }}
+      />
+      <div className="relative aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl shadow-pt-orange-dark/20 bg-white/35 backdrop-blur-2xl border border-white/55">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <svg
+            viewBox="0 0 200 200"
+            className="w-3/5 h-3/5 opacity-90"
+            aria-hidden
+          >
+            <defs>
+              <linearGradient id="pawg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#F4A22D" />
+                <stop offset="100%" stopColor="#2D9E6B" />
+              </linearGradient>
+            </defs>
+            {/* Stylized paw print */}
+            <ellipse cx="100" cy="130" rx="42" ry="32" fill="url(#pawg)" opacity="0.85" />
+            <ellipse cx="60" cy="80" rx="16" ry="20" fill="url(#pawg)" opacity="0.85" />
+            <ellipse cx="140" cy="80" rx="16" ry="20" fill="url(#pawg)" opacity="0.85" />
+            <ellipse cx="35" cy="115" rx="13" ry="17" fill="url(#pawg)" opacity="0.85" />
+            <ellipse cx="165" cy="115" rx="13" ry="17" fill="url(#pawg)" opacity="0.85" />
+          </svg>
         </div>
-      </div>
-      <div className="absolute top-5 right-5 px-3 py-1.5 rounded-full bg-pt-green text-white text-xs font-semibold shadow-md">
-        AI 캡션
+        <div className="absolute bottom-5 left-5 right-5 px-4 py-3 rounded-2xl bg-white/70 backdrop-blur-md border border-white/60 shadow-lg">
+          <div className="text-pt-ink-soft text-xs mb-1">오늘의 산책 리포트</div>
+          <div className="text-pt-ink font-semibold text-sm leading-snug">
+            "오늘은 콩이가 평소보다 좀 더 활발했어요. 잔디밭에서 신나게 뛰어놀았답니다."
+          </div>
+        </div>
+        <div className="absolute top-5 right-5 px-3 py-1.5 rounded-full bg-pt-green text-white text-xs font-semibold shadow-md">
+          AI 캡션
+        </div>
       </div>
     </div>
   );

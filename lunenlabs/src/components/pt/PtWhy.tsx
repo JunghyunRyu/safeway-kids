@@ -30,7 +30,7 @@ export default function PtWhy() {
   return (
     <section
       id="pt-why"
-      className="relative py-24 sm:py-32 bg-pt-cream overflow-hidden"
+      className="relative py-14 sm:py-20 bg-pt-cream overflow-hidden"
     >
       <div
         className="absolute inset-0 opacity-50 pointer-events-none"
@@ -48,7 +48,7 @@ export default function PtWhy() {
           <h2 className="font-pt-heading text-pt-ink text-4xl sm:text-5xl font-bold mb-6 leading-tight">
             우리 아이를 처음 보는 사람에게
             <br />
-            <span className="text-pt-orange-dark">
+            <span className="text-pt-orange">
               맡기는 게 쉽지 않잖아요.
             </span>
           </h2>

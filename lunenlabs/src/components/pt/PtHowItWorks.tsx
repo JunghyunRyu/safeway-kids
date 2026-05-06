@@ -33,7 +33,7 @@ export default function PtHowItWorks() {
   return (
     <section
       id="pt-how"
-      className="relative py-24 sm:py-32 bg-white overflow-hidden"
+      className="relative py-14 sm:py-20 bg-white overflow-hidden"
     >
       <div className="relative z-10 max-w-6xl mx-auto px-5 sm:px-8">
         <div className="max-w-3xl mb-14">
@@ -76,7 +76,7 @@ export default function PtHowItWorks() {
         </div>
 
         <div className="mt-12 grid sm:grid-cols-2 gap-5">
-          <div className="p-6 rounded-2xl bg-pt-orange-light border border-pt-orange/30">
+          <div className="p-6 rounded-2xl bg-pt-orange/10 border border-pt-orange/25">
             <div className="text-pt-orange-dark font-semibold text-sm mb-2">
               👤 보호자께
             </div>
@@ -85,7 +85,7 @@ export default function PtHowItWorks() {
               누구인지·뭘 했는지 전부 투명하게 보여드릴게요.
             </p>
           </div>
-          <div className="p-6 rounded-2xl bg-pt-green-light border border-pt-green/30">
+          <div className="p-6 rounded-2xl bg-pt-green/10 border border-pt-green/25">
             <div className="text-pt-green-dark font-semibold text-sm mb-2">
               🐕 산책 메이트분께
             </div>

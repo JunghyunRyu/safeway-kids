@@ -255,7 +255,7 @@ export default function PtSignupForm() {
         <button
           type="submit"
           disabled={status === "submitting"}
-          className="w-full py-4 rounded-xl bg-gradient-to-r from-pt-orange to-pt-green text-white font-semibold hover:opacity-95 hover:scale-[1.005] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-pt-orange/20"
+          className="w-full py-4 rounded-xl bg-pt-orange text-white font-semibold hover:bg-pt-orange-dark hover:scale-[1.005] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-pt-orange/30"
         >
           {status === "submitting" ? "전송 중..." : "사전가입 신청하기"}
         </button>

@@ -45,7 +45,7 @@ const careAreas = [
 
 export default function PtHolisticCare() {
   return (
-    <section id="pt-care" className="relative py-24 sm:py-32 bg-white overflow-hidden">
+    <section id="pt-care" className="relative pt-16 pb-14 sm:pt-20 sm:pb-16 bg-white overflow-hidden">
       {/* Soft warm accent */}
       <div
         className="absolute top-0 right-0 w-[60%] h-[60%] opacity-50 pointer-events-none"
@@ -63,7 +63,7 @@ export default function PtHolisticCare() {
           <h2 className="font-pt-heading text-pt-ink text-4xl sm:text-5xl font-bold mb-6 leading-tight">
             우리 아이의 일상은 산책 한 번으로
             <br />
-            <span className="text-pt-orange-dark">정리되지 않잖아요.</span>
+            <span className="text-pt-orange">정리되지 않잖아요.</span>
           </h2>
           <p className="text-pt-ink-soft text-lg leading-relaxed">
             그래서 PetTracker는 <strong className="text-pt-ink">우리 아이의
