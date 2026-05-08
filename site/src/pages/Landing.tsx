@@ -101,7 +101,7 @@ const TARGETS = [
     accent: "text-warning",
     points: [
       "AI 최적 경로로 효율적 운행",
-      "정규직 전환 기회 (플랫폼 직접 고용)",
+      "안정적 파트너십 체계 (장기 협력 로드맵 검토 중)",
       "체계적 안전 교육 제공",
       "공정한 보수 체계",
     ],
@@ -210,9 +210,9 @@ export default function Landing() {
           {/* Stats */}
           <div className="mt-16 grid grid-cols-3 gap-6 max-w-lg mx-auto">
             {[
-              { value: "효율적", label: "운영비 절감" },
+              { value: "도입 문의 중", label: "학원 파트너 검토" },
               { value: "실시간", label: "위치 추적" },
-              { value: "24/7", label: "안전 모니터링" },
+              { value: "Coming Soon", label: "Edge AI 안전 기능" },
             ].map((s) => (
               <div key={s.label} className="text-center">
                 <div className="text-2xl md:text-3xl font-extrabold text-primary">{s.value}</div>
@@ -263,9 +263,9 @@ export default function Landing() {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {[
-              { step: "01", title: "앱 설치", desc: "App Store 또는 Google Play에서 SAFEWAY KIDS 앱을 다운로드하세요." },
-              { step: "02", title: "자녀 등록", desc: "자녀 정보와 이용할 학원을 등록합니다." },
-              { step: "03", title: "스케줄 설정", desc: "요일별 등·하원 스케줄을 설정합니다." },
+              { step: "01", title: "사전 도입 문의", desc: "학원 측에서 도입 문의를 보내시면 영업일 2일 이내 회신드립니다." },
+              { step: "02", title: "자녀 등록", desc: "도입 학원을 통해 자녀 정보와 등·하원 스케줄을 등록합니다." },
+              { step: "03", title: "앱 사전 신청", desc: "보호자용 앱은 학원 도입 확정 후 사전 신청 링크를 안내드립니다." },
               { step: "04", title: "안심 통학", desc: "실시간 추적과 알림으로 안심하고 통학을 맡기세요." },
             ].map((item) => (
               <div key={item.step} className="text-center">
@@ -344,66 +344,67 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Use Cases — 도입 시 기대 효과 */}
       <section className="py-20 md:py-28 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-4">이용 후기</h2>
-            <p className="text-gray-500 text-lg">실제 이용자분들의 생생한 후기입니다</p>
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-4">도입 시 기대 효과</h2>
+            <p className="text-gray-500 text-lg">학부모·학원·기사 각 입장에서 SafeWay Kids가 해결하는 시나리오</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                name: "김지현 학부모",
-                role: "초등학교 2학년 자녀",
-                quote: "아이가 학원버스에 탔는지 안 탔는지 매번 전화해서 확인했는데, 이제 앱으로 바로 알림이 와서 너무 편해요. 실시간 위치도 볼 수 있어서 안심이 됩니다.",
+                role: "학부모",
+                situation: "아이의 학원버스 탑승 여부 확인",
+                benefit: "탑승·하차·도착 알림이 앱으로 자동 전달되고, 실시간 위치를 지도에서 확인할 수 있어 매번 전화로 확인할 필요가 없습니다.",
               },
               {
-                name: "박민수 원장",
-                role: "영어학원 운영 15년차",
-                quote: "차량 3대를 직접 관리하던 때보다 운영비가 줄었어요. 기사 관리, 보험, 차량 유지비 부담이 없어지니 학원 운영에만 집중할 수 있습니다.",
+                role: "학원 운영자",
+                situation: "차량 3대 직접 관리 시 운영 부담",
+                benefit: "차량·기사·보험·유지비를 통합 위탁할 수 있어, 학원 운영자는 교육에 집중할 수 있습니다. (운영비 절감 폭은 실제 도입 후 측정)",
               },
               {
-                name: "이승호 기사님",
-                role: "셔틀버스 운전 7년차",
-                quote: "AI가 경로를 잡아주니까 운행 시간이 확실히 줄었어요. 정규직으로 전환되면서 고용 안정도 생기고, 체계적인 교육도 받을 수 있어서 좋습니다.",
+                role: "기사",
+                situation: "수동 경로 계획 + 운행 효율 한계",
+                benefit: "AI 최적 경로로 운행 시간 단축이 기대되며, 체계적 안전 교육과 안정적 파트너십 체계가 제공됩니다.",
               },
             ].map((t) => (
               <div
-                key={t.name}
+                key={t.role}
                 className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
               >
-                <div className="text-primary text-3xl mb-4">"</div>
-                <p className="text-gray-600 text-sm leading-relaxed mb-6">{t.quote}</p>
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="font-bold text-gray-800">{t.name}</p>
-                  <p className="text-xs text-gray-500">{t.role}</p>
-                </div>
+                <div className="text-primary text-3xl mb-4">·</div>
+                <div className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">{t.role}</div>
+                <p className="text-sm font-bold text-gray-700 mb-3">{t.situation}</p>
+                <p className="text-gray-600 text-sm leading-relaxed">{t.benefit}</p>
               </div>
             ))}
           </div>
+
+          <p className="text-xs text-gray-400 text-center mt-10">
+            * 위 시나리오는 도입 시 기대 효과 예시입니다. 실제 사용자 후기는 도입 학원이 늘어남에 따라 별도로 안내드립니다.
+          </p>
         </div>
       </section>
 
-      {/* Mid-funnel CTA — Brochure Download */}
+      {/* Mid-funnel CTA — Inquiry */}
       <section className="py-16 bg-primary">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-4">
-            서비스 소개서 다운로드
+            서비스 소개 받기
           </h2>
           <p className="text-primary-light text-lg mb-8">
-            SAFEWAY KIDS의 서비스 안내, 요금 정보, 안전 시스템을 한눈에 확인하세요
+            도입 검토를 시작하시는 학원에 서비스 안내, 요금 정보, 안전 시스템 자료를 이메일로 전달드립니다
           </p>
           <a
-            href="/brochure/safeway-kids-brochure.pdf"
-            download
+            href="#contact"
             className="inline-flex items-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-primary font-semibold rounded-2xl transition shadow-lg hover:-translate-y-0.5"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            소개서 PDF 다운로드
+            문의로 자료 받기
           </a>
         </div>
       </section>
@@ -458,7 +459,7 @@ export default function Landing() {
           </div>
 
           <p className="text-center text-xs text-gray-400 mt-8">
-            * 요금은 베타 서비스 기준이며, 정식 출시 시 변경될 수 있습니다
+            * 기본·프리미엄 요금제는 보호자 직접 결제 기준이며, 학원 도입 요금은 학생 인원·차량 규모별 별도 협의됩니다 (비용 시뮬레이터에서 추정 가능). 모든 요금은 베타 서비스 기준이며 정식 출시 시 변경될 수 있습니다.
           </p>
         </div>
       </section>
@@ -475,7 +476,7 @@ export default function Landing() {
 
           {formStatus === 'success' && (
             <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm">
-              문의가 접수되었습니다. 빠른 시일 내에 연락드리겠습니다.
+              문의가 접수되었습니다. 영업일 2일 이내 연락드리겠습니다.
             </div>
           )}
           {formStatus === 'error' && (
@@ -550,10 +551,16 @@ export default function Landing() {
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors bg-white"
               >
                 <option value="">선택해주세요</option>
-                <option value="academy">학원 도입 문의</option>
-                <option value="parent">학부모 이용 문의</option>
-                <option value="driver">기사 지원 문의</option>
-                <option value="escort">안전도우미 지원 문의</option>
+                <optgroup label="도입 문의">
+                  <option value="academy">학원 도입 문의</option>
+                </optgroup>
+                <optgroup label="개인 이용">
+                  <option value="parent">학부모 이용 문의</option>
+                </optgroup>
+                <optgroup label="파트너 지원 (채용 조건 안내 예정)">
+                  <option value="driver">기사 지원 문의</option>
+                  <option value="escort">안전도우미 지원 문의</option>
+                </optgroup>
                 <option value="other">기타</option>
               </select>
             </div>

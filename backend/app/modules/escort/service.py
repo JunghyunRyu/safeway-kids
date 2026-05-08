@@ -40,10 +40,13 @@ async def get_my_availability(
     return list(result.scalars().all())
 
 
-async def auto_match(db: AsyncSession, target_date: date) -> dict:
-    """Auto-match available escorts to vehicle assignments for a date.
+async def suggest_candidates(db: AsyncSession, target_date: date) -> dict:
+    """Suggest safety escort candidates for vehicle assignments on a given date.
 
-    Strategy: first-come-first-served matching of available escorts
+    NOTE: 도로교통법 §53 제3항의 법적 "지명"은 교육시설의 장 권한이며, 본 함수는
+    플랫폼이 자격 검증 후보 풀에서 1차 후보를 제시하는 단계이다 (first-come-first-served).
+    실제 지명은 교육시설의 장이 UI에서 승인 단계를 수행한다 (V2.x 승인 API).
+    Strategy: first-come-first-served candidate suggestion of available escorts
     to assignments that don't already have a safety escort.
     """
     # Get assignments without safety escort

@@ -3,12 +3,14 @@ import axios from "axios";
 import { Platform } from "react-native";
 import { showError } from "../utils/toast";
 
-// Web-safe token storage (SecureStore is native-only)
+// Web: in-memory only (XSS hardening — localStorage 저장 시 동일 origin XSS로 토큰 탈취 가능)
+// Native: SecureStore (Keychain on iOS, EncryptedSharedPreferences on Android)
+// Trade-off: Web에서 페이지 새로고침 시 토큰 손실 → 재로그인 필요. 보안 > 사용성 의도.
 let _memoryTokens: Record<string, string> = {};
 
 async function getItem(key: string): Promise<string | null> {
   if (Platform.OS === "web") {
-    return _memoryTokens[key] ?? localStorage.getItem(key);
+    return _memoryTokens[key] ?? null;
   }
   const SecureStore = await import("expo-secure-store");
   return SecureStore.getItemAsync(key);
@@ -17,7 +19,6 @@ async function getItem(key: string): Promise<string | null> {
 async function setItem(key: string, value: string): Promise<void> {
   if (Platform.OS === "web") {
     _memoryTokens[key] = value;
-    localStorage.setItem(key, value);
     return;
   }
   const SecureStore = await import("expo-secure-store");
@@ -27,7 +28,6 @@ async function setItem(key: string, value: string): Promise<void> {
 async function deleteItem(key: string): Promise<void> {
   if (Platform.OS === "web") {
     delete _memoryTokens[key];
-    localStorage.removeItem(key);
     return;
   }
   const SecureStore = await import("expo-secure-store");
@@ -37,6 +37,13 @@ async function deleteItem(key: string): Promise<void> {
 export const tokenStorage = { getItem, setItem, deleteItem };
 
 const getApiBaseUrl = (): string => {
+  // Expo Web (브라우저)은 localhost를 강제 사용한다.
+  // app.json의 apiBaseUrl은 Expo Go(폰)가 노트북 백엔드에 LAN IP로 닿기 위한
+  // override라, 브라우저에서는 그 IP가 다른 호스트를 가리키거나 CORS·DNS가
+  // 깨지면서 fetch가 실패한다. 두 흐름을 모두 살리기 위해 web만 분기.
+  if (Platform.OS === "web") {
+    return "http://localhost:8000/api/v1";
+  }
   const extra = Constants.expoConfig?.extra;
   if (extra?.apiBaseUrl) return extra.apiBaseUrl;
   return "http://localhost:8000/api/v1";

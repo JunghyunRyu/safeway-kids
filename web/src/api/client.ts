@@ -3,9 +3,12 @@ import { showToast } from '../components/Toast';
 
 const API_BASE = '/api/v1';
 
+// XSS hardening — sessionStorage (탭 단위 isolation, localStorage 대비 attack surface 감소).
+// trade-off: 탭 닫으면 재로그인 필요. 학원 admin 일과 중 같은 탭 유지 → 사용성 영향 최소.
+// 동일 origin XSS 방어는 V1.x에서 httpOnly cookie 전환으로 점진 강화 예정.
 function getToken(key: string): string | null {
   try {
-    return localStorage.getItem(key);
+    return sessionStorage.getItem(key);
   } catch {
     return null;
   }
@@ -13,7 +16,7 @@ function getToken(key: string): string | null {
 
 function setToken(key: string, value: string): void {
   try {
-    localStorage.setItem(key, value);
+    sessionStorage.setItem(key, value);
   } catch {
     // Storage unavailable (incognito/quota exceeded)
   }
@@ -21,7 +24,7 @@ function setToken(key: string, value: string): void {
 
 function clearTokens(): void {
   try {
-    localStorage.clear();
+    sessionStorage.clear();
   } catch {
     // Storage unavailable
   }

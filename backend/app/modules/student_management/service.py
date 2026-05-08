@@ -556,9 +556,10 @@ async def bulk_upload_students(
             )
             continue
 
-        # Duplicate check: same name + dob + guardian
+        # Duplicate check: same name + dob + guardian — name_hash 기반 (UniqueConstraint 동등)
+        from app.common.security import compute_name_hash
         dup_stmt = select(Student).where(
-            Student.name == name,
+            Student.name_hash == compute_name_hash(name),
             Student.date_of_birth == dob,
             Student.guardian_id == guardian.id,
             Student.deleted_at.is_(None),

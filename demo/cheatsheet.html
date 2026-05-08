@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeWay Kids — 사업 소개 및 시연 (2026-05-07)</title>
+<style>
+  :root {
+    --primary: #1f5fa6;
+    --primary-dark: #0b3a7a;
+    --accent: #15a36e;
+    --warn: #d97706;
+    --bg: #f6f8fb;
+    --card: #ffffff;
+    --border: #dde4ec;
+    --text: #1d2939;
+    --muted: #5b6b7d;
+    --soft: #eef3f9;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.65; font-size: 15.5px;
+  }
+  header.hero {
+    background: linear-gradient(135deg, #0b3a7a 0%, #1f7ae0 100%);
+    color: white; padding: 44px 48px 36px;
+  }
+  header.hero .brand { font-size: 14px; letter-spacing: 2px; opacity: .85; text-transform: uppercase; }
+  header.hero h1 { margin: 6px 0 14px; font-size: 36px; font-weight: 800; letter-spacing: -0.6px; }
+  header.hero .tagline { font-size: 17.5px; opacity: 0.96; max-width: 760px; line-height: 1.5; }
+  header.hero .meeting {
+    margin-top: 22px; padding: 14px 18px;
+    background: rgba(255,255,255,0.12); border-radius: 10px;
+    font-size: 14px; display: inline-block;
+  }
+  header.hero .meeting b { color: #fde68a; }
+
+  nav.toc {
+    position: sticky; top: 0;
+    background: #0d3768; padding: 11px 48px;
+    display: flex; gap: 22px; flex-wrap: wrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12); z-index: 10;
+  }
+  nav.toc a {
+    color: #cfe1ff; text-decoration: none; font-size: 13.5px; font-weight: 600;
+    padding: 4px 10px; border-radius: 6px;
+  }
+  nav.toc a:hover { background: rgba(255,255,255,0.12); color: white; }
+
+  main { max-width: 1180px; margin: 0 auto; padding: 32px 48px 80px; }
+
+  section {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 28px 32px; margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(16,24,40,0.05);
+  }
+  section h2 {
+    margin: 0 0 16px; font-size: 22px; font-weight: 800; color: var(--primary);
+    padding-bottom: 10px; border-bottom: 2px solid var(--primary);
+  }
+  section h3 { margin: 22px 0 10px; font-size: 17px; color: var(--primary-dark); }
+  section p { margin: 0 0 12px; }
+  section ul { margin: 8px 0 12px; padding-left: 22px; }
+  section ul li { margin-bottom: 6px; }
+
+  /* 창업자 카드 */
+  .founder-card {
+    display: grid; grid-template-columns: 1fr 1.6fr; gap: 28px;
+    align-items: start;
+  }
+  .founder-card .label-row { color: var(--muted); font-size: 13.5px; }
+  .founder-card .label-row b { color: var(--text); font-weight: 700; }
+  .founder-card table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  .founder-card td { padding: 7px 0; vertical-align: top; }
+  .founder-card td:first-child { width: 100px; color: var(--muted); font-weight: 600; }
+
+  /* 문제 일러스트 */
+  figure.problem-illust {
+    margin: 6px 0 18px;
+    padding: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(16,24,40,0.08);
+    border: 1px solid var(--border);
+    background: white;
+  }
+  figure.problem-illust img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  figure.problem-illust figcaption {
+    background: var(--soft);
+    color: var(--muted);
+    font-size: 13px;
+    padding: 10px 16px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+
+  /* 4축 */
+  .axes-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px; margin-top: 8px;
+  }
+  .axis-card {
+    border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
+    background: linear-gradient(180deg, #fafcff 0%, #f0f5fa 100%);
+  }
+  .axis-card .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--primary); color: white; font-weight: 800; font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .axis-card .axis-title { font-weight: 800; font-size: 16px; color: var(--primary-dark); }
+  .axis-card .axis-desc { font-size: 13.8px; color: var(--text); margin-top: 6px; line-height: 1.5; }
+  .axis-card .axis-tech { font-size: 12.5px; color: var(--muted); margin-top: 8px; font-style: italic; }
+
+  /* 컴플라이언스 */
+  .law-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .law-card {
+    border-left: 4px solid var(--accent); background: #f3fbf7;
+    padding: 14px 18px; border-radius: 8px;
+  }
+  .law-card .law-title { font-weight: 800; color: #0d6b4a; font-size: 14.5px; }
+  .law-card .law-desc { font-size: 13.5px; color: var(--text); margin-top: 6px; line-height: 1.55; }
+
+  /* 타임라인 */
+  .timeline { list-style: none; padding: 0; margin: 8px 0 0; position: relative; }
+  .timeline::before {
+    content: ""; position: absolute; left: 9px; top: 8px; bottom: 8px;
+    width: 2px; background: var(--border);
+  }
+  .timeline li {
+    position: relative; padding: 6px 0 12px 32px; font-size: 14.5px;
+  }
+  .timeline li::before {
+    content: ""; position: absolute; left: 4px; top: 12px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--card); border: 3px solid var(--primary);
+  }
+  .timeline li.done::before { background: var(--accent); border-color: var(--accent); }
+  .timeline li.now::before { background: var(--warn); border-color: var(--warn); animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.5); }
+    50% { box-shadow: 0 0 0 6px rgba(217, 119, 6, 0); }
+  }
+  .timeline li b { color: var(--primary-dark); }
+  .timeline li .date { color: var(--muted); font-size: 12.5px; margin-right: 8px; font-weight: 600; }
+
+  /* 시연 흐름 */
+  .flow-list { counter-reset: step; padding: 0; list-style: none; margin: 8px 0 0; }
+  .flow-list li {
+    counter-increment: step;
+    position: relative; padding: 14px 18px 14px 56px; margin-bottom: 10px;
+    background: var(--soft); border-radius: 10px; border-left: 4px solid var(--primary);
+  }
+  .flow-list li::before {
+    content: counter(step);
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: white;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13.5px;
+  }
+  .flow-list li b { color: var(--primary-dark); }
+  .flow-list li .duration { color: var(--muted); font-size: 12.5px; margin-left: 6px; }
+
+  /* 링크 그리드 */
+  .links-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .link-card {
+    border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
+    background: #fafbfc; text-decoration: none; color: inherit; display: block;
+    transition: transform .12s, box-shadow .12s;
+  }
+  .link-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(31,95,166,0.12); }
+  .link-card .link-label { font-weight: 700; color: var(--primary); font-size: 14.5px; }
+  .link-card .link-desc { font-size: 12.8px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+
+  /* 연락처 */
+  .contact-card {
+    background: linear-gradient(135deg, #f3f8fd 0%, #e8f0fa 100%);
+    border: 1px solid #c8d8ec; padding: 24px 28px; border-radius: 12px;
+  }
+  .contact-card table { font-size: 14.5px; }
+  .contact-card td { padding: 6px 0; vertical-align: top; }
+  .contact-card td:first-child { width: 130px; color: var(--muted); font-weight: 600; }
+
+  .badge {
+    display: inline-block; font-size: 11.5px; font-weight: 700;
+    padding: 2px 9px; border-radius: 11px; margin-right: 4px;
+  }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-green { background: #d1fae5; color: #065f46; }
+  .badge-amber { background: #fef3c7; color: #92400e; }
+
+  footer.foot {
+    text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 40px;
+    padding-top: 18px; border-top: 1px solid var(--border);
+  }
+
+  @media print {
+    nav.toc { display: none; }
+    body { background: white; font-size: 11pt; }
+    section { box-shadow: none; border: 1px solid #aaa; page-break-inside: avoid; }
+    header.hero { background: #0b3a7a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="brand">SafeWay Kids · LunenLabs</div>
+  <h1>아이들의 통학길, AI가 함께 지킵니다</h1>
+  <div class="tagline">
+    어린이 통학버스의 승차·운행·하차 전 과정을 4축 AI로 자동 모니터링하는 안전 SaaS.
+    엣지 디바이스에서 실시간 처리, 위치정보법·개인정보보호법·도로교통법을 한 줄로 정렬한 컴플라이언스 우선 설계.
+  </div>
+  <div class="meeting">
+    <b>일시</b> 2026-05-07 (화) &nbsp;·&nbsp;
+    <b>대상</b> 이의림 변호사 (대한상공회의소) &nbsp;·&nbsp;
+    <b>의제</b> ICT 규제 샌드박스 v2.1 cross-check
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#founder">창업자</a>
+  <a href="#problem">해결하는 문제</a>
+  <a href="#solution">AI 4축 솔루션</a>
+  <a href="#tech">기술 스택</a>
+  <a href="#legal">법적 컴플라이언스</a>
+  <a href="#flow">시연 흐름</a>
+  <a href="#extra">추가 시연 카드</a>
+  <a href="#docs">관련 문서·페이지</a>
+  <a href="#contact">연락처</a>
+</nav>
+
+<main>
+
+<!-- ────────────────────────────────────────────── -->
+<section id="founder">
+  <h2>창업자 · 회사 소개</h2>
+  <div class="founder-card">
+    <div>
+      <div class="label-row" style="margin-bottom:14px;">
+        <b style="font-size:18px; color:var(--primary-dark);">류정현</b><br>
+        루넨랩스(LunenLabs) 대표 · 1인 창업가
+      </div>
+      <p style="font-size:14px; color:var(--text); line-height:1.6;">
+        엔터프라이즈 SaaS 개발 경력을 바탕으로 안전·돌봄 영역의 멀티앱 SaaS 포트폴리오를 운영하고 있습니다.
+        SafeWay Kids는 그 중 첫 정부지원사업·규제 샌드박스 트랙을 진행 중인 핵심 사업입니다.
+      </p>
+    </div>
+    <div>
+      <table>
+        <tr><td>사업 형태</td><td>1인 단독 사업자 — LunenLabs 브랜드 (도메인 보유, 법인 설립 예정)</td></tr>
+        <tr><td>대표 사업</td><td><b>SafeWay Kids</b> — 어린이 통학버스 안전 SaaS (B2B)</td></tr>
+        <tr><td>병행 사업</td><td>PetTracker (B2C, 6월 출시) · CareConnect (개발 중) · SDET Code (해외 B2B)</td></tr>
+        <tr><td>법무 자문</td><td>양길모 변호사 (법무법인 조율) — KISED #32399, 의견서 2026-05-02 발급</td></tr>
+        <tr><td>이메일</td><td>jhryu115@gmail.com</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────── -->
+<section id="problem">
+  <h2>해결하는 문제</h2>
+
+  <figure class="problem-illust">
+    <img src="images/problem-overview.png"
+         alt="네 가지 대표 사고 패턴: 잔류 사망(세림이법) · 하차 후 사각지대 충돌 · 운행 중 좌석 이탈 · 승하차 인원 누락">
+    <figcaption>네 가지 대표 사고 패턴을 SafeWay Kids가 4축 AI로 동시에 감지합니다</figcaption>
+  </figure>
+
+  <p>
+    어린이 통학버스 사고는 매년 반복됩니다. 특히 <b>잔류 사망 사고(세림이법 입법 계기)</b>,
+    <b>하차 후 사각지대 충돌</b>, <b>운행 중 좌석 이탈로 인한 부상</b>, <b>승하차 인원 누락</b>이
+    네 가지 대표 사고 패턴입니다.
+  </p>
+  <p>
+    기존 솔루션은 GPS 추적 단일 또는 스마트키 기반 단순 알림에 머물러 있고,
+    AI 영상·센서 융합·실시간 알림이 통합된 종합 솔루션은 시장에 부재합니다.
+    SafeWay Kids는 이 네 가지 사고 패턴을 <b>4축 AI</b>로 동시에 자동 감지하고,
+    학원·학부모·운전기사에게 즉각 알림을 전달하는 종합 안전 SaaS입니다.
+  </p>
+</section>
+
+<!-- ────────────────────────────────────────────── -->
+<section id="solution">
+  <h2>AI 4축 안전 솔루션</h2>
+  <div class="axes-grid">
+    <div class="axis-card">
+      <div class="num">1</div>
+      <div class="axis-title">승하차 안면인식</div>
+      <div class="axis-desc">사전 등록된 학생 얼굴 매칭으로 탑승·하차를 자동 확인하고 학원·학부모에게 푸시 알림.</div>
+      <div class="axis-tech">MediaPipe FaceDetector + ArcFace 512d · 원본 미저장 · AES-256 암호화</div>
+    </div>
+    <div class="axis-card">
+      <div class="num">2</div>
+      <div class="axis-title">운행 중 이상행동 감지</div>
+      <div class="axis-desc">좌석 이탈, 일어섬, 넘어짐을 실시간 분류하여 운전기사에게 음성 경고. 2초 이상 지속 시에만 알림(거짓 경고 5% 이하).</div>
+      <div class="axis-tech">YOLOv8 + 포즈 기반 자세 분류</div>
+    </div>
+    <div class="axis-card">
+      <div class="num">3</div>
+      <div class="axis-title">잔류 인원 감지</div>
+      <div class="axis-desc">시동 OFF 시 5프레임 연속 차량 내부 스캔. 잔류 발견 시 관리자·학부모에게 동시 푸시 알림. 도로교통법 §53 입법 취지를 자동화.</div>
+      <div class="axis-tech">YOLOv8 person class · multi-frame fusion</div>
+    </div>
+    <div class="axis-card">
+      <div class="num">4</div>
+      <div class="axis-title">사각지대 감지</div>
+      <div class="axis-desc">차량 주변 어린이 접근을 LiDAR·초음파 융합으로 거리 단계별 경고(주의·경고·위험 3단계).</div>
+      <div class="axis-tech">VLP-16 LiDAR + 초음파 12개 · 7:3 가중 융합</div>
+    </div>
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────── -->
+<section id="tech">
+  <h2>기술 스택</h2>
+  <ul>
+    <li><b>엣지 AI</b> — NVIDIA Jetson + ONNX Runtime · YOLOv8 / ArcFace / MediaPipe FaceDetector</li>
+    <li><b>백엔드</b> — Python FastAPI · PostgreSQL 16 · Redis 7 · WebSocket 실시간 스트림</li>
+    <li><b>프론트엔드</b> — React Native (Expo SDK 54, 모바일) · React + Vite (웹 대시보드 / 마케팅 사이트)</li>
+    <li><b>지도</b> — 카카오맵 JavaScript API · GPS 폴링 + WebSocket 양방향</li>
+    <li><b>데이터 보안</b> — AES-GCM 필드 암호화 · OTP 6자리 인증 (만료 5분) · 감사로그 전체 기록 · TLS 1.3</li>
+    <li><b>인프라</b> — Docker Compose 로컬 / K8s 매니페스트 작성 완료 / EAS Build (모바일 배포)</li>
+  </ul>
+</section>
+
+<!-- ────────────────────────────────────────────── -->
+<section id="legal">
+  <h2>법적 컴플라이언스</h2>
+  <p style="color:var(--muted); font-size:14px;">
+    SafeWay Kids는 코드와 약관을 한 줄로 정렬한 <b>컴플라이언스 우선 설계(Compliance-First Design)</b>를 채택합니다.
+    아래 4개 법령을 핵심 축으로 두고, 양길모 변호사(법무법인 조율) 의견서로 cross-check를 마쳤습니다.
+  </p>
+  <div class="law-grid">
+    <div class="law-card">
+      <div class="law-title">위치정보의 보호 및 이용 등에 관한 법률</div>
+      <div class="law-desc">
+        §16 — 이용·제공기록 6개월 보관<br>
+        §18 — 별도 동의 양식 (본 사이트 /location-terms 페이지가 그 본문)<br>
+        §26-2 — 위치정보관리책임자 지정 (법인 등기 후 실명 등록)
+      </div>
+    </div>
+    <div class="law-card">
+      <div class="law-title">개인정보보호법</div>
+      <div class="law-desc">
+        §29 안전조치 의무 충족 — AES-GCM 필드 암호화·접근로그 전수·암호화 저장<br>
+        <b>§5 안전성 확보 조치 핵심 카드</b> — "아동 생체정보(안면 데이터)는 엣지 디바이스에서만 처리, 서버 미전송"이 처리방침에 명문화
+      </div>
+    </div>
+    <div class="law-card">
+      <div class="law-title">도로교통법</div>
+      <div class="law-desc">
+        §53 어린이 하차확인장치 — 잔류 인원 감지(축 3)가 입법 취지를 AI로 자동화. 운행기록·하차 검증 데이터를 학원과 학부모에게 동시 알림.
+      </div>
+    </div>
+    <div class="law-card">
+      <div class="law-title">정보통신망법</div>
+      <div class="law-desc">
+        §44의2 임시조치 의무 적용 외 — 운송 중개자로서 통신매개자 지위에 해당하지 않음 (양길모 변호사 자문 Q3).
+      </div>
+    </div>
+  </div>
+  <h3>고영향 AI 해당 여부 — 양길모 변호사 자문 결과</h3>
+  <p>
+    AI 기본법(인공지능산업 진흥 및 신뢰 기반 조성 등에 관한 법률, 2026 시행)상
+    SafeWay Kids는 <b>고영향 AI에 해당하지 않습니다</b> (Q2 답변). 다만 자발적 거버넌스
+    이중 트랙(투명성 보고서 + 알고리즘 설명 가능성 문서)으로 대응하여 v2.1 §4.6에
+    명문화했습니다.
+  </p>
+</section>
+
+<!-- ────────────────────────────────────────────── -->
+<section id="flow">
+  <h2>오늘 함께 보실 시연 흐름 (15~20분)</h2>
+  <p style="color:var(--muted); font-size:14px;">
+    데모 환경은 노트북에서 로컬 가동 중입니다. 변호사님께서도 같은 화면을 보시면서 진행됩니다.
+  </p>
+  <ol class="flow-list">
+    <li><b>인사 및 컨텍스트 공유</b><span class="duration">2분</span> — 본 페이지 훑어보기 + 미팅 의제 정렬</li>
+    <li><b>승하차 안면인식 시연</b><span class="duration">3분</span> — Edge AI ① 탭 · 본인 얼굴 등록 → 탑승확인 표시 · "원본 미저장, 512d 벡터만 암호화 저장"</li>
+    <li><b>이상행동 / 잔류 / 사각지대 시연</b><span class="duration">5분</span> — Edge AI ②③④ 탭 · 각 30초 시나리오 · "거짓 경고 5% 이하, 운전기사 음성 경고만"</li>
+    <li><b>GPS 실시간 관제</b><span class="duration">3분</span> — 관제 센터 페이지 · 차량 마커가 5초마다 이동 · "위치정보 운행 종료 후 30일 보관, 이후 자동 익명화"</li>
+    <li><b>위치정보 이용약관 확인</b><span class="duration">3분</span> — /location-terms 8개 조 · §3 제3자 제공 표 · §4 보유기간 · §5 권리</li>
+    <li><b>개인정보처리방침 §5 closing card</b><span class="duration">1분</span> — "아동 생체정보(안면 데이터)는 엣지 디바이스에서만 처리, 서버 미전송"을 함께 읽기. 코드와 약관이 정합한 closing.</li>
+    <li><b>Q&A · 의견 청취</b><span class="duration">3~5분</span> — 비용 시뮬레이터·Swagger API 명세는 추가 질문 시 즉석 시연</li>
+  </ol>
+</section>
+
+<!-- ────────────────────────────────────────────── -->
+<section id="extra">
+  <h2>추가 시연 영역 — 변호사 질문 시 즉응 카드</h2>
+  <p style="color:var(--muted); margin-top:0; font-size:14px;">
+    위 핵심 흐름(안면인식·GPS·약관) 외에도, 변호사 추가 질문에 따라 즉시 띄울 수 있는 4개 영역을 준비했습니다.
+    모두 로컬 데모 환경에서 동작 중입니다.
+  </p>
+
+  <div class="axes-grid">
+    <div class="axis-card">
+      <div class="num" style="background:#15a36e;">★</div>
+      <div class="axis-title">컴플라이언스 자동 추적</div>
+      <div class="axis-desc">
+        학원별 6종 법정 서류(사업자등록증·보험증서·차량검사증·<b>범죄경력조회</b>·안전교육이수증·통학버스 신고필증)
+        등록 및 만료일 자동 모니터링. 만료 임박 자동 알림.
+      </div>
+      <div class="axis-tech">
+        <a href="http://localhost:5173/compliance" target="_blank">/compliance</a>
+        · 변호사 트리거: "어린이 안전 관련 법정 서류 관리는?"
+      </div>
+    </div>
+
+    <div class="axis-card">
+      <div class="num" style="background:#15a36e;">★</div>
+      <div class="axis-title">감사 로그 — 위치정보법 §16 증명</div>
+      <div class="axis-desc">
+        위치정보 이용·제공 기록을 자동 보존(법정 6개월). 누가·언제·어떤 차량 위치에 접근했는지
+        모든 이벤트가 audit log에 기록됩니다.
+      </div>
+      <div class="axis-tech">
+        <a href="http://localhost:5173/audit-logs" target="_blank">/audit-logs</a>
+        · 변호사 트리거: "위치정보 이용·제공 기록 보존은 어떻게?"
+      </div>
+    </div>
+
+    <div class="axis-card">
+      <div class="num" style="background:#1f5fa6;">●</div>
+      <div class="axis-title">알림 이력</div>
+      <div class="axis-desc">
+        학부모·운전기사·관리자에게 발송된 모든 푸시 알림 이력을 시간순으로 표시.
+        탑승 확인·이상행동 경고·잔류 감지 등 이벤트별 발송 결과 추적.
+      </div>
+      <div class="axis-tech">
+        <a href="http://localhost:5173/notification-logs" target="_blank">/notification-logs</a>
+        · 변호사 트리거: "학부모에게 알림은 어떻게 가나요?"
+      </div>
+    </div>
+
+    <div class="axis-card">
+      <div class="num" style="background:#1f5fa6;">●</div>
+      <div class="axis-title">승하차 현황</div>
+      <div class="axis-desc">
+        학생별 등하원 상태 실시간 추적. 안면인식 결과가 학생 카드에 즉시 반영되어
+        학원 관리자가 한 화면에서 전체 인원을 확인.
+      </div>
+      <div class="axis-tech">
+        <a href="http://localhost:5173/boarding-status" target="_blank">/boarding-status</a>
+        · 변호사 트리거: "탑승 후 학원에 알림 흐름은?"
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────── -->
+<section id="docs">
+  <h2>관련 문서 · 시연 페이지</h2>
+  <p style="color:var(--muted); font-size:14px;">아래 카드는 클릭하면 새 탭으로 열립니다 (로컬 데모 환경 가동 중).</p>
+  <div class="links-grid">
+    <a class="link-card" href="http://localhost:3000/location-terms" target="_blank">
+      <div class="link-label">📍 위치정보 이용약관</div>
+      <div class="link-desc">8개 조 · 위치정보법 §16/§18 인용 · 제3자 제공 표</div>
+    </a>
+    <a class="link-card" href="http://localhost:3000/privacy" target="_blank">
+      <div class="link-label">🔐 개인정보처리방침</div>
+      <div class="link-desc">8개 섹션 · §5 엣지 처리 명문화</div>
+    </a>
+    <a class="link-card" href="http://localhost:3000/terms" target="_blank">
+      <div class="link-label">📄 서비스 이용약관</div>
+      <div class="link-desc">서비스 이용 조건 · 분쟁 해결</div>
+    </a>
+    <a class="link-card" href="http://localhost:3000/cost-simulator" target="_blank">
+      <div class="link-label">💰 비용 시뮬레이터</div>
+      <div class="link-desc">학원당 월 89,000원/학생 · 인터랙티브 입력</div>
+    </a>
+    <a class="link-card" href="http://localhost:5173/map" target="_blank">
+      <div class="link-label">🗺️ 실시간 관제 센터</div>
+      <div class="link-desc">차량 8대 + 카카오맵 + GPS 실시간 마커</div>
+    </a>
+    <a class="link-card" href="http://localhost:5173/boarding-status" target="_blank">
+      <div class="link-label">🚌 승하차 현황</div>
+      <div class="link-desc">학생별 탑승·하차 상태 추적</div>
+    </a>
+    <a class="link-card" href="http://localhost:5173/compliance" target="_blank">
+      <div class="link-label">📋 컴플라이언스 / 감사로그</div>
+      <div class="link-desc">접근 로그 · 위치정보 이용·제공 기록</div>
+    </a>
+    <a class="link-card" href="http://localhost:7860" target="_blank">
+      <div class="link-label">🤖 Edge AI 데모</div>
+      <div class="link-desc">4축 AI 시연 페이지 (안면·이상행동·잔류·사각지대)</div>
+    </a>
+    <a class="link-card" href="http://localhost:8000/docs" target="_blank">
+      <div class="link-label">📖 API 명세 (Swagger)</div>
+      <div class="link-desc">FastAPI 자동 생성 · /api/v1/telemetry/* 등</div>
+    </a>
+    <a class="link-card" href="http://localhost:3000/" target="_blank">
+      <div class="link-label">🌐 사업소개 랜딩</div>
+      <div class="link-desc">소개 페이지 (운영 도메인 별도)</div>
+    </a>
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────── -->
+<section id="contact">
+  <h2>연락처</h2>
+  <div class="contact-card">
+    <table>
+      <tr><td>창업자</td><td><b>류정현</b> · 1인 단독 사업자</td></tr>
+      <tr><td>사업 브랜드</td><td>LunenLabs (도메인 보유, 법인 설립 예정)</td></tr>
+      <tr><td>이메일</td><td><a href="mailto:jhryu115@gmail.com">jhryu115@gmail.com</a></td></tr>
+      <tr><td>법무 자문</td><td>양길모 변호사 · 법무법인 조율 · KISED 자문번호 #32399</td></tr>
+      <tr><td>의견서</td><td>2026-05-02 발급 — Q1 운송계약 / Q2 고영향 AI 미해당 / Q3 정통망법 §44의2 적용 외</td></tr>
+    </table>
+  </div>
+</section>
+
+<footer class="foot">
+  본 문서는 2026-05-07 ICT 규제 샌드박스 cross-check 미팅을 위해 준비되었습니다 · LunenLabs · SafeWay Kids
+</footer>
+
+</main>
+
+</body>
+</html>

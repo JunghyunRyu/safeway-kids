@@ -46,15 +46,15 @@ async def my_availability(
 
 
 @router.post("/match", response_model=MatchResponse)
-async def auto_match(
+async def suggest_candidates(
     request: MatchRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(
         require_roles(UserRole.ACADEMY_ADMIN, UserRole.PLATFORM_ADMIN)
     ),
 ) -> dict:
-    """자동 매칭 실행 (관리자)"""
-    result = await service.auto_match(db, request.target_date)
+    """후보 추천 실행 — 교육시설의 장이 UI 승인 단계 별도 수행 (도로교통법 §53 ③)"""
+    result = await service.suggest_candidates(db, request.target_date)
     await db.commit()
     return result
 

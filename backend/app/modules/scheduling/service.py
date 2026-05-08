@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.common.security import decrypt_value
 from app.middleware.consent import require_consent
 from app.modules.scheduling.models import DailyScheduleInstance, DriverMemo, ScheduleTemplate, VehicleClearance
 from app.modules.scheduling.schemas import (
@@ -545,10 +546,10 @@ async def get_driver_daily_schedules(
     stmt = (
         select(
             DailyScheduleInstance,
-            Student.name.label("student_name"),
+            Student.name_encrypted.label("student_name_encrypted"),
             Student.profile_photo_url.label("student_photo_url"),
             Student.special_notes.label("special_notes"),
-            Student.allergies.label("allergies"),
+            Student.allergies_encrypted.label("allergies_encrypted"),
             Academy.name.label("academy_name"),
         )
         .join(Student, DailyScheduleInstance.student_id == Student.id)
@@ -590,8 +591,10 @@ async def get_driver_daily_schedules(
 
         # P1-28 법률: 건강정보(알레르기) 민감정보 동의 확인 (개인정보보호법 §23)
         # health_info_sharing 미동의 시 알레르기 정보 마스킹
-        allergies_display = row.allergies
-        if row.allergies and guardian_id:
+        allergies_display = (
+            decrypt_value(row.allergies_encrypted) if row.allergies_encrypted else None
+        )
+        if row.allergies_encrypted and guardian_id:
             from app.modules.compliance.models import GuardianConsent
             consent_stmt = select(GuardianConsent).where(
                 GuardianConsent.guardian_id == guardian_id,
@@ -609,7 +612,7 @@ async def get_driver_daily_schedules(
             DriverDailyScheduleResponse(
                 id=inst.id,
                 student_id=inst.student_id,
-                student_name=row.student_name,
+                student_name=decrypt_value(row.student_name_encrypted) if row.student_name_encrypted else "",
                 student_photo_url=row.student_photo_url,
                 academy_id=inst.academy_id,
                 academy_name=row.academy_name,

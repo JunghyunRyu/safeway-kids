@@ -4,6 +4,7 @@ from datetime import date, datetime
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, Text, UniqueConstraint, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.common.security import compute_name_hash, decrypt_value, encrypt_value
 from app.database import Base
 
 
@@ -16,14 +17,17 @@ class Student(Base):
     guardian_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=False
     )
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    # 개인정보보호법 §29 안전성 확보 의무 — name AES-GCM 암호화 저장 + HMAC hash로 검색·UniqueConstraint 보존
+    name_encrypted: Mapped[str] = mapped_column(String(500), nullable=False)
+    name_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
     grade: Mapped[str | None] = mapped_column(String(20))
     profile_photo_url: Mapped[str | None] = mapped_column(String(500))
     special_notes: Mapped[str | None] = mapped_column(Text)
-    allergies: Mapped[str | None] = mapped_column(Text)
-    medical_notes: Mapped[str | None] = mapped_column(Text)
-    emergency_contact: Mapped[str | None] = mapped_column(String(20))
+    # 개인정보보호법 §29 안전성 확보 의무 — AES-GCM 암호화 저장 (DB 직접 저장 금지)
+    allergies_encrypted: Mapped[str | None] = mapped_column(Text)
+    medical_notes_encrypted: Mapped[str | None] = mapped_column(Text)
+    emergency_contact_encrypted: Mapped[str | None] = mapped_column(String(500))
     school_name: Mapped[str | None] = mapped_column(String(100))
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id"), unique=True
@@ -38,7 +42,7 @@ class Student(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
-        UniqueConstraint("guardian_id", "name", "date_of_birth", name="uq_student_guardian"),
+        UniqueConstraint("guardian_id", "name_hash", "date_of_birth", name="uq_student_guardian"),
     )
 
     # Relationships
@@ -46,6 +50,42 @@ class Student(Base):
     enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="student")
     consents: Mapped[list["GuardianConsent"]] = relationship(back_populates="child")  # type: ignore[name-defined] # noqa: F821
     schedule_templates: Mapped[list["ScheduleTemplate"]] = relationship(back_populates="student")  # type: ignore[name-defined] # noqa: F821
+
+    # PII auto encrypt/decrypt — Python @property 사용 (instance level only).
+    # SQL level에서는 _encrypted/_hash 칼럼을 직접 참조 (scheduling/billing/admin service).
+    # @hybrid_property는 class level access 시 InstrumentedAttribute → decrypt fail 회귀.
+    @property
+    def name(self) -> str:
+        return decrypt_value(self.name_encrypted)
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self.name_encrypted = encrypt_value(value)
+        self.name_hash = compute_name_hash(value)
+
+    @property
+    def allergies(self) -> str | None:
+        return decrypt_value(self.allergies_encrypted) if self.allergies_encrypted else None
+
+    @allergies.setter
+    def allergies(self, value: str | None) -> None:
+        self.allergies_encrypted = encrypt_value(value) if value else None
+
+    @property
+    def medical_notes(self) -> str | None:
+        return decrypt_value(self.medical_notes_encrypted) if self.medical_notes_encrypted else None
+
+    @medical_notes.setter
+    def medical_notes(self, value: str | None) -> None:
+        self.medical_notes_encrypted = encrypt_value(value) if value else None
+
+    @property
+    def emergency_contact(self) -> str | None:
+        return decrypt_value(self.emergency_contact_encrypted) if self.emergency_contact_encrypted else None
+
+    @emergency_contact.setter
+    def emergency_contact(self, value: str | None) -> None:
+        self.emergency_contact_encrypted = encrypt_value(value) if value else None
 
 
 class SecondaryGuardian(Base):

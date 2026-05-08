@@ -121,9 +121,9 @@ export default function SchedulesPage() {
       setAcademy(data);
       return data;
     } catch {
-      // Try from localStorage as fallback
+      // Try from sessionStorage as fallback (XSS hardening — useAuth.ts와 정합)
       try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const user = JSON.parse(sessionStorage.getItem('user') || '{}');
         if (user.academy_id) {
           setAcademy({ id: user.academy_id, name: '', address: '', latitude: 0, longitude: 0 });
           return { id: user.academy_id } as Academy;

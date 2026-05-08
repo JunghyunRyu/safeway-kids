@@ -6,7 +6,7 @@ import math
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.apps.pettracker.models import (
@@ -446,6 +446,13 @@ async def record_gps(db: AsyncSession, session_id: uuid.UUID, point: GpsPoint) -
     db.add(gps)
     await db.flush()
 
+    walk_session = await db.get(WalkSession, session_id)
+    if walk_session is not None:
+        polyline = list(walk_session.route_polyline) if walk_session.route_polyline else []
+        polyline.append([point.latitude, point.longitude])
+        walk_session.route_polyline = polyline
+        await db.flush()
+
     try:
         import asyncio
         from app.redis import redis_client
@@ -642,6 +649,19 @@ async def confirm_payment(
     pg_status = pg_resp.get("status")
     if pg_status not in ("PAID", "VIRTUAL_ACCOUNT_ISSUED"):
         raise ValidationError(detail=f"PG 결제 상태가 비정상입니다: {pg_status}")
+
+
+# ── 위치정보법 §16 자동 파기 (180일) — PT 산책 GPS 이력 ─────────────────
+
+async def purge_old_walk_gps_history(db: AsyncSession) -> int:
+    """Delete WalkGpsHistory older than 180 days (위치정보법 제16조 보유 한도)."""
+    cutoff = datetime.now(UTC) - timedelta(days=180)
+    stmt = delete(WalkGpsHistory).where(WalkGpsHistory.recorded_at < cutoff)
+    result = await db.execute(stmt)
+    count = result.rowcount
+    if count > 0:
+        logger.info("[PT GPS] Purged %d old walk GPS records (before %s)", count, cutoff.isoformat())
+    return count
 
     payment.imp_uid = imp_uid
     payment.status = PtPaymentStatus.PAID

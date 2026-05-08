@@ -37,10 +37,12 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
       ]
     },
     "web": {
@@ -57,7 +59,10 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "자녀의 셔틀버스 위치를 추적하기 위해 위치 권한이 필요합니다."
+          "locationWhenInUsePermission": "자녀의 셔틀버스 위치를 추적하고, SOS 긴급 호출 시 현재 위치를 전송하기 위해 위치 권한이 필요합니다.",
+          "locationAlwaysAndWhenInUsePermission": "운전기사 앱이 백그라운드 상태에서도 GPS 위치를 학원·보호자에게 전송하기 위해 '항상 허용' 권한이 필요합니다.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [

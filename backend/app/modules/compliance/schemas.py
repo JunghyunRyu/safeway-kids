@@ -11,10 +11,23 @@ class ConsentScopeModel(BaseModel):
     privacy_policy: bool = Field(..., description="개인정보 처리방침 동의")
     child_info_collection: bool = Field(..., description="아동 개인정보 수집 동의")
     # 선택 동의
-    location_tracking: bool = Field(default=False, description="위치정보 수집 동의")
+    location_tracking: bool = Field(default=False, description="위치정보 수집 동의 (위치정보법 §15 통합 동의 — 하위 3개 필드로 세분화)")
+    # 위치정보법 §15①1·2·3 — 수집·이용 목적 / 보유 기간 / 제3자 제공 별도 동의
+    location_purpose: str = Field(
+        default="shuttle_safety",
+        description="위치정보 수집·이용 목적 (위치정보법 §15①1) — shuttle_safety / pet_walk / etc.",
+    )
+    location_retention_days: int = Field(
+        default=180,
+        description="위치정보 보유 기간(일) (위치정보법 §15①2 + §16 6개월 한도)",
+    )
+    location_third_party: bool = Field(
+        default=False,
+        description="위치정보 제3자 제공 별도 동의 (위치정보법 §15①3)",
+    )
     push_notification: bool = Field(default=True, description="푸시 알림 수신 동의")
     marketing: bool = Field(default=False, description="마케팅 정보 수신 동의")
-    third_party_sharing: bool = Field(default=False, description="제3자 제공 동의")
+    third_party_sharing: bool = Field(default=False, description="제3자 제공 동의 (위치정보 제외 일반 PII)")
     health_info_sharing: bool = Field(
         default=False,
         description=(

@@ -42,6 +42,9 @@ coverage/
 # Uploaded files
 uploads/
 
+# Edge AI registered face data (PII / 생체정보 — 절대 커밋 금지)
+edge_ai/registered_faces/
+
 # OS/editor
 .DS_Store
 .vscode/

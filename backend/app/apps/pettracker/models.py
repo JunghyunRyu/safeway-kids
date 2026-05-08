@@ -13,6 +13,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.common.security import decrypt_value, encrypt_value
+
 from app.database import Base
 
 
@@ -58,13 +60,22 @@ class Pet(Base):
     birth_date: Mapped[date | None] = mapped_column(Date)
     weight_kg: Mapped[float | None] = mapped_column(Float)
     photo_url: Mapped[str | None] = mapped_column(String(500))
-    medical_notes: Mapped[str | None] = mapped_column(Text)
+    # 반려동물 의료 정보 — AES-GCM 암호화 (보호자 신뢰 + 도메인 PII 동격 처리)
+    medical_notes_encrypted: Mapped[str | None] = mapped_column(Text)
     temperament: Mapped[str | None] = mapped_column(String(50))  # calm, active, aggressive, anxious
     vaccination_status: Mapped[str] = mapped_column(String(20), default="unknown")
     special_needs: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    @property
+    def medical_notes(self) -> str | None:
+        return decrypt_value(self.medical_notes_encrypted) if self.medical_notes_encrypted else None
+
+    @medical_notes.setter
+    def medical_notes(self, value: str | None) -> None:
+        self.medical_notes_encrypted = encrypt_value(value) if value else None
 
 
 # ── Walker Qualification ─────────────────────────────────────────
@@ -193,10 +204,19 @@ class WalkerWallet(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False, unique=True)
     balance: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # KRW
     bank_name: Mapped[str | None] = mapped_column(String(50))
-    bank_account: Mapped[str | None] = mapped_column(String(100))  # should be encrypted in prod
+    # 개인정보보호법 §29 + 전자금융거래법 — AES-GCM 암호화 저장
+    bank_account_encrypted: Mapped[str | None] = mapped_column(String(500))
     account_holder: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    @property
+    def bank_account(self) -> str | None:
+        return decrypt_value(self.bank_account_encrypted) if self.bank_account_encrypted else None
+
+    @bank_account.setter
+    def bank_account(self, value: str | None) -> None:
+        self.bank_account_encrypted = encrypt_value(value) if value else None
 
 
 # ── Walker Reviews ───────────────────────────────────────────────
