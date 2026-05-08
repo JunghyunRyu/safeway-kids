@@ -181,11 +181,12 @@ async def get_invoice_details(
     from app.modules.academy_management.models import Academy
     from app.modules.auth.models import UserRole
 
+    from app.common.security import decrypt_value
     stmt = (
         select(
             Invoice,
             Academy.name.label("academy_name"),
-            Student.name.label("student_name"),
+            Student.name_encrypted.label("student_name_encrypted"),
         )
         .outerjoin(Academy, Invoice.academy_id == Academy.id)
         .outerjoin(Student, Invoice.student_id == Student.id)
@@ -244,7 +245,9 @@ async def get_invoice_details(
 
     invoice_dict = {c.key: getattr(inv, c.key) for c in inv.__table__.columns}
     invoice_dict["academy_name"] = row.academy_name
-    invoice_dict["student_name"] = row.student_name
+    invoice_dict["student_name"] = (
+        decrypt_value(row.student_name_encrypted) if row.student_name_encrypted else None
+    )
 
     return {
         "invoice": invoice_dict,
@@ -260,11 +263,12 @@ async def get_parent_invoices(
 ) -> list[dict]:
     from app.modules.academy_management.models import Academy
 
+    from app.common.security import decrypt_value
     stmt = (
         select(
             Invoice,
             Academy.name.label("academy_name"),
-            Student.name.label("student_name"),
+            Student.name_encrypted.label("student_name_encrypted"),
         )
         .outerjoin(Academy, Invoice.academy_id == Academy.id)
         .outerjoin(Student, Invoice.student_id == Student.id)
@@ -278,7 +282,9 @@ async def get_parent_invoices(
         inv = row.Invoice
         d = {c.key: getattr(inv, c.key) for c in inv.__table__.columns}
         d["academy_name"] = row.academy_name
-        d["student_name"] = row.student_name
+        d["student_name"] = (
+            decrypt_value(row.student_name_encrypted) if row.student_name_encrypted else None
+        )
         enriched.append(d)
     return enriched
 

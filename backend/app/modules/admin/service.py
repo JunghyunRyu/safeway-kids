@@ -449,13 +449,15 @@ async def search_students(db: AsyncSession, query: str) -> list:
     """ITEM-P1-24: Search students by name or guardian phone."""
     from app.modules.student_management.models import Enrollment
 
-    # Search by student name
+    # Search by student name — name_hash 기반 정확 일치 검색 (AES ciphertext 부분 일치 불가)
+    # 부분 일치 검색은 보호자 전화번호로 가능 (phone_stmt). 추후 V1.x에 token-index 추가 예정.
+    from app.common.security import compute_name_hash
     name_stmt = (
         select(Student, User, Academy)
         .outerjoin(User, Student.guardian_id == User.id)
         .outerjoin(Enrollment, Enrollment.student_id == Student.id)
         .outerjoin(Academy, Enrollment.academy_id == Academy.id)
-        .where(Student.name.ilike(f"%{query}%"))
+        .where(Student.name_hash == compute_name_hash(query))
         .limit(50)
     )
 

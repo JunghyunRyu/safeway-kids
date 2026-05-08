@@ -96,7 +96,7 @@ def _start_daily_cron() -> None:
                 if expired_count:
                     logger.info("Cron: deactivated %d expired compliance documents", expired_count)
 
-                # Purge GPS data older than 180 days (위치정보법 제16조)
+                # Purge GPS data older than 180 days (위치정보법 제16조) — SafeWay 차량 GPS
                 purged = await purge_old_gps_data(db)
                 if purged:
                     logger.info("Cron: purged %d old GPS records", purged)
@@ -105,6 +105,12 @@ def _start_daily_cron() -> None:
                 purged_logs = await purge_old_location_access_logs(db)
                 if purged_logs:
                     logger.info("Cron: purged %d expired location access logs", purged_logs)
+
+                # Purge PT walk GPS history older than 180 days (위치정보법 제16조) — PT 산책 GPS
+                from app.apps.pettracker.service import purge_old_walk_gps_history
+                purged_walk = await purge_old_walk_gps_history(db)
+                if purged_walk:
+                    logger.info("Cron: purged %d old PT walk GPS records", purged_walk)
 
                 result = await run_daily_pipeline(db, tomorrow)
                 await db.commit()

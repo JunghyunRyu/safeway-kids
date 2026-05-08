@@ -53,6 +53,8 @@ class Settings(BaseSettings):
 
     # Encryption
     aes_encryption_key: str = "change-me-32-byte-key-for-prod!!"
+    # HMAC key for searchable PII hash (Student.name 등). 미설정 시 aes_encryption_key fallback.
+    hash_key: str = "change-me-32-byte-hash-key-prod!"
 
     # Scheduling
     pipeline_cron_hour: int = 0  # 0 = midnight KST

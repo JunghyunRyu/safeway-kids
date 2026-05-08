@@ -233,6 +233,12 @@ async def check_vehicle_access(
     if user.role == UserRole.PLATFORM_ADMIN:
         return True
 
+    # Development bypass: 시뮬레이터/데모 환경에서 driver의 VehicleAssignment 시드가
+    # 없어도 모든 차량 location/gps 흐름을 시연할 수 있게 한다.
+    # production은 environment != "development"이므로 영향 없음.
+    if settings.environment == "development":
+        return True
+
     today = date.today()
 
     if user.role == UserRole.DRIVER:
