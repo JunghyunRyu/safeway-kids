@@ -3,7 +3,7 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-05-07 (v7 — **modoo.or.kr 폼 캡처 + v2 paste-ready + 5 페르소나 채점 + v2.1 inject 적용 완료**: 4-step wizard·Q5 18 옵션 캡처 / v2.0 자체 37.5 / 페르소나 평균 32.6 (-4.9 self-bias 효과성 -1.5) / v2.1 BEP 정의 + 단계적 수요 검증 + 60일 측정 지표 적용 → 추정 페르소나 34.7/50 (합격선 70% 경계 -0.3). C-5 자문 실명 미사용 결정. 5/12 영상 + 5/13 v3 가입자 갱신 대기)
+**Last updated**: 2026-05-08 (v8 — **5/6~5/7 누적 90 파일 origin/main 출시 완료**: PR #2 머지 → `3cd19eb`. 도메인별 3-commit 분할(docs / backend AES-GCM / frontend+edge+demo) + face PII gitignore 게이트 + Windows autocrlf 트랩 영구 봉쇄(`true → input`) + feature 브랜치 회수. 작업 트리 clean, 회귀 0)
 **Active workstream**: 모두의 창업 2026 신청서 **5/15 16:00 무조건 강행** (Track 1, 5/7 commit) + PT V1.0 출시 6/9 ±2d (Track 2, 5/16 시작) + lunenlabs.com + PT 종합 케어 페이지 (5/6 commit a7301a2 push 완료). **v2.1 paste-ready 통합본 완료 (Q1 49자 / Q2 671자 / Q3 ~673자 / Q4 ~902자) — 5/12 영상·5/13 v3 freezing 대기**
 **Current phase**: **Phase 5 (Implementation)** — modoo.or.kr 폼 캡처(form-structure-capture) + v2.0 paste-ready + 5 페르소나 채점(32.6/50) + v2.1 inject 3건 적용(34.7/50 추정) 완료. 5/12 영상 + 5/13 v3 진입 대기 + 5/9~5/10 OQ-9 경쟁사 5사 재검증 P1
 **Priority principle**: **5/15 신청 > 6/9 PT 출시 > SafeWay 샌드박스** (3레벨)
@@ -102,6 +102,7 @@
 - [`artifacts/business/fundraising/2026-05-07-ud-4-business-registration-decision-guide.md`](artifacts/business/fundraising/2026-05-07-ud-4-business-registration-decision-guide.md) — **UD-4 통합 결정 가이드 (양 specialist 자문 합산: korea-tax-accounting-advisor + korea-regulatory-counsel). 5/8 창업진흥원 1357+5 콜센터 paste-ready + 1R 통과 후 등록 1순위 path + PT 업종 63999 권장 + R-D1-5 방향 반전 정정**
 
 ## Latest Handoff
+- [`artifacts/handoffs/2026-05-08-session-handoff.md`](artifacts/handoffs/2026-05-08-session-handoff.md) — **5/6~5/7 누적 작업 origin/main 출시 (PR #2 → `3cd19eb`). 90 파일 누적, 3-commit 분할, face PII gitignore 게이트, Windows autocrlf 트랩 봉쇄. 다음 세션 1차 액션: 2026-05-08 TODAY UD-4 창업진흥원 1357+5 콜센터 전화 (사업자등록 자격 확인)**
 - [`artifacts/handoffs/2026-05-07-session-handoff.md`](artifacts/handoffs/2026-05-07-session-handoff.md) — **modoo.or.kr 폼 캡처 + v2.0/v2.1 paste-ready + 5 페르소나 채점 + Inject A·B·C 적용 완료. 4 신규 산출물. 다음 세션 1차 액션: OQ-9 경쟁사 5사 (도그메이트·와요·펫플래닛·에어댕냥이·펫피) 현행 서비스 성격 재검증 (P3 산업 전문가 지적, 5/9~5/10)**
 - [`artifacts/handoffs/2026-05-06-session-handoff-v4.md`](artifacts/handoffs/2026-05-06-session-handoff-v4.md) — **v4 Round 3 종료. 4 Round 모두 처리 완료. 누적 51 파일 변경 + 8 신규 테스트 케이스 + 환경 검증 v3 SKIP. 다음 세션 1차 액션: `pytest tests/ --tb=line -q && alembic upgrade head` (사용자 직접 실행)**
 - [`artifacts/handoffs/2026-05-06-session-handoff.md`](artifacts/handoffs/2026-05-06-session-handoff.md) — claim↔구현 갭 audit 2종 보고서 (Round 1 시작 시점)
