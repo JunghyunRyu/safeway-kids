@@ -23,7 +23,7 @@ export default function StatsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const user = JSON.parse(sessionStorage.getItem('user') || '{}');
       const academyId = user.academy_id;
       if (!academyId) return;
       const res = await api.get(`/admin/academy/${academyId}/stats`, {

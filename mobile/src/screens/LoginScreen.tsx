@@ -107,6 +107,9 @@ function ProductionLoginScreen() {
             value={phone}
             onChangeText={setPhone}
           />
+          <Text style={styles.otpNotice}>
+            전화번호는 본인 인증 목적으로만 사용되며, 인증 완료 후 별도 보관되지 않습니다. (개인정보보호법 §15)
+          </Text>
           <Pressable
             style={[styles.loginBtn, { backgroundColor: activeColor }, loading && styles.disabled]}
             onPress={handleSendOtp}
@@ -379,6 +382,13 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     backgroundColor: Colors.surface,
     marginBottom: Spacing.md,
+  },
+  otpNotice: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textSecondary,
+    lineHeight: Typography.sizes.xs * 1.5,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.xs,
   },
   loginBtn: {
     flexDirection: "row",

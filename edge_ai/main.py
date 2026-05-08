@@ -17,6 +17,50 @@ import cv2
 import numpy as np
 from flask import Flask, Response, jsonify, render_template_string, request
 
+try:
+    from PIL import Image, ImageDraw, ImageFont
+    _PIL_AVAILABLE = True
+except Exception:
+    _PIL_AVAILABLE = False
+
+_KR_FONT_PATH = r"C:\Windows\Fonts\malgun.ttf"
+_kr_font_cache: dict = {}
+
+
+def _kr_font(size: int):
+    if not _PIL_AVAILABLE:
+        return None
+    if size in _kr_font_cache:
+        return _kr_font_cache[size]
+    try:
+        f = ImageFont.truetype(_KR_FONT_PATH, size)
+    except Exception:
+        f = None
+    _kr_font_cache[size] = f
+    return f
+
+
+def _put_text_kr(frame, text, pos_baseline, color_bgr, font_scale=0.7, thickness=2):
+    """OpenCV BGR ndarray 위에 한글 포함 텍스트 그리기.
+
+    cv2.putText의 baseline 좌표 의미와 호환되도록 pos_baseline을 받는다.
+    PIL 폰트 로딩 실패 시 cv2.putText로 graceful fallback (영문은 그대로 출력).
+    """
+    px = max(12, int(font_scale * 28))
+    font = _kr_font(px)
+    if font is None:
+        cv2.putText(frame, text, pos_baseline, cv2.FONT_HERSHEY_SIMPLEX,
+                    font_scale, color_bgr, thickness)
+        return
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    pil_img = Image.fromarray(rgb)
+    draw = ImageDraw.Draw(pil_img)
+    fill_rgb = (int(color_bgr[2]), int(color_bgr[1]), int(color_bgr[0]))
+    top_left = (pos_baseline[0], pos_baseline[1] - px)
+    draw.text(top_left, text, font=font, fill=fill_rgb)
+    bgr = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    np.copyto(frame, bgr)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -93,7 +137,7 @@ def _draw_label(frame, text, x, y, color, font_scale=0.7):
     thickness = 2
     (tw, th), _ = cv2.getTextSize(text, font, font_scale, thickness)
     cv2.rectangle(frame, (x, y - th - 10), (x + tw + 10, y), COLOR_BG, -1)
-    cv2.putText(frame, text, (x + 5, y - 5), font, font_scale, color, thickness)
+    _put_text_kr(frame, text, (x + 5, y - 5), color, font_scale, thickness)
 
 
 def _draw_status_bar(frame, mode_name: str, status: str, color):
@@ -153,7 +197,7 @@ def process_boarding(frame: np.ndarray) -> np.ndarray:
             (tw, th), _ = cv2.getTextSize(msg, cv2.FONT_HERSHEY_SIMPLEX, 1.2, 3)
             cx = (w - tw) // 2
             cv2.rectangle(output, (cx - 15, h - 80), (cx + tw + 15, h - 20), (0, 100, 0), -1)
-            cv2.putText(output, msg, (cx, h - 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, COLOR_WHITE, 3)
+            _put_text_kr(output, msg, (cx, h - 40), COLOR_WHITE, 1.2, 3)
 
             _log_event("boarding", f"{match.name} confirmed ({match.confidence:.0%})")
             _send_event_async("face", {"student_name": match.name, "confidence": match.confidence})

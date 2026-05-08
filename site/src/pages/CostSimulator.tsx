@@ -27,8 +27,9 @@ function simulate(
     vehicleCount * (monthlyFuelPerVehicle + monthlyInsurancePerVehicle + monthlyMaintenancePerVehicle) +
     driverCount * monthlySalaryPerDriver;
 
-  // SafeWay Kids pricing model: per-student monthly fee
-  const perStudentFee = 89000; // won per student per month
+  // SafeWay Kids 학원 도입 모델 (B2B) — 시뮬레이션 기준값
+  // 실제 도입 비용은 학원 규모·운영 조건에 따라 별도 협의
+  const perStudentFee = 89000; // won per student per month (시뮬레이션 기준값)
   const safewayMonthlyCost = studentCount * perStudentFee;
 
   const monthlySaving = currentMonthlyCost - safewayMonthlyCost;
@@ -153,7 +154,7 @@ export default function CostSimulator() {
                   )}
 
                   <p className="text-xs text-gray-400 mt-4 text-center">
-                    * 시뮬레이션 결과는 참고용이며, 실제 요금은 지역과 계약 조건에 따라 달라질 수 있습니다.
+                    * 학생당 월 89,000원은 학원 도입 시뮬레이션 기준값이며, 실제 도입 요금은 학원 규모·운영 조건에 따라 별도 협의됩니다. 보호자 직접 결제 모델(1회 5,000원~)은 메인 페이지 요금 안내를 참고하세요.
                   </p>
                 </div>
               ) : (

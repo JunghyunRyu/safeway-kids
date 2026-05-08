@@ -133,3 +133,13 @@ YOLO_ONNX_PATH = os.path.join(MODELS_DIR, "yolov8n.onnx")
 ARCFACE_ONNX_PATH = os.path.join(MODELS_DIR, "arcface_w600k_r50.onnx")
 FACE_DETECTOR_PATH = os.path.join(ASSETS_DIR, "face_detector.tflite")
 POSE_LANDMARKER_PATH = os.path.join(ASSETS_DIR, "pose_landmarker_lite.task")
+
+# ---------------------------------------------------------------------------
+# Legacy aliases (main.py 진입점이 lazy import로 사용하는 이름들)
+# main.py 흐름은 ultralytics .pt + 히스토그램 face_manager 기반,
+# main_v2.py는 ONNX core/* 기반. 둘 다 동일 config 인스턴스를 공유한다.
+# ---------------------------------------------------------------------------
+YOLO_MODEL = os.path.join(BASE_DIR, "yolov8n.pt")
+FACE_TOLERANCE = round(1.0 - FACE_SIMILARITY_THRESHOLD, 2)
+BEHAVIOR_FALLING_THRESHOLD = BEHAVIOR_FALLING_RATIO
+BEHAVIOR_STANDING_THRESHOLD = BEHAVIOR_STANDING_RATIO

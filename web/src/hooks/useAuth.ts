@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
 import type { User } from '../types';
 
+// XSS hardening — sessionStorage 사용 (R-11-Web 대응). 탭 단위 isolation으로 attack surface 감소.
+// trade-off: 탭 닫으면 재로그인. V1.x에서 httpOnly cookie 전환 예정.
 function readStoredUser(): User | null {
   try {
-    const stored = localStorage.getItem('user');
+    const stored = sessionStorage.getItem('user');
     return stored ? JSON.parse(stored) : null;
   } catch {
     return null;
@@ -16,9 +18,9 @@ export function useAuth() {
   const login = useCallback(
     (userData: User, accessToken: string, refreshToken: string) => {
       try {
-        localStorage.setItem('user', JSON.stringify(userData));
-        localStorage.setItem('access_token', accessToken);
-        localStorage.setItem('refresh_token', refreshToken);
+        sessionStorage.setItem('user', JSON.stringify(userData));
+        sessionStorage.setItem('access_token', accessToken);
+        sessionStorage.setItem('refresh_token', refreshToken);
       } catch {
         // Storage unavailable (incognito/quota exceeded)
       }
@@ -29,7 +31,7 @@ export function useAuth() {
 
   const logout = useCallback(() => {
     try {
-      localStorage.clear();
+      sessionStorage.clear();
     } catch {
       // Storage unavailable
     }

@@ -81,6 +81,9 @@ function buildMapHtml(apiKey: string): string {
           var pos=new kakao.maps.LatLng(data.lat,data.lng);
           if(markers[data.id]){
             markers[data.id].setPosition(pos);
+            if(infoWindows[data.id]){
+              infoWindows[data.id].setPosition(pos);
+            }
           } else {
             var img=new kakao.maps.MarkerImage(
               'data:image/svg+xml,'+encodeURIComponent(
