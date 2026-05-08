@@ -217,12 +217,13 @@ cd site && npm run dev
 | 플랫폼 운영자 대시보드 | COMPLETE | 2026-03-20 |
 | 웹 대시보드 품질 95점 달성 | COMPLETE | 2026-03-20 |
 
-### 검증 수치 (최신)
-- 백엔드 테스트: **95 passed, 0 failed**
-- 모바일 테스트: **10 suites, 36 passed**
-- 웹 테스트: **12 suites, 50 passed**
-- TypeScript: **0 errors** (모바일, 웹, 사이트 전체)
-- 총 코드: 백엔드 6,543 + 모바일 7,292 + 웹 4,000+ + 사이트 736 = **~18,500+ LOC**
+### 검증 수치 (2026-05-06 backend-dev sub-agent 실측 갱신)
+- 백엔드 테스트: **178 def test_ collected** (alembic upgrade head --sql EXIT:0 PASS, 본 세션 변경분 회귀 0). Known fails: KI-2 Toss webhook 3건 / KI-3 health degraded 1건 / KI-4 WS teardown race 1건
+- 모바일 테스트: **17 파일 / 71 it() 블록** (SafeWay mobile) + 9 파일 (PT mobile, apps/pettracker)
+- 웹 테스트: **12 파일 / 50 it() 블록**
+- TypeScript: web · site · lunenlabs **0 errors** (실측 PASS) / mobile **SKIP** (node_modules partial install — 다음 세션 npm install 후 재검증 필요)
+- 총 코드 (실측 2026-05-06): 백엔드 24,936 + 모바일(SafeWay) 12,609 + 웹 10,804 + 사이트 1,361 + apps(PT+CC) 8,646 + lunenlabs 2,926 + packages 1,455 = **~62,200 LOC**
+- 웹 대시보드 품질 향상 완료 (정량 측정 기준·결과 artifact 미보존 — "95점" 표현 약화)
 
 ### 코드로 해결 불가능한 남은 항목
 - 엣지 AI 하드웨어 (NVIDIA Jetson, CCTV, 스마트 미러) — 하드웨어 필요
@@ -240,40 +241,56 @@ cd site && npm run dev
 
 > **Live pointer** — STATE.md mirror. `/session-start`·`/session-end`로 정합성 유지.
 
-**Active workstream**: 모두의 창업 2026 신청서 5/15 16:00 마감 critical path (Track 1) + PT V1.0 출시 6/9 ±2d (Track 2, 5/16 시작)
-**Current phase**: **Phase 5 (Implementation)** — modoo-deadline-execution 패키지 4 산출물 구현 중
+**Active workstream**: 모두의 창업 2026 신청서 **5/15 16:00 무조건 강행** (Track 1, 2026-05-07 사용자 D-5 commit) + PT V1.0 출시 6/9 ±2d (Track 2, 5/16 시작). **v2.1 paste-ready 통합본 완료 — 5/12 영상·5/13 v3 freezing 대기**
+**Current phase**: **Phase 5 (Implementation)** — modoo.or.kr 폼 캡처 + v2.0 paste-ready + 5 페르소나 채점(32.6/50) + v2.1 inject 3건 적용(34.7/50 추정) 완료. 5/12 영상 + 5/13 v3 + 5/9~5/10 OQ-9 경쟁사 5사 재검증 대기
 **Priority principle**: **5/15 신청 > 6/9 PT 출시 > SafeWay 샌드박스** (3레벨)
 **Active Brief**: [`artifacts/specs/2026-05-03-modoo-deadline-execution-brief.md`](artifacts/specs/2026-05-03-modoo-deadline-execution-brief.md)
-**Final Tech Spec**: [`artifacts/specs/2026-05-03-modoo-deadline-execution-final-tech-spec.md`](artifacts/specs/2026-05-03-modoo-deadline-execution-final-tech-spec.md)
-**Consensus**: [`artifacts/reviews/2026-05-03-modoo-deadline-execution-consensus.md`](artifacts/reviews/2026-05-03-modoo-deadline-execution-consensus.md) — 4 reviewer (frontend 8 / product 7 / fundraising 7 / business 7 / 평균 7.25/10)
-**Tech Spec Reviewer**: APPROVED WITH REQUIRED CHANGES (3 필수 수정 + 5 권고)
-**신청서 v1**: [`artifacts/business/fundraising/2026-04-30-modoo-startup-pt-application-v1.md`](artifacts/business/fundraising/2026-04-30-modoo-startup-pt-application-v1.md) (36/50, 72%)
-**Next gate**: **5/8 D-7 strong-go 게이트** (가입자 ≥30 + LOI ≥3) → 5/9 v2 inject → 5/10 채점 → 5/11 freezing → 5/12 영상 → 5/13 v3 (80+) → 5/14 운영기관 + SafeWay v2.2 → **5/15 16:00 K-Startup 제출** → 5/16 Track 2 시작
+**신청서 v2.1 (현재 anchor)**: [`artifacts/business/fundraising/2026-05-07-modoo-startup-pt-application-v2.1.md`](artifacts/business/fundraising/2026-05-07-modoo-startup-pt-application-v2.1.md) (자체 38.5/50 / 페르소나 추정 34.7/50 / 합격선 70% 경계 -0.3)
+**5 페르소나 채점**: [`artifacts/business/fundraising/2026-05-07-modoo-v2-5persona-evaluation.md`](artifacts/business/fundraising/2026-05-07-modoo-v2-5persona-evaluation.md) (KISED 34/VC 30/산업 32/회계 35/멘토 32, self-bias 효과성 -1.5)
+**폼 구조 캡처**: [`artifacts/business/fundraising/2026-05-07-modoo-form-structure-capture.md`](artifacts/business/fundraising/2026-05-07-modoo-form-structure-capture.md) (4-step wizard + Q5 18 옵션 + 글자수 제약)
+**D-1 Push Package**: [`artifacts/business/fundraising/2026-05-07-d-1-gate-push-package.md`](artifacts/business/fundraising/2026-05-07-d-1-gate-push-package.md)
+**신청서 v1.4 (D-9 lock)**: [`artifacts/business/fundraising/2026-04-30-modoo-startup-pt-application-v1.md`](artifacts/business/fundraising/2026-04-30-modoo-startup-pt-application-v1.md) (36/50, 72%, 가입자 D-9 3건 → D-1 5건)
+**Next gate**: ~~5/8 D-7~~ **REVOKED** → 5/8 UD-4 사업자등록 자격 박탈 회피 + 5/9~5/10 OQ-9 경쟁사 5사 재검증 → 5/11 freezing → 5/12 영상 → 5/13 v3 (목표 35.7~36.5/50) → 5/14 운영기관 + SafeWay v2.2 → **5/15 16:00 modoo.or.kr 도전신청서 무조건 제출** → 5/16 Track 2 시작
 **PT 출시 타깃**: **2026-06-09 ±2d**
-**Latest handoff**: [`artifacts/handoffs/2026-05-05-session-handoff.md`](artifacts/handoffs/2026-05-05-session-handoff.md) — **modoo-deadline-execution Phase 0~7 완료 (4 산출물 + 38/38 AC PASS + 회귀 0)**
+**Latest artifact**: v2.1 paste-ready (위 anchor 6건)
+**Latest handoff**: [`artifacts/handoffs/2026-05-07-session-handoff.md`](artifacts/handoffs/2026-05-07-session-handoff.md)
 
 **User Decisions (Anchored)**:
 - **D-1=A** 신청서 6/9 AI 5축 동작 강한 약속 (§4·영상 자막 "조건부 약속" 절충)
 - **D-2=A** 영상 5/12 마감 (Hybrid: 0~25 실녹화 / 25~55 슬라이드 / 55~60 클로징)
 - **D-3** Beachhead = **마포구 + 용산구**
 - **D-4=C** ActivityFeed = Track 2 T2.3 후 실 API (6/8)
+- **D-5 (NEW 2026-05-07)** **모두의 창업 5/15 무조건 강행 commit** (가입자 수치 무관, 게이트 분기 폐기, BORDERLINE narrative + P4 honesty 가산 default)
 - **F-1=A** 5/16~6/8 placeholder ("준비 중 — 6월 정식 출시")
 - **F-2=C** 영상 25~55초 슬라이드 + 본인 음성 (YouTube Unlisted)
 - **UD-2 default** 영상 자막 "2026.06.09 출시 예정" / **UD-3 default** SafeWay v2.2 5/14 연기
+- **UD-4 (CORRECTED 2026-05-07, 양 자문 합산)** ~~사업자등록 보유 여부 = 자격 결격 risk~~ → 방향 반전. 공고 Page 3 "예비창업자 = 공고일 미보유" → **5/8~5/14 사이 사업자등록 시 자격 박탈 (#1 risk)**. 1순위 path = 1R 통과 후 등록. 상세 [`UD-4 가이드`](artifacts/business/fundraising/2026-05-07-ud-4-business-registration-decision-guide.md)
+- **C-1 (NEW 2026-05-07)** Q5 사업 분야 = **라이프스타일** (V2.0 슈퍼앱 6축 정합)
+- **C-2 (NEW 2026-05-07)** Q1 시제 = "AI가 사고를 자동 처리하도록 설계된 반려견 라이프스타일 플랫폼 — 6/9 출시 예정 · 국내 최초 안전 인프라" (49자)
+- **C-3 (NEW 2026-05-07)** Q7 팀원 = 미입력 (자문 narrative Q4 통합)
+- **C-4 (NEW 2026-05-07)** 사진 5장 = Q2(경쟁사+시장)/Q3(앱메인)/Q4(V2.0 6축+멀티앱 시너지)
+- **C-5 (NEW 2026-05-07)** **자문 실명 미사용** — Inject A 변호사 실명 제외, BEP 정의만 적용. publicly verifiable claim risk 회피
 
-**Fallback (5/8 게이트 FAIL)**: 가입자 <30 OR LOI <3 → K-Startup 초기창업패키지 7월 전환, 산출물 3·4 중단, 6월 신청서 재작성. 산출물 1·2는 진행.
+**Fallback (REVOKED — 2026-05-07 strategic pivot)**: ~~5/8 게이트 FAIL → 7월 차회 또는 별도 전환~~ 폐기. 5/15 무조건 강행 commit. 7월 차회 또는 별도 사업 전환은 5/15 합격선 미달 시 fallback으로만 보존.
 
-**Blockers / Waiting On**:
-- 🔴 **5/5~5/7 사용자 critical path**: 가입자 30+·LOI 3+·LOI 마포/용산 거주자 2명 우선·카톡 50명·SNS·5/7 변호사 미팅
-- 🟡 EXT-9~12 외부 계정 (AWS·Firebase·Anthropic·OpenAI·PortOne) — Track 2 5/16 의존, 본 패키지 영향 0
-- 🟡 UD-3 5/7 결정 (기본값 자동 적용 가능) / UD-4 5/8 게이트 시 (루넨랩스 사업자등록 5/15 전 가능 여부)
+**Blockers / Waiting On (v3 갱신, 2026-05-06)**:
+- ✅ **CATASTROPHIC 3 + RED 17 + YELLOW 20 + 카드 6 + Round 2 잔존 4건 처리 완료**: 상세 `artifacts/reports/2026-05-06-major-issues-resolution-v{1,2,3}.md`
+- ✅ **검증 수치 갱신 완료**: CLAUDE.md / 신청서 §1·§2·§4·§7·5축·평가표·정량 8건 모두 62,200 LOC / 178 collected로 통합
+- ✅ **카드 #4 Student.name AES-GCM 본격 구현**: security.py compute_name_hash + models.py name_encrypted+name_hash+hybrid_property + 마이그레이션 e7a9b2c4d6f8 + Class-level SQL 5곳 정합 (scheduling/billing/admin)
+- 🟡 **Round 3 환경 검증 진행 중**: pytest 정확 카운트 + alembic upgrade head + mobile lock 재생성 (backend-dev sub-agent v3 백그라운드)
+- 🟡 mobile tsc 환경 제약 잔존 (typescript 모듈 lock mismatch — Round 3 처리 중)
+- 🔴 **5/7~5/8 사용자 critical path (UD-4 cascade 정정 후)**: (a) **UD-4 = 5/8 모두의 창업 운영기관 또는 창업진흥원 1357+5 콜센터 전화** (사업자등록 결정 X — 운영기관 공식 확인) (b) §3-3 자문진 LOI 5/7 reminder + ID "류정현" 통일 (c) 5/7 변호사 미팅 (SafeWay 영역) (d) 5/8 18:00 가입자·LOI 수치 anchor. **5/8~5/14 사이 사업자등록 회피 = #1 priority**
+- 🟡 EXT-9~12 외부 계정 (AWS·Firebase·Anthropic·OpenAI·PortOne) — Track 2 5/16 의존
+- 🟡 UD-3 5/7 결정 (기본값 자동 적용 가능)
 
 **Track 2 (5/16~6/9) — PT V1.0 출시**: T2.0 pip check → T2.1 Milestone C 잔여 (C-13/14 ✅ 2026-04-30 선행) + AI 인프라 (LLM client + Redis cost counter + WalkPhoto migration) → T2.2 사고 신고 LLM (축 A) + 모더레이션 (축 D) → T2.3 사진 캡션 + Empathic 리포트 + 컨디션 (축 B+F) → T2.4 GPS 이상 탐지 (축 E) → T2.5 통합 테스트 → T2.6 Pre-launch QA + EAS Build → **6/9 V1.0 출시**
 
-**Risks (Brief R-7 등급 상향: 낮음 → 중간)**:
-- 5/8 게이트 미달 (자금 조달 gap, runway SDET Code B2B 의존도 검토 필요)
+**Risks (UD-4 cascade 정정 후 재배치, 2026-05-07)**:
+- **R-D1-5 #1 (CORRECTED)** ~~사업자등록 미보유 → 자격 결격~~ → 방향 반전. **5/8~5/14 사이 사업자등록 시 예비창업자 자격 박탈 (#1 risk)**. 5/8 모두의 창업 운영기관 또는 창업진흥원 1357+5 콜센터 전화로 공식 확인
+- 5/15 합격선 미달 시 자금 lag 4~6개월 → 7월 모두의 창업 차회 또는 별도 사업 fallback path 보존 (산출물 60~70% 재사용)
 - 5/12 영상 제작 실패 → 이미지 5장 대체 (특히 슬롯 2 경쟁사·슬롯 5 멀티앱)
 - 5/12~5/13 자원 경합 → UD-3 5/14 연기로 완화
+- ~~5/8 게이트 미달~~ **REVOKED** — strategic pivot로 게이트 분기 폐기
 
 **Open Gap Notes**:
 - [`artifacts/gap-notes/2026-04-27-storage-contract-divergence.md`](artifacts/gap-notes/2026-04-27-storage-contract-divergence.md) — Storage FR-3.x ↔ deployed code 4 divergence (V1.1 해소)
