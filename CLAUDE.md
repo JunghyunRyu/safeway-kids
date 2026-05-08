@@ -253,7 +253,7 @@ cd site && npm run dev
 **Next gate**: ~~5/8 D-7~~ **REVOKED** → 5/8 UD-4 사업자등록 자격 박탈 회피 + 5/9~5/10 OQ-9 경쟁사 5사 재검증 → 5/11 freezing → 5/12 영상 → 5/13 v3 (목표 35.7~36.5/50) → 5/14 운영기관 + SafeWay v2.2 → **5/15 16:00 modoo.or.kr 도전신청서 무조건 제출** → 5/16 Track 2 시작
 **PT 출시 타깃**: **2026-06-09 ±2d**
 **Latest artifact**: v2.1 paste-ready (위 anchor 6건)
-**Latest handoff**: [`artifacts/handoffs/2026-05-07-session-handoff.md`](artifacts/handoffs/2026-05-07-session-handoff.md)
+**Latest handoff**: [`artifacts/handoffs/2026-05-08-session-handoff.md`](artifacts/handoffs/2026-05-08-session-handoff.md) (5/6~5/7 누적 90 파일 origin/main 출시 완료, `3cd19eb`)
 
 **User Decisions (Anchored)**:
 - **D-1=A** 신청서 6/9 AI 5축 동작 강한 약속 (§4·영상 자막 "조건부 약속" 절충)
