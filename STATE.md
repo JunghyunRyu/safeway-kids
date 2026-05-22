@@ -3,7 +3,7 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-05-22 (v11 — P1-2 ai 모듈 스켈레톤 + Redis cost counter + 단위 테스트 19/19 PASS. 회귀 0 (백엔드 207 passed / 3 fail = 기존 KI-2 Toss 3건만). 신규 파일 7개 + config.py AI env 8개 추가. v10 anchor: P1-1 mobile tsc PASS / v9 anchor: 5/15 modoo 제출)
+**Last updated**: 2026-05-22 (v12 — P1-3 일부: WalkPhoto 모델 + 마이그레이션 `f1a3c5b7d9e2` + 단위 테스트 8/8 PASS. 회귀 0 (백엔드 214 passed / 4 fail = KI-2 Toss 3 + KI-3 health 1 flaky). alembic upgrade/downgrade 라운드트립 PASS. 커밋 `0d5ea26`. PortOne v2 mock은 P1-3 잔여. v11 anchor: P1-2 ai 모듈 / v9 anchor: 5/15 modoo 제출)
 **Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말 예상)** + PT V1.0 출시 reschedule (7월 말~8월 초) + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
 **Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료(v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임된 상태. 6/15까지 본업 사이 가벼운 P1 작업만, 6/15 이후 Track 2 본격 ramp-up
 **Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**
@@ -30,7 +30,8 @@
 | 5/23 ~ 6/15 | 본업 집중 + PT 인프라 골격 슬라이스 (P1-1·P1-2·P1-3) | 사용자(본업) + Claude(슬라이스) |
 | ~~~ 6/15 mobile tsc 복구 (P1-1)~~~ | ✅ 5/22 PASS (workspace hoisting, 루트 node_modules에서 tsc 해상 0 errors) | Claude |
 | ~~~ 6/15 LLM client 스켈레톤 + Redis cost counter (P1-2)~~~ | ✅ 5/22 PASS (19/19 unit tests, 회귀 0, 신규 파일 7개 + config 8개 env) | Claude |
-| ~ 6/15 | WalkPhoto 마이그 + PortOne v2 인터페이스 (P1-3, mock only) | Claude |
+| ~~~ 6/15 WalkPhoto 모델 + 마이그 (P1-3 일부)~~~ | ✅ 5/22 PASS (마이그 `f1a3c5b7d9e2`, 8/8 tests, 라운드트립 PASS, 회귀 0, 커밋 `0d5ea26`) | Claude |
+| ~ 6/15 | PortOne v2 인터페이스 mock (P1-3 잔여) | Claude |
 | ~ 7월 말 | 1R 결과 안내 수신 | 운영기관(프라이머) |
 | 7월 말 → | 통과 시: 사업자등록 + PortOne 계약 + OpenAI 결제 해결 + Track 2 본격 (P2-1·P2-2) | 사용자 + Claude |
 | 7월 말 ~ 8월 초 | PT V1.0 출시 (T2.5 통합 테스트 + T2.6 EAS Build) (P2-3) | Claude |
@@ -64,8 +65,11 @@
 - **루넨랩스**: 사업자등록 1R 통과 후 진행 / lunenlabs.com LIVE 유지
 
 ## Latest Handoff
-- [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS. 다음 first step = P1-3
-- [`artifacts/handoffs/2026-05-22-session-handoff.md`](artifacts/handoffs/2026-05-22-session-handoff.md) — 5/11~5/22 12일 갭 acknowledgement + 3대 결정(PT reschedule·SafeWay 동결·본업 집중) anchor
+- [`artifacts/handoffs/2026-05-22-session-handoff-v3.md`](artifacts/handoffs/2026-05-22-session-handoff-v3.md) — P1-3 일부(WalkPhoto 모델+마이그) PASS·커밋. 다음 first step = P1-3 잔여(PortOne v2 mock)
+- [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS
+
+## Open Gap Notes
+- [`artifacts/gap-notes/2026-05-22-walkphoto-migration-sequencing.md`](artifacts/gap-notes/2026-05-22-walkphoto-migration-sequencing.md) — Tech Spec §16 "4테이블 1마이그" → WalkPhoto 분리(D-8). P2-2에 나머지 3개 테이블 이연 체크리스트 보유
 
 ## Available Skills
 - `/session-start` · `/session-end` · `/sandbox-followup [email|prep|status|review]` (동결 중)

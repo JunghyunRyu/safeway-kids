@@ -218,7 +218,7 @@ cd site && npm run dev
 | 웹 대시보드 품질 95점 달성 | COMPLETE | 2026-03-20 |
 
 ### 검증 수치 (2026-05-06 backend-dev sub-agent 실측 갱신)
-- 백엔드 테스트: **207 passed / 210** (2026-05-22 P1-2 후 실측, 신규 P1-2 19건 추가, 회귀 0). Known fails: KI-2 Toss webhook 3건 (TOSS_WEBHOOK_SECRET 미설정). KI-3 health degraded / KI-4 WS teardown race는 이번 run 미발현 (flaky 카테고리)
+- 백엔드 테스트: **214 passed / 218** (2026-05-22 P1-3 일부 후 실측, 신규 P1-3 8건 추가, 회귀 0). Known fails 4: KI-2 Toss webhook 3건 (TOSS_WEBHOOK_SECRET 미설정) + KI-3 health degraded 1건 (이번 run 발현, flaky). KI-4 WS teardown race는 카운트된 error 0
 - 모바일 테스트: **17 파일 / 71 it() 블록** (SafeWay mobile) + 9 파일 (PT mobile, apps/pettracker)
 - 웹 테스트: **12 파일 / 50 it() 블록**
 - TypeScript: web · site · lunenlabs **0 errors** (실측 PASS) / mobile **0 errors** (2026-05-22 PASS — `npx tsc --noEmit` from `mobile/`, typescript 5.9.3 hoisted to root node_modules)
@@ -250,7 +250,7 @@ cd site && npm run dev
 **운영기관 선택**: 프라이머 ★★★★★ ([`artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md`](artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md))
 **Next gate**: **~7월 말 1R 결과 안내** → 통과 시: 사업자등록 + PortOne 계약 + OpenAI 결제 해결 + Track 2 본격 → 7월 말~8월 초 PT V1.0 출시. 미통과 시: 7월 modoo 차회 또는 별도 사업 fallback (산출물 60~70% 재사용)
 **PT 출시 타깃 (재정렬)**: **2026-07월 말 ~ 8월 초** (이전 6/9 ±2d에서 reschedule)
-**Latest handoff**: [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) (P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS, 회귀 0. 다음 first step = P1-3)
+**Latest handoff**: [`artifacts/handoffs/2026-05-22-session-handoff-v3.md`](artifacts/handoffs/2026-05-22-session-handoff-v3.md) (P1-3 일부 = WalkPhoto 모델 + 마이그 `f1a3c5b7d9e2` + 8/8 PASS, 회귀 0, 커밋 `0d5ea26`. 다음 first step = P1-3 잔여 PortOne v2 mock)
 
 **User Decisions (2026-05-22 갱신)**:
 - **D-1~D-5 / C-1~C-5 / UD-1~UD-4**: modoo 제출 anchor (이력 archive, 변경 없음)
@@ -266,7 +266,7 @@ cd site && npm run dev
 - ✅ **EXT-9~11** AWS·Firebase·Anthropic 보유 / **OpenAI** 결제만 / **PortOne** 사업자만
 - 🔴 **D-7 SafeWay 동결** — Claude proactive 작업 0, 사용자 재진입 전 모든 SafeWay 영역 동결
 
-**6/15까지 슬라이스 (본업 사이 가벼운 작업)**: ~~P1-1 mobile tsc 복구~~ (✅ 5/22) → ~~P1-2 LLM client + Redis cost counter 스켈레톤 (stub)~~ (✅ 5/22) → P1-3 WalkPhoto 마이그 + PortOne v2 인터페이스 (mock)
+**6/15까지 슬라이스 (본업 사이 가벼운 작업)**: ~~P1-1 mobile tsc 복구~~ (✅ 5/22) → ~~P1-2 LLM client + Redis cost counter 스켈레톤 (stub)~~ (✅ 5/22) → ~~P1-3 일부 WalkPhoto 모델 + 마이그~~ (✅ 5/22) → P1-3 잔여 PortOne v2 인터페이스 (mock)
 
 **6/15 이후 ramp-up**: P2-1 OpenAI 결제 해결 → P2-2 Track 2 T2.2~T2.4 LLM 실 구현 (사고·캡션·모더레이션·GPS) → P2-3 PT V1.0 출시 (T2.5 통합 + T2.6 EAS Build)
 
@@ -278,6 +278,7 @@ cd site && npm run dev
 
 **Open Gap Notes**:
 - [`artifacts/gap-notes/2026-04-27-storage-contract-divergence.md`](artifacts/gap-notes/2026-04-27-storage-contract-divergence.md) — Storage FR-3.x ↔ deployed code 4 divergence (V1.1 해소)
+- [`artifacts/gap-notes/2026-05-22-walkphoto-migration-sequencing.md`](artifacts/gap-notes/2026-05-22-walkphoto-migration-sequencing.md) — Tech Spec §16 "4테이블 1마이그" → WalkPhoto 분리(D-8). P2-2에 나머지 3개 테이블(PtIncidentClassification·PtModerationFlag·PtAiInsight) 이연 체크리스트 보유
 
 **Known Issues (출시 critical path 무관)**:
 - KI-2 TOSS_WEBHOOK_SECRET 미설정 → Toss webhook 3 fail
