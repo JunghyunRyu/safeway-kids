@@ -47,6 +47,35 @@ class PtPaymentStatus(enum.StrEnum):
     REFUNDED = "refunded"
 
 
+class WalkPhotoCaptionStatus(enum.StrEnum):
+    """산책 사진 캡션 생성 상태 — Tech Spec FR-B2.
+
+    pending: 사진 INSERT 직후, 캡션 생성 BackgroundTask 대기
+    generated: Vision LLM 캡션 생성 완료
+    edited: 펫시터가 1-tap 수정 (FR-B5)
+    failed: LLM 8s timeout / 호출 실패 → 펫시터 수동 입력 fallback (FR-B2 EC-1)
+    """
+
+    PENDING = "pending"
+    GENERATED = "generated"
+    EDITED = "edited"
+    FAILED = "failed"
+
+
+class PetCondition(enum.StrEnum):
+    """산책 사진 기반 펫 컨디션 1줄 (V1.0 베타) — Tech Spec 축 F FR-F1.
+
+    축 B의 generate_caption() 동일 LLM 응답에 포함되며 별도 호출이 없다.
+    값은 Tech Spec FR-F1이 명시한 한국어 라벨을 그대로 저장한다.
+    """
+
+    ENERGETIC = "활기"
+    CALM = "평온"
+    TIRED = "지친_듯"
+    ABNORMAL = "이상"
+    UNKNOWN = "불명"
+
+
 # ── Pets ─────────────────────────────────────────────────────────
 
 class Pet(Base):
@@ -272,4 +301,44 @@ class PtPayment(Base):
 
     __table_args__ = (
         Index("ix_pt_payments_booking_status", "booking_id", "status"),
+    )
+
+
+# ── Walk Photos (AI 캡션 축 B + 컨디션 축 F) ──────────────────────
+
+class WalkPhoto(Base):
+    """산책 사진 + AI 자동 캡션 + 펫 컨디션 — Tech Spec FR-B2 / FR-F2.
+
+    사진 업로드(POST /api/v1/storage/confirm, entity_type="walk_photo") 시
+    caption_status="pending"으로 INSERT 되고, BackgroundTask generate_caption()이
+    Vision LLM 호출 후 caption·condition·caption_status를 UPDATE 한다 (FR-B1·FR-B3).
+
+    P1-3 슬라이스: 모델 + 마이그레이션만. generate_caption() 실 구현은 P2-2.
+    """
+
+    __tablename__ = "walk_photos"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("walk_sessions.id"), nullable=False
+    )
+    # S3 객체 키 (URL 아님 — presigned URL은 조회 시점에 발급). e.g.
+    # "pettracker/walk-photos/{session_id}/{uuid}.jpg"
+    s3_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    # AI 생성 캡션 — pending 상태에서는 None, generated/edited 시 채워짐 (FR-B4)
+    caption: Mapped[str | None] = mapped_column(Text)
+    caption_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending"
+    )
+    # 축 F 컨디션 1줄 (FR-F2 Optional). PetCondition 한국어 라벨 저장
+    condition: Mapped[str | None] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    session: Mapped["WalkSession"] = relationship(lazy="joined")
+
+    __table_args__ = (
+        # GET /pt/walks/{id}/photos — session별 시간순 조회 (FR-B7 리포트)
+        Index("ix_walk_photos_session_created", "session_id", "created_at"),
     )

@@ -56,6 +56,7 @@ from app.apps.pettracker.models import (  # noqa: F401
     WalkGpsHistory,
     WalkerWallet,
     WalkerReview,
+    WalkPhoto,
 )
 
 config = context.config
