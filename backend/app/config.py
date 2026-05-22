@@ -95,6 +95,18 @@ class Settings(BaseSettings):
     # External API
     external_api_timeout_seconds: float = 30.0
 
+    # PT AI (LLM client) — spec §7.4, §17.2, §NFR-3.
+    # P1-2 (2026-05-22): keys remain optional. StubLlmClient is forced via
+    # pt_llm_use_stub until P2-2 wires Anthropic/OpenAI concrete clients.
+    anthropic_api_key: str = ""
+    openai_api_key: str = ""
+    pt_llm_primary_provider: str = "anthropic"  # anthropic | openai
+    pt_llm_monthly_cost_cap_krw: float = 2_000_000.0
+    pt_llm_haiku_threshold_pct: int = 80
+    pt_llm_use_stub: bool = True
+    pt_llm_fallback_timeout_ms: int = 10_000
+    pt_llm_vision_timeout_ms: int = 8_000
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @model_validator(mode="after")

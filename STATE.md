@@ -3,7 +3,7 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-05-22 (v9 — 5/15 modoo 제출 완료 후 12일 갭 cleanup. v2.6-tight 산출물 + 5/8 보조 산출물 11개 origin/main 출시 `dd4398b`. **PT 출시 reschedule 6/9 → 7월 말~8월 초 + SafeWay 동결 + 본업 집중 6/15까지** 3대 결정 anchor)
+**Last updated**: 2026-05-22 (v11 — P1-2 ai 모듈 스켈레톤 + Redis cost counter + 단위 테스트 19/19 PASS. 회귀 0 (백엔드 207 passed / 3 fail = 기존 KI-2 Toss 3건만). 신규 파일 7개 + config.py AI env 8개 추가. v10 anchor: P1-1 mobile tsc PASS / v9 anchor: 5/15 modoo 제출)
 **Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말 예상)** + PT V1.0 출시 reschedule (7월 말~8월 초) + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
 **Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료(v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임된 상태. 6/15까지 본업 사이 가벼운 P1 작업만, 6/15 이후 Track 2 본격 ramp-up
 **Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**
@@ -28,8 +28,8 @@
 |---|---|---|
 | 5/22 (오늘) | P0 cleanup: untracked 산출물 push (✅ `dd4398b`) + STATE/CLAUDE 갱신 + 5/22 핸드오프 | Claude |
 | 5/23 ~ 6/15 | 본업 집중 + PT 인프라 골격 슬라이스 (P1-1·P1-2·P1-3) | 사용자(본업) + Claude(슬라이스) |
-| ~ 6/15 | mobile tsc 환경 복구 (P1-1, 30분) | Claude |
-| ~ 6/15 | LLM client 스켈레톤 + Redis cost counter (P1-2, stub only) | Claude |
+| ~~~ 6/15 mobile tsc 복구 (P1-1)~~~ | ✅ 5/22 PASS (workspace hoisting, 루트 node_modules에서 tsc 해상 0 errors) | Claude |
+| ~~~ 6/15 LLM client 스켈레톤 + Redis cost counter (P1-2)~~~ | ✅ 5/22 PASS (19/19 unit tests, 회귀 0, 신규 파일 7개 + config 8개 env) | Claude |
 | ~ 6/15 | WalkPhoto 마이그 + PortOne v2 인터페이스 (P1-3, mock only) | Claude |
 | ~ 7월 말 | 1R 결과 안내 수신 | 운영기관(프라이머) |
 | 7월 말 → | 통과 시: 사업자등록 + PortOne 계약 + OpenAI 결제 해결 + Track 2 본격 (P2-1·P2-2) | 사용자 + Claude |
@@ -40,7 +40,7 @@
 - 🟡 **1R 결과 안내 대기 (~7월 말)** — 외부 의존, action 불가
 - 🟡 **OpenAI 결제 보류** — 카드 결제 처리 실패. Track 2 T2.2~T2.3 LLM 실 호출 unblock 의존. 6/15 본업 종료 후 결제 해결 (P2-1)
 - 🟡 **PortOne 사업자 계정 필요** — 1R 통과 후 사업자등록 → PortOne 계약 순서. UD-4 자격 박탈 risk 회피 path 유지
-- 🟡 **mobile tsc 환경**: typescript 모듈 lock mismatch (5/8 잔존). 6/15까지 P1-1로 복구
+- ✅ ~~mobile tsc 환경~~ (5/22 P1-1 PASS, npm workspace hoisting으로 루트 node_modules 사용. "lock mismatch" 진단은 오진이었음)
 - 🟡 **EXT-9~11 외부 계정 (AWS·Firebase·Anthropic) 이미 보유** — OpenAI만 결제 이슈 / PortOne만 사업자 의존
 - 🔴 **D-7 SafeWay 동결** — Claude proactive 작업 0. 사용자 재진입 전 모든 SafeWay 영역 동결 (자문 메모·v2.2·미팅 등)
 
@@ -64,8 +64,8 @@
 - **루넨랩스**: 사업자등록 1R 통과 후 진행 / lunenlabs.com LIVE 유지
 
 ## Latest Handoff
-- [`artifacts/handoffs/2026-05-22-session-handoff.md`](artifacts/handoffs/2026-05-22-session-handoff.md) — 5/11~5/22 12일 갭 acknowledgement + 3대 결정(PT reschedule·SafeWay 동결·본업 집중) anchor + 다음 세션 first step
-- [`artifacts/handoffs/2026-05-08-session-handoff.md`](artifacts/handoffs/2026-05-08-session-handoff.md) — 5/6~5/7 누적 90 파일 origin/main 출시
+- [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS. 다음 first step = P1-3
+- [`artifacts/handoffs/2026-05-22-session-handoff.md`](artifacts/handoffs/2026-05-22-session-handoff.md) — 5/11~5/22 12일 갭 acknowledgement + 3대 결정(PT reschedule·SafeWay 동결·본업 집중) anchor
 
 ## Available Skills
 - `/session-start` · `/session-end` · `/sandbox-followup [email|prep|status|review]` (동결 중)
