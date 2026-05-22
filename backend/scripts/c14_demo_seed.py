@@ -58,10 +58,13 @@ def main(num_points: int = 12, interval_sec: float = 3.0) -> None:
 
     # 1. Login (3 users)
     # phone format: ^01[0-9]{8,9}$ → 010 + 8 digits (total 11 chars)
+    # PT_OWNER_PHONE/PT_WALKER_PHONE/PT_ADMIN_PHONE env vars override the random
+    # defaults — useful when seeding for the PT app's hardcoded dev-login phone.
+    import os as _os
     rand = str(int(time.time()))[-5:]
-    owner_phone = f"01011{rand}"
-    walker_phone = f"01022{rand}"
-    admin_phone = f"01099{rand}"
+    owner_phone = _os.environ.get("PT_OWNER_PHONE", f"01011{rand}")
+    walker_phone = _os.environ.get("PT_WALKER_PHONE", f"01022{rand}")
+    admin_phone = _os.environ.get("PT_ADMIN_PHONE", f"01099{rand}")
 
     print("[1] dev-login owner / walker / admin")
     owner = dev_login(owner_phone, "데모오너", "pet_owner")
@@ -146,6 +149,8 @@ def main(num_points: int = 12, interval_sec: float = 3.0) -> None:
     print("\n=== HUMAN ACTION REQUIRED ===")
     print(f"OWNER ACCESS TOKEN (set in PT mobile localStorage / SecureStore):")
     print(owner_tok)
+    print(f"\nWALKER ACCESS TOKEN (for live GPS streaming to this session):")
+    print(walker_tok)
     print(f"\nSESSION ID for LiveTrackScreen:")
     print(session_id)
     print(f"\nOpen Web preview: http://localhost:8081 → login as owner → navigate to")
@@ -175,9 +180,13 @@ def main(num_points: int = 12, interval_sec: float = 3.0) -> None:
         if i < num_points - 1:
             time.sleep(interval_sec)
 
-    # 7. End walk
-    end = post(f"/pt/walks/{session_id}/end", {}, token=walker_tok)
-    print(f"\n[7] walk end: distance={end.get('distance_meters')}m")
+    # 7. End walk (skipped when PT_KEEP_WALK_OPEN=1 so the LiveTrack demo can show
+    #    a booking with status=in_progress and live GPS trail).
+    if _os.environ.get("PT_KEEP_WALK_OPEN") == "1":
+        print(f"\n[7] walk LEFT IN_PROGRESS (PT_KEEP_WALK_OPEN=1) session_id={session_id}")
+    else:
+        end = post(f"/pt/walks/{session_id}/end", {}, token=walker_tok)
+        print(f"\n[7] walk end: distance={end.get('distance_meters')}m")
     print("\n=== DONE ===")
 
 
