@@ -405,12 +405,15 @@ async def get_walk_report(
     user: User = Depends(require_pt_any),
 ) -> WalkReportResponse:
     session = await service.get_walk_report(db, session_id)
-    # 보호자가 산책 중 도우미에게 연락할 수 있도록 전화번호 포함 (O-01)
+    # 보호자가 산책 중 도우미에게 연락 + 리뷰 개인화용 (O-01 / O-18)
     walker_phone = None
+    walker_name = None
     if session.walker_id:
-        walker_phone = (await db.execute(
-            select(User.phone).where(User.id == session.walker_id)
-        )).scalar_one_or_none()
+        wrow = (await db.execute(
+            select(User.name, User.phone).where(User.id == session.walker_id)
+        )).first()
+        if wrow:
+            walker_name, walker_phone = wrow
     return WalkReportResponse(
         session_id=session.id,
         booking_id=session.booking_id,
@@ -420,6 +423,7 @@ async def get_walk_report(
         walker_memo=session.walker_memo,
         route_polyline=session.route_polyline,
         walker_phone=walker_phone,
+        walker_name=walker_name,
     )
 
 

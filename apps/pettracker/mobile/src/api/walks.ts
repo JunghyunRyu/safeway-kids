@@ -8,6 +8,8 @@ export interface WalkReport {
   distance_meters: number | null;
   walker_memo: string | null;
   route_polyline: number[][] | null;
+  walker_phone?: string | null;
+  walker_name?: string | null;
 }
 
 export async function startWalk(bookingId: string): Promise<{ session_id: string; started_at: string }> {

@@ -46,7 +46,7 @@ export default function LiveTrackScreen({ route, navigation }: any) {
       if (report.started_at && !startedAt) {
         setStartedAt(new Date(report.started_at));
       }
-      const phone = (report as any).walker_phone;
+      const phone = report.walker_phone;
       if (typeof phone === 'string' && phone.length >= 9) {
         setWalkerPhone(phone);
       }

@@ -130,7 +130,7 @@ export default function WalkReportScreen({ route, navigation }: any) {
           <View style={styles.ctaRow}>
             <Pressable
               style={[styles.cta, { backgroundColor: Colors.accent }]}
-              onPress={() => navigation.navigate('Review', { bookingId: report.booking_id })}
+              onPress={() => navigation.navigate('Review', { bookingId: report.booking_id, walkerName: report.walker_name })}
               accessibilityRole="button"
               accessibilityLabel="리뷰 작성하기"
             >

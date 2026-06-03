@@ -7,7 +7,7 @@ import { tokenStorage } from "@safeway/core-mobile/api/client";
 import { getMe } from "@safeway/core-mobile/api/auth";
 
 import OwnerStackNavigator from "./src/navigation/OwnerStackNavigator";
-import WalkerTabNavigator from "./src/navigation/WalkerTabNavigator";
+import WalkerStackNavigator from "./src/navigation/WalkerStackNavigator";
 import LoginScreen from "./src/screens/shared/LoginScreen";
 import DevTokenPasteScreen from "./src/screens/shared/DevTokenPasteScreen";
 
@@ -99,7 +99,7 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <NavigationContainer>
-        {role === "walker" ? <WalkerTabNavigator /> : <OwnerStackNavigator />}
+        {role === "walker" ? <WalkerStackNavigator /> : <OwnerStackNavigator />}
       </NavigationContainer>
     </SafeAreaProvider>
   );

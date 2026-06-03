@@ -226,19 +226,24 @@ async def search_walkers(db: AsyncSession, params: WalkerSearchParams) -> list[d
             area_lon = area.get("lon", 0)
             dist = haversine_km(params.latitude, params.longitude, area_lat, area_lon)
             if dist <= params.radius_km:
-                # Get rating
+                # Get rating + 완료 산책 수 (검색 카드 표시용 — O-34 사진/total_walks 포함)
                 rating_r = await db.execute(
                     select(func.avg(WalkerReview.rating)).where(WalkerReview.walker_id == user.id)
                 )
                 avg_rating = rating_r.scalar()
+                total_walks = (await db.execute(
+                    select(func.count(WalkSession.id)).where(WalkSession.walker_id == user.id)
+                )).scalar() or 0
                 results.append({
                     "id": user.id,
                     "name": user.name,
                     "distance_km": round(dist, 1),
                     "avg_rating": round(float(avg_rating), 1) if avg_rating else None,
+                    "total_walks": total_walks,
                     "bio": qual.bio,
                     "experience_years": qual.experience_years,
                     "certification_type": qual.certification_type,
+                    "profile_photo_url": qual.profile_photo_url,
                 })
                 break
 
@@ -727,6 +732,14 @@ async def confirm_payment(
     if pg_status not in ("PAID", "VIRTUAL_ACCOUNT_ISSUED"):
         raise ValidationError(detail=f"PG 결제 상태가 비정상입니다: {pg_status}")
 
+    # PG 승인 확인 후 결제 상태 확정 (이전엔 이 블록이 아래 purge 함수로
+    # 잘못 이식돼 confirm_payment가 None을 반환하던 P0 버그 — QA 발견 후 복원)
+    payment.imp_uid = imp_uid
+    payment.status = PtPaymentStatus.PAID
+    payment.paid_at = datetime.now(UTC)
+    await db.flush()
+    return payment
+
 
 # ── 위치정보법 §16 자동 파기 (180일) — PT 산책 GPS 이력 ─────────────────
 
@@ -739,12 +752,6 @@ async def purge_old_walk_gps_history(db: AsyncSession) -> int:
     if count > 0:
         logger.info("[PT GPS] Purged %d old walk GPS records (before %s)", count, cutoff.isoformat())
     return count
-
-    payment.imp_uid = imp_uid
-    payment.status = PtPaymentStatus.PAID
-    payment.paid_at = datetime.now(UTC)
-    await db.flush()
-    return payment
 
 
 async def cancel_payment(

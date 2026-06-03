@@ -164,6 +164,7 @@ class WalkReportResponse(BaseModel):
     walker_memo: str | None
     route_polyline: list | None
     walker_phone: str | None = None
+    walker_name: str | None = None
 
     model_config = {"from_attributes": True}
 

@@ -29,6 +29,9 @@ export default function WalkScreen() {
   const gpsRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gpsFailRef = useRef(0);
   const lastPosRef = useRef<{ lat: number; lng: number } | null>(null);
+  // sessionId의 동기 미러 — setState 비동기 lag으로 handleEnd가 null을 읽어
+  // endWalk가 누락되던 race 방지. startWalk 직후 동기 설정.
+  const sessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     getMe()
@@ -125,6 +128,7 @@ export default function WalkScreen() {
         onPress: async () => {
           try {
             const result = await startWalk(booking.id);
+            sessionIdRef.current = result.session_id;
             setSessionId(result.session_id);
             setSelectedBooking(booking);
             setState('walking');
@@ -186,9 +190,11 @@ export default function WalkScreen() {
           if (gpsRef.current) clearInterval(gpsRef.current);
           if (timerRef.current) clearInterval(timerRef.current);
           setGpsWeak(false);
+          // 동기 ref 우선 — setState lag으로 state가 아직 null이어도 종료 보장.
+          const sid = sessionIdRef.current ?? sessionId;
           try {
-            if (sessionId) {
-              const result = await endWalk(sessionId, {
+            if (sid) {
+              const result = await endWalk(sid, {
                 walker_memo: walkerMemo.trim() || undefined,
                 photo_url: photoDownloadUrl || undefined,
               });
