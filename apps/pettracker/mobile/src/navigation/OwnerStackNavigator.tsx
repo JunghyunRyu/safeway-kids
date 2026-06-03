@@ -21,6 +21,7 @@ import MyPetsScreen from '../screens/owner/MyPetsScreen';
 import PaymentHistoryScreen from '../screens/owner/PaymentHistoryScreen';
 import NotificationSettingsScreen from '../screens/shared/NotificationSettingsScreen';
 import PolicyScreen from '../screens/shared/PolicyScreen';
+import ChatScreen from '../screens/shared/ChatScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -39,6 +40,7 @@ export default function OwnerStackNavigator() {
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="Policy" component={PolicyScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
     </Stack.Navigator>
   );
 }

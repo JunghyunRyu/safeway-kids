@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, DeviceEventEmitter, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
-import { getMe } from '@safeway/core-mobile/api/auth';
+import { getMe, logout } from '@safeway/core-mobile/api/auth';
 import { useImageUpload } from '@safeway/core-mobile/hooks/useImageUpload';
 
 export default function WalkerProfileScreen() {
@@ -65,12 +65,29 @@ export default function WalkerProfileScreen() {
     ]);
   };
 
+  const comingSoon = (label: string) =>
+    Alert.alert(label, '준비 중인 기능입니다. 곧 만나보실 수 있어요.');
+
+  const handleLogout = () => {
+    Alert.alert('로그아웃', '로그아웃 하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          DeviceEventEmitter.emit('auth:logout');
+        },
+      },
+    ]);
+  };
+
   const menuItems = [
-    { icon: 'document-text' as const, label: '자격증/서류 관리', onPress: () => {} },
-    { icon: 'star' as const, label: '내 리뷰 보기', onPress: () => {} },
-    { icon: 'notifications' as const, label: '알림 설정', onPress: () => {} },
-    { icon: 'shield-checkmark' as const, label: '개인정보 처리방침', onPress: () => {} },
-    { icon: 'help-circle' as const, label: '고객센터', onPress: () => {} },
+    { icon: 'document-text' as const, label: '자격증/서류 관리', onPress: () => comingSoon('자격증/서류 관리') },
+    { icon: 'star' as const, label: '내 리뷰 보기', onPress: () => comingSoon('내 리뷰 보기') },
+    { icon: 'notifications' as const, label: '알림 설정', onPress: () => comingSoon('알림 설정') },
+    { icon: 'shield-checkmark' as const, label: '개인정보 처리방침', onPress: () => comingSoon('개인정보 처리방침') },
+    { icon: 'help-circle' as const, label: '고객센터', onPress: () => comingSoon('고객센터') },
   ];
 
   return (
@@ -97,7 +114,13 @@ export default function WalkerProfileScreen() {
 
       <View style={styles.menu}>
         {menuItems.map((item, idx) => (
-          <Pressable key={idx} style={styles.menuItem} onPress={item.onPress}>
+          <Pressable
+            key={idx}
+            style={styles.menuItem}
+            onPress={item.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+          >
             <Ionicons name={item.icon} size={22} color={Colors.textSecondary} />
             <Text style={styles.menuLabel}>{item.label}</Text>
             <Ionicons name="chevron-forward" size={18} color={Colors.textDisabled} />
@@ -105,7 +128,12 @@ export default function WalkerProfileScreen() {
         ))}
       </View>
 
-      <Pressable style={styles.logoutBtn} onPress={() => Alert.alert('로그아웃', '로그아웃 하시겠습니까?')}>
+      <Pressable
+        style={styles.logoutBtn}
+        onPress={handleLogout}
+        accessibilityRole="button"
+        accessibilityLabel="로그아웃"
+      >
         <Text style={styles.logoutText}>로그아웃</Text>
       </Pressable>
       <View style={{ height: 40 }} />

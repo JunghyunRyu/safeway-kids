@@ -22,6 +22,7 @@ export default function LiveTrackScreen({ route, navigation }: any) {
   const [isLoading, setIsLoading] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [startedAt, setStartedAt] = useState<Date | null>(null);
+  const [walkerPhone, setWalkerPhone] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const webviewRef = useRef<WebView>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -44,6 +45,10 @@ export default function LiveTrackScreen({ route, navigation }: any) {
       }
       if (report.started_at && !startedAt) {
         setStartedAt(new Date(report.started_at));
+      }
+      const phone = (report as any).walker_phone;
+      if (typeof phone === 'string' && phone.length >= 9) {
+        setWalkerPhone(phone);
       }
       setIsLoading(false);
     } catch {
@@ -97,6 +102,14 @@ export default function LiveTrackScreen({ route, navigation }: any) {
     }
   }, [wsStatus, fetchLocation]);
 
+  // startedAt이 도착하면 경과 시간을 실제 시작 시각 기준으로 보정한다.
+  // (산책 도중에 화면을 열어도 00:00이 아니라 실제 경과가 보이도록)
+  useEffect(() => {
+    if (!startedAt) return;
+    const base = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+    setElapsedSeconds(base > 0 ? base : 0);
+  }, [startedAt]);
+
   const formatElapsed = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -104,11 +117,23 @@ export default function LiveTrackScreen({ route, navigation }: any) {
   };
 
   const handleContact = () => {
-    // TODO: Replace with actual walker phone or navigate to chat screen
-    Alert.alert('산책사 연락', '산책사에게 연락하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { text: '전화', onPress: () => Linking.openURL('tel:010-0000-0000').catch(() => Alert.alert('오류', '전화 앱을 열 수 없습니다')) },
-    ]);
+    // 실제 산책 도우미 전화번호가 있을 때만 전화 연결. (가짜 번호 다이얼 금지)
+    if (walkerPhone) {
+      Alert.alert('산책 도우미 연락', '산책 도우미에게 전화하시겠습니까?', [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '전화',
+          onPress: () =>
+            Linking.openURL(`tel:${walkerPhone}`).catch(() => Alert.alert('오류', '전화 앱을 열 수 없습니다')),
+        },
+      ]);
+      return;
+    }
+    // 번호 미수신 시: 가짜 번호로 걸지 않고 안내만 한다.
+    Alert.alert(
+      '산책 도우미 연락',
+      '연락처를 불러오는 중입니다. 긴급한 상황이라면 아래 SOS 긴급 신고를 이용해 주세요.',
+    );
   };
 
   const handleSOS = () => {
@@ -171,10 +196,6 @@ export default function LiveTrackScreen({ route, navigation }: any) {
 
   // TODO: In production, replace polling with WebSocket subscription to walk_session:{sessionId}:live
 
-  const positionText = walkerPosition
-    ? `${walkerPosition.lat.toFixed(4)}, ${walkerPosition.lng.toFixed(4)}`
-    : '위치 수신 대기';
-
   const centerLat = walkerPosition?.lat ?? 37.5665;
   const centerLng = walkerPosition?.lng ?? 126.978;
   const routeJson = JSON.stringify(routePoints);
@@ -213,8 +234,8 @@ export default function LiveTrackScreen({ route, navigation }: any) {
     <div id="map">
       <div style="text-align:center">
         <div style="font-size:48px">📍</div>
-        <div style="font-size:16px;color:#5a7272;margin-top:8px">실시간 위치 추적 중...</div>
-        <div style="font-size:12px;color:#9eb3b3;margin-top:4px">${positionText}</div>
+        <div style="font-size:16px;color:#5a7272;margin-top:8px">실시간 위치를 받아오고 있어요...</div>
+        <div style="font-size:12px;color:#9eb3b3;margin-top:4px">산책이 시작되면 경로가 지도에 표시됩니다</div>
       </div>
     </div>
     </body></html>
@@ -223,7 +244,7 @@ export default function LiveTrackScreen({ route, navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="뒤로 가기" hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>실시간 추적</Text>
@@ -234,7 +255,7 @@ export default function LiveTrackScreen({ route, navigation }: any) {
           </View>
         ) : wsStatus === 'failed' ? (
           <View style={[styles.liveBadge, { backgroundColor: Colors.borderLight }]}>
-            <Text style={[styles.liveText, { color: Colors.textSecondary }]}>POLLING</Text>
+            <Text style={[styles.liveText, { color: Colors.textSecondary }]}>업데이트 중</Text>
           </View>
         ) : (
           <View style={[styles.liveBadge, { backgroundColor: Colors.borderLight }]}>
@@ -272,11 +293,11 @@ export default function LiveTrackScreen({ route, navigation }: any) {
 
       {/* Action Buttons */}
       <View style={styles.actionBar}>
-        <Pressable style={styles.contactBtn} onPress={handleContact}>
+        <Pressable style={styles.contactBtn} onPress={handleContact} accessibilityRole="button" accessibilityLabel="산책 도우미에게 연락">
           <Ionicons name="call" size={20} color={Colors.textInverse} />
-          <Text style={styles.contactBtnText}>산책사 연락</Text>
+          <Text style={styles.contactBtnText}>산책 도우미 연락</Text>
         </Pressable>
-        <Pressable style={[styles.sosBtn, sending && { opacity: 0.6 }]} onPress={handleSOS} disabled={sending}>
+        <Pressable style={[styles.sosBtn, sending && { opacity: 0.6 }]} onPress={handleSOS} disabled={sending} accessibilityRole="button" accessibilityLabel="SOS 긴급 신고">
           {sending ? (
             <ActivityIndicator size="small" color={Colors.textInverse} />
           ) : (

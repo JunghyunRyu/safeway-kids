@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, FlatList, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
@@ -21,27 +21,43 @@ export default function SearchScreen({ navigation }: any) {
   const [userLng, setUserLng] = useState(DEFAULT_LNG);
   const [locationDenied, setLocationDenied] = useState(false);
 
+  const [locationResolved, setLocationResolved] = useState(false);
+
   useEffect(() => {
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setLocationDenied(true);
-          return;
+        } else {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          setUserLat(loc.coords.latitude);
+          setUserLng(loc.coords.longitude);
         }
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        setUserLat(loc.coords.latitude);
-        setUserLng(loc.coords.longitude);
       } catch {
         setLocationDenied(true);
+      } finally {
+        setLocationResolved(true);
       }
     })();
   }, []);
 
-  const doSearch = async () => {
+  // 위치 확보가 끝나면 자동으로 한 번 검색한다 (불필요한 추가 탭 제거).
+  useEffect(() => {
+    if (locationResolved && !hasSearched) {
+      doSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationResolved]);
+
+  const doSearch = async (overrideSize?: typeof sizeFilter) => {
     setLoading(true);
     try {
-      const data = await searchWalkers(userLat, userLng, date);
+      const effectiveSize = overrideSize ?? sizeFilter;
+      const data = await searchWalkers(
+        userLat, userLng, date, 3,
+        effectiveSize === 'all' ? undefined : effectiveSize,
+      );
       setResults(data);
       setHasSearched(true);
     } catch {
@@ -54,9 +70,15 @@ export default function SearchScreen({ navigation }: any) {
     <Pressable
       style={styles.walkerCard}
       onPress={() => navigation.navigate('WalkerProfile', { walkerId: item.id })}
+      accessibilityRole="button"
+      accessibilityLabel={`산책 도우미 ${item.name}, 평점 ${item.avg_rating ?? '없음'}, 거리 ${item.distance_km}km`}
     >
       <View style={styles.avatar}>
-        <Ionicons name="person-circle" size={48} color={Colors.primary} />
+        {item.profile_photo_url ? (
+          <Image source={{ uri: item.profile_photo_url }} style={styles.avatarImg} />
+        ) : (
+          <Ionicons name="person-circle" size={48} color={Colors.primary} />
+        )}
       </View>
       <View style={styles.walkerInfo}>
         <Text style={styles.walkerName}>{item.name}</Text>
@@ -98,7 +120,7 @@ export default function SearchScreen({ navigation }: any) {
           <Ionicons name="calendar-outline" size={18} color={Colors.textSecondary} />
           <Text style={styles.dateText}>{formatKorean(date)}</Text>
         </Pressable>
-        <Pressable style={styles.searchBtn} onPress={doSearch}>
+        <Pressable style={styles.searchBtn} onPress={() => doSearch()} accessibilityRole="button" accessibilityLabel="도우미 검색">
           <Ionicons name="search" size={20} color={Colors.textInverse} />
         </Pressable>
       </View>
@@ -114,7 +136,14 @@ export default function SearchScreen({ navigation }: any) {
       {/* Size Filter Chips */}
       <View style={styles.filterRow}>
         {([['all', '전체'], ['small', '소형 (<10kg)'], ['medium', '중형 (10-25kg)'], ['large', '대형 (>25kg)']] as const).map(([key, label]) => (
-          <Pressable key={key} style={[styles.filterChip, sizeFilter === key && styles.filterChipActive]} onPress={() => setSizeFilter(key)}>
+          <Pressable
+            key={key}
+            style={[styles.filterChip, sizeFilter === key && styles.filterChipActive]}
+            onPress={() => { setSizeFilter(key); if (hasSearched) doSearch(key); }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: sizeFilter === key }}
+            accessibilityLabel={`${label} 필터`}
+          >
             <Text style={[styles.filterChipText, sizeFilter === key && styles.filterChipTextActive]}>{label}</Text>
           </Pressable>
         ))}
@@ -167,6 +196,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg, padding: Spacing.base, marginBottom: Spacing.sm, ...Shadows.sm,
   },
   avatar: { marginRight: Spacing.md },
+  avatarImg: { width: 48, height: 48, borderRadius: 24 },
   walkerInfo: { flex: 1 },
   walkerName: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.semibold, color: Colors.textPrimary },
   badges: { flexDirection: 'row', marginTop: 4, gap: 8 },

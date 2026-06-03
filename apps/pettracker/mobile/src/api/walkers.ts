@@ -20,11 +20,14 @@ export interface WalkerSearchResult extends WalkerProfile {
   distance_km: number;
 }
 
+export type DogSize = 'small' | 'medium' | 'large';
+
 export async function searchWalkers(
-  latitude: number, longitude: number, date: string, radiusKm = 3,
+  latitude: number, longitude: number, date: string,
+  radiusKm = 3, size?: DogSize,
 ): Promise<WalkerSearchResult[]> {
   const resp = await apiClient.get('/pt/walkers/search', {
-    params: { latitude, longitude, date, radius_km: radiusKm },
+    params: { latitude, longitude, date, radius_km: radiusKm, ...(size ? { size } : {}) },
   });
   return resp.data;
 }

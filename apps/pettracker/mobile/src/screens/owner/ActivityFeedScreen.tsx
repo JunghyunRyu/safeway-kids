@@ -6,7 +6,7 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 // NOTE: This screen is not registered in OwnerStackNavigator as of V1.0.
 // The CTA navigate call is non-operational until V1.1 stack registration.
 // Mock placeholder data removed 2026-05-05 (modoo-deadline package F-1=A).
-// Track 2 T2.3 (사진 캡션 + Empathic 리포트) 완료 후 실 API 연결 예정 (V1.1 또는 V1.0 출시 6/9).
+// Track 2 T2.3 (사진 캡션 + Empathic 리포트) 완료 후 실 API 연결 예정.
 export default function ActivityFeedScreen({ navigation }: any) {
   return (
     <View style={styles.container} testID="activity-feed-placeholder">
@@ -15,7 +15,7 @@ export default function ActivityFeedScreen({ navigation }: any) {
       </View>
       <Text style={styles.title}>활동 피드</Text>
       <Text style={styles.body}>
-        {'실시간 산책 업데이트 기능이\n6월 정식 출시 예정입니다.'}
+        {'실시간 산책 업데이트 기능을\n준비하고 있어요.'}
       </Text>
       <Text style={styles.subBody}>
         예약 후 산책이 시작되면 사진과 메시지를 받아볼 수 있어요.
