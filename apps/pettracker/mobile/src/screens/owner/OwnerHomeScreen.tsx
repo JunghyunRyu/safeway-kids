@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { listPets, type Pet } from '../../api/pets';
@@ -9,6 +9,7 @@ export default function OwnerHomeScreen({ navigation }: any) {
   const [pets, setPets] = useState<Pet[]>([]);
   const [nextBooking, setNextBooking] = useState<Booking | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
     try {
@@ -19,9 +20,18 @@ export default function OwnerHomeScreen({ navigation }: any) {
       setPets(petsData);
       setNextBooking(bookingsData[0] || null);
     } catch { Alert.alert('오류', '데이터를 불러올 수 없습니다'); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { loadData(); }, []);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingWrap]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -41,7 +51,7 @@ export default function OwnerHomeScreen({ navigation }: any) {
 
       {/* Next Booking Card */}
       {nextBooking && (
-        <Pressable style={styles.bookingCard} onPress={() => navigation.navigate('Bookings')}>
+        <Pressable style={styles.bookingCard} onPress={() => navigation.navigate('BookingDetail', { booking: nextBooking })} accessibilityRole="button" accessibilityLabel="다음 예약 상세 보기">
           <View style={styles.bookingHeader}>
             <Ionicons name="calendar" size={20} color={Colors.primary} />
             <Text style={styles.bookingTitle}>다음 예약</Text>
@@ -52,19 +62,22 @@ export default function OwnerHomeScreen({ navigation }: any) {
           <Text style={styles.bookingDetail}>
             {nextBooking.duration_minutes}분 산책 · {nextBooking.price.toLocaleString()}원
           </Text>
+          <Text style={styles.bookingWalker}>
+            {nextBooking.walker_name ? `산책 도우미 ${nextBooking.walker_name}` : '산책 도우미 배정 대기 중'}
+          </Text>
         </Pressable>
       )}
 
       {/* Pet Cards */}
       <Text style={styles.sectionTitle}>내 반려동물</Text>
       {pets.length === 0 ? (
-        <Pressable style={styles.emptyCard} onPress={() => navigation.navigate('Search')}>
+        <Pressable style={styles.emptyCard} onPress={() => navigation.navigate('PetRegistration')} accessibilityRole="button" accessibilityLabel="반려동물 등록하기">
           <Ionicons name="add-circle-outline" size={40} color={Colors.textDisabled} />
           <Text style={styles.emptyText}>반려동물을 등록해 주세요</Text>
         </Pressable>
       ) : (
         pets.map((pet) => (
-          <View key={pet.id} style={styles.petCard}>
+          <Pressable key={pet.id} style={styles.petCard} onPress={() => navigation.navigate('MyPets')} accessibilityRole="button" accessibilityLabel={`${pet.name} 정보 보기`}>
             <View style={styles.petIcon}>
               <Text style={{ fontSize: 28 }}>{pet.species === 'dog' ? '🐕' : '🐈'}</Text>
             </View>
@@ -73,7 +86,8 @@ export default function OwnerHomeScreen({ navigation }: any) {
               <Text style={styles.petBreed}>{pet.breed || pet.species}</Text>
               {pet.weight_kg && <Text style={styles.petDetail}>{pet.weight_kg}kg</Text>}
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={18} color={Colors.textDisabled} />
+          </Pressable>
         ))
       )}
 
@@ -81,6 +95,8 @@ export default function OwnerHomeScreen({ navigation }: any) {
       <Pressable
         style={styles.quickAction}
         onPress={() => navigation.navigate('Search')}
+        accessibilityRole="button"
+        accessibilityLabel="산책 예약하기"
       >
         <Ionicons name="walk" size={24} color={Colors.textInverse} />
         <Text style={styles.quickActionText}>산책 예약하기</Text>
@@ -93,6 +109,7 @@ export default function OwnerHomeScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  loadingWrap: { justifyContent: 'center', alignItems: 'center' },
   header: { padding: Spacing.xl, paddingTop: 60 },
   greeting: { fontSize: Typography.sizes.xxl, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
   subtitle: { fontSize: Typography.sizes.base, color: Colors.textSecondary, marginTop: 4 },
@@ -104,6 +121,7 @@ const styles = StyleSheet.create({
   bookingTitle: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.semibold, color: Colors.primary, marginLeft: 8 },
   bookingTime: { fontSize: Typography.sizes.base, color: Colors.textPrimary, fontWeight: Typography.weights.medium },
   bookingDetail: { fontSize: Typography.sizes.sm, color: Colors.textSecondary, marginTop: 4 },
+  bookingWalker: { fontSize: Typography.sizes.sm, color: Colors.primary, fontWeight: Typography.weights.medium, marginTop: 4 },
   sectionTitle: {
     fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.textPrimary,
     paddingHorizontal: Spacing.base, marginTop: Spacing.lg, marginBottom: Spacing.md,

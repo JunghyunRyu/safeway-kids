@@ -237,6 +237,7 @@ jest.mock('../api/walks', () => ({
 jest.mock('../api/reviews', () => ({
   createReview: jest.fn().mockResolvedValue({ id: 'r-1' }),
   listMyReviews: jest.fn().mockResolvedValue([]),
+  listWalkerReviews: jest.fn().mockResolvedValue([]),
   replyReview: jest.fn().mockResolvedValue(undefined),
 }));
 

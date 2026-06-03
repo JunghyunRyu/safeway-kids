@@ -5,7 +5,7 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { createReview } from '../../api/reviews';
 
 export default function ReviewScreen({ route, navigation }: any) {
-  const { bookingId } = route?.params || {};
+  const { bookingId, walkerName } = route?.params || {};
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,18 +26,20 @@ export default function ReviewScreen({ route, navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="뒤로 가기" hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>리뷰 작성</Text>
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.prompt}>산책은 어떠셨나요?</Text>
+        <Text style={styles.prompt}>
+          {walkerName ? `${walkerName} 님과의 산책은 어떠셨나요?` : '산책은 어떠셨나요?'}
+        </Text>
 
         <View style={styles.stars}>
           {[1, 2, 3, 4, 5].map((n) => (
-            <Pressable key={n} onPress={() => setRating(n)} hitSlop={8}>
+            <Pressable key={n} onPress={() => setRating(n)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`별점 ${n}점`}>
               <Ionicons
                 name={n <= rating ? 'star' : 'star-outline'}
                 size={44}
@@ -61,7 +63,7 @@ export default function ReviewScreen({ route, navigation }: any) {
           numberOfLines={4}
         />
 
-        <Pressable style={[styles.submitBtn, rating === 0 && styles.submitBtnDisabled]} onPress={handleSubmit} disabled={loading || rating === 0}>
+        <Pressable style={[styles.submitBtn, rating === 0 && styles.submitBtnDisabled]} onPress={handleSubmit} disabled={loading || rating === 0} accessibilityRole="button" accessibilityLabel="리뷰 등록">
           <Text style={styles.submitText}>{loading ? '등록 중...' : '리뷰 등록'}</Text>
         </Pressable>
       </View>
