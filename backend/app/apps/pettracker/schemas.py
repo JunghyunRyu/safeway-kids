@@ -116,8 +116,13 @@ class BookingResponse(BaseModel):
     pet_weight_kg: float | None = None
     pet_special_needs: str | None = None
     owner_name: str | None = None
-    # Active walk session id (populated when status=in_progress)
+    # Walker info (populated from relationship when walker assigned)
+    walker_name: str | None = None
+    walker_phone: str | None = None
+    # Active/finished walk session id (populated when status in {in_progress, completed})
     session_id: uuid.UUID | None = None
+    # True once owner has submitted a review for this booking
+    has_review: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -157,8 +162,27 @@ class WalkReportResponse(BaseModel):
     distance_meters: int | None
     walker_memo: str | None
     route_polyline: list | None
+    walker_phone: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class WalkerReviewResponse(BaseModel):
+    id: uuid.UUID
+    booking_id: uuid.UUID
+    reviewer_id: uuid.UUID
+    walker_id: uuid.UUID
+    rating: int
+    comment: str | None
+    created_at: datetime
+    reviewer_name: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class WalkEndRequest(BaseModel):
+    walker_memo: str | None = Field(default=None, max_length=1000)
+    photo_url: str | None = Field(default=None, max_length=500)
 
 
 # ── Review Schemas ───────────────────────────────────────────────

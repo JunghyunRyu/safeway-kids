@@ -33,7 +33,9 @@ from app.apps.pettracker.schemas import (
     WalkerAvailabilityCreate,
     WalkerProfileResponse,
     WalkerQualificationCreate,
+    WalkerReviewResponse,
     WalkerSearchParams,
+    WalkEndRequest,
     WalkMemoUpdate,
     WalkReportResponse,
     WalletResponse,
@@ -216,17 +218,36 @@ async def list_bookings(
     role_str = user.role.value if hasattr(user.role, "value") else user.role
     bookings = await service.list_bookings(db, user.id, role_str, status)
 
-    # Lookup session_id for in_progress bookings (1 query covers all)
-    from app.apps.pettracker.models import WalkSession
-    in_progress_ids = [b.id for b in bookings if b.status == "in_progress"]
+    # 배치 조회로 N+1/lazy-load(MissingGreenlet) 회피.
+    from app.apps.pettracker.models import WalkSession, WalkerReview
+    booking_ids = [b.id for b in bookings]
+
+    # 1) 산책 세션 (in_progress + completed 모두 — 완료 예약 리포트 도달용)
     session_map: dict = {}
-    if in_progress_ids:
+    if booking_ids:
         rows = (await db.execute(
             select(WalkSession.booking_id, WalkSession.id).where(
-                WalkSession.booking_id.in_(in_progress_ids)
+                WalkSession.booking_id.in_(booking_ids)
             )
         )).all()
         session_map = {row[0]: row[1] for row in rows}
+
+    # 2) 워커 이름/전화 (배정된 워커들만)
+    walker_ids = list({b.walker_id for b in bookings if b.walker_id})
+    walker_map: dict = {}
+    if walker_ids:
+        wrows = (await db.execute(
+            select(User.id, User.name, User.phone).where(User.id.in_(walker_ids))
+        )).all()
+        walker_map = {row[0]: (row[1], row[2]) for row in wrows}
+
+    # 3) 리뷰 존재 여부 (owner가 작성한 리뷰)
+    reviewed_ids: set = set()
+    if booking_ids:
+        rrows = (await db.execute(
+            select(WalkerReview.booking_id).where(WalkerReview.booking_id.in_(booking_ids))
+        )).all()
+        reviewed_ids = {row[0] for row in rrows}
 
     results = []
     for b in bookings:
@@ -238,8 +259,11 @@ async def list_bookings(
             resp.pet_temperament = b.pet.temperament
             resp.pet_weight_kg = b.pet.weight_kg
             resp.pet_special_needs = b.pet.special_needs
+        if b.walker_id and b.walker_id in walker_map:
+            resp.walker_name, resp.walker_phone = walker_map[b.walker_id]
         if b.id in session_map:
             resp.session_id = session_map[b.id]
+        resp.has_review = b.id in reviewed_ids
         results.append(resp)
     return results
 
@@ -346,10 +370,15 @@ async def pt_sos_alert(
 @router.post("/walks/{session_id}/end")
 async def end_walk(
     session_id: uuid.UUID,
+    body: WalkEndRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_walker),
 ) -> dict:
-    session = await service.end_walk(db, session_id, user.id)
+    body = body or WalkEndRequest()
+    session = await service.end_walk(
+        db, session_id, user.id,
+        walker_memo=body.walker_memo, photo_url=body.photo_url,
+    )
     await db.commit()
     return {
         "session_id": str(session.id),
@@ -365,6 +394,12 @@ async def get_walk_report(
     user: User = Depends(require_pt_any),
 ) -> WalkReportResponse:
     session = await service.get_walk_report(db, session_id)
+    # 보호자가 산책 중 도우미에게 연락할 수 있도록 전화번호 포함 (O-01)
+    walker_phone = None
+    if session.walker_id:
+        walker_phone = (await db.execute(
+            select(User.phone).where(User.id == session.walker_id)
+        )).scalar_one_or_none()
     return WalkReportResponse(
         session_id=session.id,
         booking_id=session.booking_id,
@@ -373,6 +408,7 @@ async def get_walk_report(
         distance_meters=session.distance_meters,
         walker_memo=session.walker_memo,
         route_polyline=session.route_polyline,
+        walker_phone=walker_phone,
     )
 
 
@@ -402,6 +438,41 @@ async def list_my_reviews(
         .order_by(WalkerReview.created_at.desc())
     )).scalars().all()
     return [ReviewWithReplyResponse.model_validate(r) for r in reviews]
+
+
+@router.get("/walkers/{walker_id}/reviews", response_model=list[WalkerReviewResponse])
+async def list_walker_reviews(
+    walker_id: uuid.UUID,
+    limit: int = Query(5, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_pt_any),
+) -> list[WalkerReviewResponse]:
+    """보호자가 워커 프로필에서 실제 후기를 읽을 수 있도록 공개 (O-15).
+
+    배치 조회로 작성자 이름을 채운다 (lazy-load 회피).
+    """
+    from app.apps.pettracker.models import WalkerReview
+    reviews = (await db.execute(
+        select(WalkerReview)
+        .where(WalkerReview.walker_id == walker_id)
+        .order_by(WalkerReview.created_at.desc())
+        .limit(limit)
+    )).scalars().all()
+
+    reviewer_ids = list({r.reviewer_id for r in reviews})
+    name_map: dict = {}
+    if reviewer_ids:
+        nrows = (await db.execute(
+            select(User.id, User.name).where(User.id.in_(reviewer_ids))
+        )).all()
+        name_map = {row[0]: row[1] for row in nrows}
+
+    out = []
+    for r in reviews:
+        resp = WalkerReviewResponse.model_validate(r)
+        resp.reviewer_name = name_map.get(r.reviewer_id)
+        out.append(resp)
+    return out
 
 
 @router.post("/reviews/{review_id}/reply")

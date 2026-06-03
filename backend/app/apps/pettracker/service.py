@@ -354,7 +354,10 @@ async def start_walk(db: AsyncSession, booking_id: uuid.UUID, walker_id: uuid.UU
     return session
 
 
-async def end_walk(db: AsyncSession, session_id: uuid.UUID, walker_id: uuid.UUID) -> WalkSession:
+async def end_walk(
+    db: AsyncSession, session_id: uuid.UUID, walker_id: uuid.UUID,
+    walker_memo: str | None = None, photo_url: str | None = None,
+) -> WalkSession:
     session = (await db.execute(
         select(WalkSession).where(WalkSession.id == session_id, WalkSession.walker_id == walker_id)
     )).scalar_one_or_none()
@@ -364,6 +367,11 @@ async def end_walk(db: AsyncSession, session_id: uuid.UUID, walker_id: uuid.UUID
         raise ValidationError(detail="이미 종료된 산책입니다")
 
     session.ended_at = datetime.now(UTC)
+    # 워커가 산책 중 남긴 메모/사진을 보호자 리포트에 전달 (W-04)
+    if walker_memo:
+        session.walker_memo = walker_memo
+    if photo_url:
+        session.arrival_photo_url = photo_url
 
     # Calculate distance from GPS history
     gps_points = (await db.execute(
