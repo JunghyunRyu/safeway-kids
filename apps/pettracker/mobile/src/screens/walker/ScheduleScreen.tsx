@@ -34,8 +34,18 @@ export default function ScheduleScreen() {
     return dates;
   };
 
+  const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
   const addSlot = async () => {
-    if (!newDate) return;
+    if (!newDate) { Alert.alert('날짜 필요', '먼저 날짜를 선택해 주세요'); return; }
+    if (!TIME_RE.test(newStart) || !TIME_RE.test(newEnd)) {
+      Alert.alert('시간 형식 오류', '시작/종료 시간을 HH:MM 형식으로 입력해 주세요 (예: 09:00)');
+      return;
+    }
+    if (newStart >= newEnd) {
+      Alert.alert('시간 오류', '종료 시간이 시작 시간보다 늦어야 합니다');
+      return;
+    }
     const dates = computeDates();
     let success = 0;
     let failed = 0;
@@ -70,9 +80,9 @@ export default function ScheduleScreen() {
             {newDate || '날짜 선택'}
           </Text>
         </Pressable>
-        <TextInput style={[styles.input, { width: 80 }]} value={newStart} onChangeText={setNewStart} placeholder="시작" placeholderTextColor={Colors.textDisabled} />
-        <TextInput style={[styles.input, { width: 80 }]} value={newEnd} onChangeText={setNewEnd} placeholder="종료" placeholderTextColor={Colors.textDisabled} />
-        <Pressable style={styles.addBtn} onPress={addSlot}>
+        <TextInput style={[styles.input, { width: 80 }]} value={newStart} onChangeText={setNewStart} placeholder="09:00" placeholderTextColor={Colors.textDisabled} maxLength={5} accessibilityLabel="시작 시간" />
+        <TextInput style={[styles.input, { width: 80 }]} value={newEnd} onChangeText={setNewEnd} placeholder="18:00" placeholderTextColor={Colors.textDisabled} maxLength={5} accessibilityLabel="종료 시간" />
+        <Pressable style={styles.addBtn} onPress={addSlot} accessibilityRole="button" accessibilityLabel="가용 시간 추가">
           <Ionicons name="add" size={22} color={Colors.textInverse} />
         </Pressable>
       </View>
@@ -92,7 +102,10 @@ export default function ScheduleScreen() {
           <Pressable
             key={key}
             style={[styles.repeatChip, repeatType === key && styles.repeatChipActive]}
-            onPress={() => setRepeatType(key)}
+            onPress={() => { setRepeatType(key); if (key !== 'none' && repeatCount < 2) setRepeatCount(2); }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: repeatType === key }}
+            accessibilityLabel={`반복 ${label}`}
           >
             <Text style={[styles.repeatChipText, repeatType === key && { color: '#fff' }]}>{label}</Text>
           </Pressable>
@@ -115,7 +128,7 @@ export default function ScheduleScreen() {
 
       <FlatList
         data={slots}
-        keyExtractor={(_, i) => String(i)}
+        keyExtractor={(item) => `${item.date}-${item.start}`}
         contentContainerStyle={{ padding: Spacing.base }}
         renderItem={({ item }) => (
           <View style={styles.slotCard}>

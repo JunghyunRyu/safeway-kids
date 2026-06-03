@@ -26,10 +26,11 @@ export async function recordGps(sessionId: string, data: {
   await apiClient.post(`/pt/walks/${sessionId}/gps`, data);
 }
 
-export async function endWalk(sessionId: string): Promise<{
-  session_id: string; distance_meters: number; ended_at: string;
-}> {
-  const resp = await apiClient.post(`/pt/walks/${sessionId}/end`);
+export async function endWalk(
+  sessionId: string,
+  payload?: { walker_memo?: string; photo_url?: string },
+): Promise<{ session_id: string; distance_meters: number; ended_at: string }> {
+  const resp = await apiClient.post(`/pt/walks/${sessionId}/end`, payload ?? {});
   return resp.data;
 }
 

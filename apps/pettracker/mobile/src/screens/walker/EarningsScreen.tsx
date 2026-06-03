@@ -80,13 +80,24 @@ export default function EarningsScreen() {
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>현재 잔액</Text>
         <Text style={styles.balanceAmount}>{wallet ? `${wallet.balance.toLocaleString()}원` : '-'}</Text>
-        <Pressable style={styles.withdrawBtn} onPress={handleWithdraw}>
-          <Text style={styles.withdrawText}>출금하기</Text>
-        </Pressable>
+        {wallet && wallet.balance > 0 ? (
+          <Pressable
+            style={styles.withdrawBtn}
+            onPress={handleWithdraw}
+            accessibilityRole="button"
+            accessibilityLabel="출금하기"
+          >
+            <Text style={styles.withdrawText}>출금하기</Text>
+          </Pressable>
+        ) : (
+          <View style={[styles.withdrawBtn, styles.withdrawBtnDisabled]}>
+            <Text style={styles.withdrawText}>출금 가능 잔액 없음</Text>
+          </View>
+        )}
       </View>
 
-      {/* Monthly Summary */}
-      {transactions.length > 0 && (() => {
+      {/* Monthly Summary — 이번 달 수입이 0원이어도 카드를 노출해 현재 상태를 명확히 한다 (W-23) */}
+      {wallet && (() => {
         const now = new Date();
         const monthTxs = transactions.filter(t => {
           const d = new Date(t.created_at);
@@ -100,7 +111,13 @@ export default function EarningsScreen() {
             <Text style={styles.monthAmount}>{(gross - fee).toLocaleString()}원</Text>
             <Text style={styles.monthDetail}>총 {gross.toLocaleString()}원 (수수료 {fee.toLocaleString()}원)</Text>
           </View>
-        ) : null;
+        ) : (
+          <View style={styles.monthCard}>
+            <Text style={styles.monthLabel}>이번 달 수입</Text>
+            <Text style={styles.monthAmount}>0원</Text>
+            <Text style={styles.monthDetail}>예약을 수락하면 이번 달 수입이 쌓여요</Text>
+          </View>
+        );
       })()}
 
       {/* Commission Rate Info */}
@@ -163,6 +180,7 @@ const styles = StyleSheet.create({
   balanceLabel: { fontSize: Typography.sizes.sm, color: 'rgba(255,255,255,0.8)' },
   balanceAmount: { fontSize: Typography.sizes.display, fontWeight: Typography.weights.extrabold, color: '#fff', marginVertical: 8 },
   withdrawBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.sm, borderRadius: Radius.md },
+  withdrawBtnDisabled: { opacity: 0.5 },
   withdrawText: { color: '#fff', fontWeight: Typography.weights.bold, fontSize: Typography.sizes.base },
   commissionInfo: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

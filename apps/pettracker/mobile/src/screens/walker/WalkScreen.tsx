@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, FlatList, ActivityIndicator, TextInput, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, FlatList, ActivityIndicator, TextInput, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,15 +23,39 @@ export default function WalkScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoDownloadUrl, setPhotoDownloadUrl] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [gpsWeak, setGpsWeak] = useState(false);
   const { upload: uploadImage, uploading: photoUploading } = useImageUpload();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gpsRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const gpsFailRef = useRef(0);
+  const lastPosRef = useRef<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     getMe()
       .then((me) => setUserId(me.id))
       .catch(() => {});
   }, []);
+
+  // 화면이 사라질 때(탭 전환·언마운트) GPS/타이머 인터벌을 반드시 정리한다.
+  // (인터벌 누수·중복 시작으로 데이터가 오염되는 것을 방지)
+  useEffect(() => {
+    return () => {
+      if (gpsRef.current) clearInterval(gpsRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  // 두 GPS 좌표 사이의 거리(m)를 누적해 산책 중 실시간 거리를 보여준다.
+  const haversineMeters = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+    const R = 6371000;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  };
 
   const uploadWalkPhoto = useCallback(
     async (localUri: string, mimeType: string | undefined) => {
@@ -105,6 +129,13 @@ export default function WalkScreen() {
             setSelectedBooking(booking);
             setState('walking');
             setElapsed(0);
+            setDistance(0);
+            setGpsWeak(false);
+            gpsFailRef.current = 0;
+            lastPosRef.current = null;
+
+            // 중복 시작 방지: 기존 인터벌이 있으면 먼저 정리.
+            if (gpsRef.current) clearInterval(gpsRef.current);
 
             // Start GPS streaming every 5 seconds
             gpsRef.current = setInterval(async () => {
@@ -120,8 +151,22 @@ export default function WalkScreen() {
                     recorded_at: new Date().toISOString(),
                   });
                 }
+                // 실시간 거리 누적 (W-10)
+                const cur = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+                if (lastPosRef.current) {
+                  const step = haversineMeters(lastPosRef.current, cur);
+                  // GPS 지터로 인한 미세 이동(2m 미만)은 무시.
+                  if (step >= 2) setDistance((d) => d + step);
+                }
+                lastPosRef.current = cur;
+                // 성공 시 실패 카운터/약신호 배너 해제.
+                gpsFailRef.current = 0;
+                setGpsWeak(false);
               } catch {
-                Alert.alert('오류', 'GPS 기록에 실패했습니다');
+                // 5초마다 Alert 반복 금지(W-01): 배너로만 표시하고,
+                // 연속 실패가 누적될 때만 약신호로 간주한다.
+                gpsFailRef.current += 1;
+                if (gpsFailRef.current >= 2) setGpsWeak(true);
               }
             }, 5000);
           } catch {
@@ -140,15 +185,25 @@ export default function WalkScreen() {
         onPress: async () => {
           if (gpsRef.current) clearInterval(gpsRef.current);
           if (timerRef.current) clearInterval(timerRef.current);
+          setGpsWeak(false);
           try {
             if (sessionId) {
-              const result = await endWalk(sessionId);
-              setDistance(result.distance_meters || 0);
+              const result = await endWalk(sessionId, {
+                walker_memo: walkerMemo.trim() || undefined,
+                photo_url: photoDownloadUrl || undefined,
+              });
+              // 서버 거리가 있으면 그 값을, 없으면 클라이언트 누적 거리를 유지.
+              if (result.distance_meters && result.distance_meters > 0) {
+                setDistance(result.distance_meters);
+              }
+              setState('ended');
+            } else {
+              setState('ended');
             }
           } catch {
-            Alert.alert('오류', '산책 종료 처리에 실패했습니다. 다시 시도해 주세요.');
+            // 종료 실패 시 산책 상태 유지 (GPS는 멈췄으므로 재시도 안내).
+            Alert.alert('종료 실패', '산책 종료 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.');
           }
-          setState('ended');
         },
       },
     ]);
@@ -161,6 +216,8 @@ export default function WalkScreen() {
     <Pressable
       style={[styles.bookingCard, isAttentionNeeded(item) && styles.bookingCardWarning]}
       onPress={() => handleStart(item)}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.pet_name || '반려동물'} 산책 시작`}
     >
       <View style={styles.bookingCardHeader}>
         <Text style={styles.petEmoji}>{item.pet_species === 'cat' ? '🐈' : '🐕'}</Text>
@@ -212,7 +269,9 @@ export default function WalkScreen() {
           ) : confirmedBookings.length === 0 ? (
             <View style={styles.center}>
               <Ionicons name="walk" size={80} color={Colors.textDisabled} />
-              <Text style={styles.idleText}>확정된 예약이 없습니다</Text>
+              <Text style={styles.idleText}>
+                아직 확정된 예약이 없어요.{'\n'}홈에서 새 산책 요청을 수락해 보세요.
+              </Text>
             </View>
           ) : (
             <FlatList
@@ -226,79 +285,98 @@ export default function WalkScreen() {
       )}
 
       {state === 'walking' && (
-        <View style={styles.center}>
-          <View style={styles.timerCircle}>
-            <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
-            <Text style={styles.timerLabel}>산책 중</Text>
-          </View>
-
-          {selectedBooking && (
-            <Text style={styles.walkingPetName}>
-              {selectedBooking.pet_species === 'cat' ? '🐈' : '🐕'} {selectedBooking.pet_name || '반려동물'}
-            </Text>
-          )}
-
-          {/* Walk memo input */}
-          <TextInput
-            style={styles.memoInput}
-            value={walkerMemo}
-            onChangeText={setWalkerMemo}
-            placeholder="산책 메모를 입력하세요"
-            placeholderTextColor={Colors.textDisabled}
-            multiline
-          />
-
-          {/* Photo FAB — large button for one-handed use */}
-          <Pressable
-            style={[styles.photoFab, photoUploading && styles.photoFabDisabled]}
-            disabled={photoUploading}
-            onPress={() => {
-              Alert.alert('사진 추가', '방법을 선택하세요', [
-                { text: '카메라', onPress: async () => {
-                  const { status } = await ImagePicker.requestCameraPermissionsAsync();
-                  if (status !== 'granted') { Alert.alert('권한 필요', '카메라 권한이 필요합니다'); return; }
-                  const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
-                  if (!result.canceled && result.assets[0]) {
-                    setPhotoUri(result.assets[0].uri);
-                    setPhotoDownloadUrl(null);
-                    uploadWalkPhoto(result.assets[0].uri, result.assets[0].mimeType);
-                  }
-                }},
-                { text: '갤러리', onPress: async () => {
-                  const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
-                  if (!result.canceled && result.assets[0]) {
-                    setPhotoUri(result.assets[0].uri);
-                    setPhotoDownloadUrl(null);
-                    uploadWalkPhoto(result.assets[0].uri, result.assets[0].mimeType);
-                  }
-                }},
-                { text: '취소', style: 'cancel' },
-              ]);
-            }}>
-            <Ionicons name="camera" size={32} color={Colors.textInverse} />
-            <Text style={styles.photoLabel}>사진</Text>
-          </Pressable>
-
-          {photoUri && (
-            <View style={styles.photoPreview}>
-              <Image source={{ uri: photoDownloadUrl ?? photoUri }} style={styles.photoThumb} />
-              {photoUploading ? (
-                <View style={styles.photoStatusRow}>
-                  <ActivityIndicator size="small" color={Colors.primary} />
-                  <Text style={styles.photoStatus}>업로드 중...</Text>
-                </View>
-              ) : photoDownloadUrl ? (
-                <Text style={styles.photoStatusOk}>업로드 완료</Text>
-              ) : (
-                <Text style={styles.photoStatus}>사진이 저장되었습니다</Text>
-              )}
+        <View style={styles.walkingWrap}>
+          {gpsWeak && (
+            <View style={styles.gpsBanner} accessibilityLiveRegion="polite">
+              <Ionicons name="warning" size={16} color={Colors.warning} />
+              <Text style={styles.gpsBannerText}>GPS 신호가 약해요. 잠시 이동하면 다시 잡힙니다.</Text>
             </View>
           )}
 
-          <Pressable style={styles.endBtn} onPress={handleEnd}>
-            <Ionicons name="stop" size={24} color={Colors.textInverse} />
-            <Text style={styles.btnText}>산책 종료</Text>
-          </Pressable>
+          <ScrollView contentContainerStyle={styles.walkingContent} keyboardShouldPersistTaps="handled">
+            <View style={styles.timerCircle}>
+              <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
+              <Text style={styles.timerLabel}>산책 중</Text>
+            </View>
+
+            <Text style={styles.distanceText} accessibilityLabel={`현재까지 거리 ${(distance / 1000).toFixed(2)}킬로미터`}>
+              📍 {(distance / 1000).toFixed(2)} km
+            </Text>
+
+            {selectedBooking && (
+              <Text style={styles.walkingPetName}>
+                {selectedBooking.pet_species === 'cat' ? '🐈' : '🐕'} {selectedBooking.pet_name || '반려동물'}
+              </Text>
+            )}
+
+            {/* Walk memo input */}
+            <TextInput
+              style={styles.memoInput}
+              value={walkerMemo}
+              onChangeText={setWalkerMemo}
+              placeholder="산책 메모를 입력하세요 (보호자에게 전달돼요)"
+              placeholderTextColor={Colors.textDisabled}
+              multiline
+              accessibilityLabel="산책 메모 입력"
+            />
+
+            {/* Photo FAB — large button for one-handed use */}
+            <Pressable
+              style={[styles.photoFab, photoUploading && styles.photoFabDisabled]}
+              disabled={photoUploading}
+              accessibilityRole="button"
+              accessibilityLabel="산책 사진 추가"
+              onPress={() => {
+                Alert.alert('사진 추가', '방법을 선택하세요', [
+                  { text: '카메라', onPress: async () => {
+                    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                    if (status !== 'granted') { Alert.alert('권한 필요', '카메라 권한이 필요합니다'); return; }
+                    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+                    if (!result.canceled && result.assets[0]) {
+                      setPhotoUri(result.assets[0].uri);
+                      setPhotoDownloadUrl(null);
+                      uploadWalkPhoto(result.assets[0].uri, result.assets[0].mimeType);
+                    }
+                  }},
+                  { text: '갤러리', onPress: async () => {
+                    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
+                    if (!result.canceled && result.assets[0]) {
+                      setPhotoUri(result.assets[0].uri);
+                      setPhotoDownloadUrl(null);
+                      uploadWalkPhoto(result.assets[0].uri, result.assets[0].mimeType);
+                    }
+                  }},
+                  { text: '취소', style: 'cancel' },
+                ]);
+              }}>
+              <Ionicons name="camera" size={32} color={Colors.textInverse} />
+              <Text style={styles.photoLabel}>사진</Text>
+            </Pressable>
+
+            {photoUri && (
+              <View style={styles.photoPreview}>
+                <Image source={{ uri: photoDownloadUrl ?? photoUri }} style={styles.photoThumb} />
+                {photoUploading ? (
+                  <View style={styles.photoStatusRow}>
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                    <Text style={styles.photoStatus}>업로드 중...</Text>
+                  </View>
+                ) : photoDownloadUrl ? (
+                  <Text style={styles.photoStatusOk}>업로드 완료</Text>
+                ) : (
+                  <Text style={styles.photoStatus}>사진이 저장되었습니다</Text>
+                )}
+              </View>
+            )}
+          </ScrollView>
+
+          {/* 종료 버튼은 화면 하단에 고정 — 스크롤과 무관하게 항상 보인다 (W-02) */}
+          <View style={styles.footer}>
+            <Pressable style={styles.endBtn} onPress={handleEnd} accessibilityRole="button" accessibilityLabel="산책 종료">
+              <Ionicons name="stop" size={24} color={Colors.textInverse} />
+              <Text style={styles.btnText}>산책 종료</Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -327,6 +405,17 @@ const styles = StyleSheet.create({
   },
   idleContainer: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xl },
+  walkingWrap: { flex: 1 },
+  walkingContent: { alignItems: 'center', paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl, paddingBottom: Spacing.lg },
+  gpsBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: Colors.warningLight, paddingHorizontal: Spacing.base, paddingVertical: Spacing.sm,
+  },
+  gpsBannerText: { fontSize: Typography.sizes.sm, color: Colors.textSecondary, flex: 1 },
+  distanceText: { fontSize: Typography.sizes.lg, fontWeight: Typography.weights.semibold, color: Colors.textPrimary, marginBottom: Spacing.md },
+  footer: {
+    padding: Spacing.base, borderTopWidth: 1, borderTopColor: Colors.borderLight, backgroundColor: Colors.surface,
+  },
   idleText: { fontSize: Typography.sizes.md, color: Colors.textDisabled, marginTop: Spacing.lg, textAlign: 'center' },
   // Booking card styles
   bookingCard: {

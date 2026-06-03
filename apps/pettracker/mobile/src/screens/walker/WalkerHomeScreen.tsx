@@ -4,12 +4,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { listBookings, acceptBooking, declineBooking, type Booking } from '../../api/bookings';
 import { getWallet, type Wallet } from '../../api/wallet';
+import { getMe } from '@safeway/core-mobile/api/auth';
+
+const greetingByHour = () => {
+  const h = new Date().getHours();
+  if (h < 6) return '늦은 시간이에요';
+  if (h < 12) return '좋은 아침이에요';
+  if (h < 18) return '오늘도 힘내세요';
+  return '오늘 하루 고생하셨어요';
+};
 
 export default function WalkerHomeScreen() {
   const [todayBookings, setTodayBookings] = useState<Booking[]>([]);
   const [pendingBookings, setPendingBookings] = useState<Booking[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+
+  useEffect(() => {
+    getMe().then((me) => setUserName(me.name || '')).catch(() => {});
+  }, []);
 
   const loadData = async () => {
     try {
@@ -18,7 +32,9 @@ export default function WalkerHomeScreen() {
         listBookings('pending'),
         getWallet(),
       ]);
-      setTodayBookings(confirmed.slice(0, 5));
+      // 오늘 확정 예약만 노출 (조용한 slice(5) 은닉 제거 — 오늘 일정을 놓치지 않도록)
+      const today = new Date().toISOString().split('T')[0];
+      setTodayBookings(confirmed.filter((b) => b.scheduled_at.startsWith(today)));
       setPendingBookings(pending);
       setWallet(walletData);
     } catch {
@@ -64,7 +80,9 @@ export default function WalkerHomeScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
     >
       <View style={styles.header}>
-        <Text style={styles.greeting}>오늘의 산책 🐕</Text>
+        <Text style={styles.greeting}>
+          {userName ? `${userName}님, ${greetingByHour()} 🐕` : `${greetingByHour()} 🐕`}
+        </Text>
       </View>
 
       {/* Earnings Card */}
@@ -92,10 +110,10 @@ export default function WalkerHomeScreen() {
                 <Text style={styles.pendingPrice}>{b.price.toLocaleString()}원</Text>
               </View>
               <View style={styles.pendingActions}>
-                <Pressable style={styles.acceptBtn} onPress={() => handleAccept(b.id)}>
+                <Pressable style={styles.acceptBtn} onPress={() => handleAccept(b.id)} accessibilityRole="button" accessibilityLabel={`${b.pet_name || '반려동물'} 예약 수락`}>
                   <Text style={styles.acceptBtnText}>수락</Text>
                 </Pressable>
-                <Pressable style={styles.declineBtn} onPress={() => handleDecline(b.id)}>
+                <Pressable style={styles.declineBtn} onPress={() => handleDecline(b.id)} accessibilityRole="button" accessibilityLabel={`${b.pet_name || '반려동물'} 예약 거절`}>
                   <Text style={styles.declineBtnText}>거절</Text>
                 </Pressable>
               </View>
@@ -105,11 +123,11 @@ export default function WalkerHomeScreen() {
       )}
 
       {/* Today's Bookings */}
-      <Text style={styles.sectionTitle}>예정된 예약</Text>
+      <Text style={styles.sectionTitle}>오늘 예정된 예약</Text>
       {todayBookings.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="sunny-outline" size={40} color={Colors.textDisabled} />
-          <Text style={styles.emptyText}>예정된 산책이 없어요</Text>
+          <Text style={styles.emptyText}>오늘 예정된 산책이 없어요</Text>
         </View>
       ) : (
         todayBookings.map((b) => (
@@ -160,13 +178,13 @@ const styles = StyleSheet.create({
   pendingPrice: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.bold, color: Colors.accent, marginTop: 2 },
   pendingActions: { flexDirection: 'row', gap: Spacing.sm },
   acceptBtn: {
-    flex: 1, backgroundColor: Colors.accent, paddingVertical: Spacing.sm,
-    borderRadius: Radius.md, alignItems: 'center',
+    flex: 1, backgroundColor: Colors.accent, paddingVertical: Spacing.sm, minHeight: 44,
+    borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center',
   },
   acceptBtnText: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.bold, color: Colors.textInverse },
   declineBtn: {
-    flex: 1, backgroundColor: Colors.surface, paddingVertical: Spacing.sm,
-    borderRadius: Radius.md, alignItems: 'center', borderWidth: 1, borderColor: Colors.danger,
+    flex: 1, backgroundColor: Colors.surface, paddingVertical: Spacing.sm, minHeight: 44,
+    borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.danger,
   },
   declineBtnText: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.medium, color: Colors.danger },
   // Confirmed bookings
