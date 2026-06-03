@@ -78,6 +78,16 @@ async def update_pet(db: AsyncSession, pet_id: uuid.UUID, owner_id: uuid.UUID, d
     return pet
 
 
+async def delete_pet(db: AsyncSession, pet_id: uuid.UUID, owner_id: uuid.UUID) -> None:
+    """반려동물 소프트 삭제 (is_active=False). 예약 이력 보존 + 소유권 검증."""
+    stmt = select(Pet).where(Pet.id == pet_id, Pet.owner_id == owner_id, Pet.is_active.is_(True))
+    pet = (await db.execute(stmt)).scalar_one_or_none()
+    if not pet:
+        raise NotFoundError(detail="반려동물을 찾을 수 없습니다")
+    pet.is_active = False
+    await db.flush()
+
+
 # ── Walker Qualification Service ─────────────────────────────────
 
 async def submit_qualification(
@@ -206,6 +216,10 @@ async def search_walkers(db: AsyncSession, params: WalkerSearchParams) -> list[d
     for user, qual, avail in rows:
         # Check if walker has service areas with coordinates
         if not qual.service_areas:
+            continue
+        # 견종 크기 필터 (O-02): 워커가 수용 크기를 지정했고 요청 크기가 빠지면 제외.
+        # accepted_sizes 미지정(None/빈) = 모든 크기 수용 (레거시 워커 호환).
+        if params.size and qual.accepted_sizes and params.size not in qual.accepted_sizes:
             continue
         for area in qual.service_areas:
             area_lat = area.get("lat", 0)

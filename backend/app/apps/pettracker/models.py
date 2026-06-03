@@ -127,6 +127,8 @@ class WalkerQualification(Base):
     has_insurance: Mapped[bool] = mapped_column(Boolean, default=False)
     insurance_expiry: Mapped[date | None] = mapped_column(Date)
     profile_photo_url: Mapped[str | None] = mapped_column(String(500))
+    # 워커가 산책 가능한 반려동물 크기 ["small","medium","large"]. None/빈 = 모든 크기 수용.
+    accepted_sizes: Mapped[list | None] = mapped_column(JSON)  # type: ignore[assignment]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

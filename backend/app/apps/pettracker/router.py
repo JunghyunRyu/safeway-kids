@@ -83,6 +83,16 @@ async def update_pet(
     return PetResponse.model_validate(pet)
 
 
+@router.delete("/pets/{pet_id}", status_code=204)
+async def delete_pet(
+    pet_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_pet_owner),
+) -> None:
+    await service.delete_pet(db, pet_id, user.id)
+    await db.commit()
+
+
 # ── Walker Qualification ─────────────────────────────────────────
 
 @router.post("/walkers/qualification", status_code=201)
@@ -116,13 +126,14 @@ async def search_walkers(
     longitude: float = Query(..., ge=-180, le=180),
     date: str = Query(..., description="YYYY-MM-DD"),
     radius_km: float = Query(3.0, gt=0, le=50),
+    size: str | None = Query(None, pattern="^(small|medium|large)$"),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_pet_owner),
 ) -> list[dict]:
     from datetime import date as dt_date
     params = WalkerSearchParams(
         latitude=latitude, longitude=longitude,
-        date=dt_date.fromisoformat(date), radius_km=radius_km,
+        date=dt_date.fromisoformat(date), radius_km=radius_km, size=size,
     )
     return await service.search_walkers(db, params)
 

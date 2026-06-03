@@ -59,6 +59,7 @@ class WalkerQualificationCreate(BaseModel):
     service_areas: list[dict] | None = None
     bio: str | None = None
     experience_years: int = 0
+    accepted_sizes: list[str] | None = None  # ["small","medium","large"], None=모든 크기
 
 
 class WalkerProfileResponse(BaseModel):
@@ -227,6 +228,7 @@ class WalkerSearchParams(BaseModel):
     longitude: float = Field(..., ge=-180, le=180)
     date: date
     radius_km: float = Field(default=3.0, gt=0, le=50)
+    size: str | None = Field(default=None, pattern="^(small|medium|large)$")
 
 
 # ── Review Reply Schemas ─────────────────────────────────────────
