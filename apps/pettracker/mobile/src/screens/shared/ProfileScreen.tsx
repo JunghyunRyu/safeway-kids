@@ -4,29 +4,34 @@ import {
   ActivityIndicator, Linking, DeviceEventEmitter,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { getMe, logout, type UserResponse } from '@safeway/core-mobile/api/auth';
 
+// PetTracker에서 사용하는 역할만 매핑 (타 앱 내부 역할 노출 방지, S-14)
 const ROLE_LABEL: Record<string, string> = {
   pet_owner: '반려동물 보호자',
   walker: '산책 도우미',
-  platform_admin: '플랫폼 관리자',
-  parent: '학부모',
-  driver: '기사',
 };
 
 const SUPPORT_EMAIL = 'support@lunenlabs.com';
 
 export default function ProfileScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const [me, setMe] = useState<UserResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const loadMe = () => {
+    setLoading(true);
+    setError(false);
     getMe()
       .then(setMe)
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(loadMe, []);
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '로그아웃 하시겠습니까?', [
@@ -63,12 +68,17 @@ export default function ProfileScreen({ navigation }: any) {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.lg }]}>
         <View style={styles.avatar}>
           <Ionicons name="person-circle" size={72} color={Colors.primary} />
         </View>
         {loading ? (
           <ActivityIndicator color={Colors.primary} style={{ marginTop: 8 }} />
+        ) : error ? (
+          <Pressable onPress={loadMe} accessibilityRole="button" accessibilityLabel="내 정보 다시 불러오기">
+            <Text style={styles.name}>사용자</Text>
+            <Text style={styles.errorText}>정보를 불러오지 못했어요. 탭하여 다시 시도</Text>
+          </Pressable>
         ) : (
           <>
             <Text style={styles.name}>{me?.name ?? '사용자'}</Text>
@@ -85,6 +95,8 @@ export default function ProfileScreen({ navigation }: any) {
             style={[styles.menuItem, idx === menuItems.length - 1 && { borderBottomWidth: 0 }]}
             onPress={item.onPress}
             android_ripple={{ color: Colors.borderLight }}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
           >
             <Ionicons name={item.icon} size={22} color={Colors.textSecondary} />
             <Text style={styles.menuLabel}>{item.label}</Text>
@@ -93,7 +105,7 @@ export default function ProfileScreen({ navigation }: any) {
         ))}
       </View>
 
-      <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+      <Pressable style={styles.logoutBtn} onPress={handleLogout} accessibilityRole="button" accessibilityLabel="로그아웃">
         <Text style={styles.logoutText}>로그아웃</Text>
       </Pressable>
 
@@ -106,7 +118,8 @@ export default function ProfileScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { alignItems: 'center', paddingTop: 60, paddingBottom: Spacing.xl },
+  header: { alignItems: 'center', paddingBottom: Spacing.xl },
+  errorText: { fontSize: Typography.sizes.sm, color: Colors.danger, marginTop: 4, textAlign: 'center' },
   avatar: { marginBottom: Spacing.sm },
   name: { fontSize: Typography.sizes.xl, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
   role: { fontSize: Typography.sizes.base, color: Colors.textSecondary, marginTop: 4 },

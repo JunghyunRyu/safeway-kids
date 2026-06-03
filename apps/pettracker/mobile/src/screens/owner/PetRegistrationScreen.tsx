@@ -10,9 +10,12 @@ export default function PetRegistrationScreen({ navigation }: any) {
   const [breed, setBreed] = useState('');
   const [weightKg, setWeightKg] = useState('');
   const [medicalNotes, setMedicalNotes] = useState('');
-  const [temperament, setTemperament] = useState('');
+  const [temperaments, setTemperaments] = useState<string[]>([]);
   const [specialNeeds, setSpecialNeeds] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const toggleTemperament = (t: string) =>
+    setTemperaments((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
   const handleSubmit = async () => {
     if (!name.trim()) { Alert.alert('오류', '이름을 입력해 주세요'); return; }
@@ -25,7 +28,7 @@ export default function PetRegistrationScreen({ navigation }: any) {
         breed: breed || undefined,
         weight_kg: weightKg ? parseFloat(weightKg) : undefined,
         medical_notes: medicalNotes || undefined,
-        temperament: temperament || undefined,
+        temperament: temperaments.length ? temperaments.join(', ') : undefined,
         special_needs: specialNeeds || undefined,
       });
       Alert.alert('등록 완료', `${name}이(가) 등록되었습니다!`);
@@ -39,24 +42,30 @@ export default function PetRegistrationScreen({ navigation }: any) {
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="뒤로 가기" hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>반려동물 등록</Text>
       </View>
 
-      {/* Species selector */}
+      {/* Species selector — 초기엔 둘 다 정상 표시, 선택 후 비선택 항목만 흐리게 (O-20) */}
       <View style={styles.speciesRow}>
         <Pressable
-          style={[styles.speciesBtn, species === 'dog' && styles.speciesBtnActive, species === null && styles.speciesBtnInactive]}
+          style={[styles.speciesBtn, species === 'dog' && styles.speciesBtnActive, species === 'cat' && styles.speciesBtnInactive]}
           onPress={() => setSpecies('dog')}
+          accessibilityRole="button"
+          accessibilityState={{ selected: species === 'dog' }}
+          accessibilityLabel="강아지"
         >
           <Text style={styles.speciesEmoji}>🐕</Text>
           <Text style={[styles.speciesLabel, species === 'dog' && styles.speciesLabelActive]}>강아지</Text>
         </Pressable>
         <Pressable
-          style={[styles.speciesBtn, species === 'cat' && styles.speciesBtnActive, species === null && styles.speciesBtnInactive]}
+          style={[styles.speciesBtn, species === 'cat' && styles.speciesBtnActive, species === 'dog' && styles.speciesBtnInactive]}
           onPress={() => setSpecies('cat')}
+          accessibilityRole="button"
+          accessibilityState={{ selected: species === 'cat' }}
+          accessibilityLabel="고양이"
         >
           <Text style={styles.speciesEmoji}>🐈</Text>
           <Text style={[styles.speciesLabel, species === 'cat' && styles.speciesLabelActive]}>고양이</Text>
@@ -72,13 +81,23 @@ export default function PetRegistrationScreen({ navigation }: any) {
       <Text style={styles.label}>체중 (kg)</Text>
       <TextInput style={styles.input} value={weightKg} onChangeText={setWeightKg} placeholder="예: 12.5" keyboardType="decimal-pad" placeholderTextColor={Colors.textDisabled} />
 
-      <Text style={styles.label}>성격</Text>
+      <Text style={styles.label}>성격 (여러 개 선택 가능)</Text>
       <View style={styles.tagRow}>
-        {TEMPERAMENTS.map((t) => (
-          <Pressable key={t} style={[styles.tag, temperament === t && styles.tagActive]} onPress={() => setTemperament(t)}>
-            <Text style={[styles.tagText, temperament === t && styles.tagTextActive]}>{t}</Text>
-          </Pressable>
-        ))}
+        {TEMPERAMENTS.map((t) => {
+          const on = temperaments.includes(t);
+          return (
+            <Pressable
+              key={t}
+              style={[styles.tag, on && styles.tagActive]}
+              onPress={() => toggleTemperament(t)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={`성격 ${t}`}
+            >
+              <Text style={[styles.tagText, on && styles.tagTextActive]}>{t}</Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <Text style={styles.label}>의료 정보 / 알레르기</Text>
@@ -87,7 +106,7 @@ export default function PetRegistrationScreen({ navigation }: any) {
       <Text style={styles.label}>특이사항</Text>
       <TextInput style={[styles.input, styles.multiline]} value={specialNeeds} onChangeText={setSpecialNeeds} placeholder="워커가 알아야 할 점" multiline numberOfLines={3} placeholderTextColor={Colors.textDisabled} />
 
-      <Pressable style={styles.submitBtn} onPress={handleSubmit} disabled={loading}>
+      <Pressable style={styles.submitBtn} onPress={handleSubmit} disabled={loading} accessibilityRole="button" accessibilityLabel="등록하기">
         <Text style={styles.submitText}>{loading ? '등록 중...' : '등록하기'}</Text>
       </Pressable>
 

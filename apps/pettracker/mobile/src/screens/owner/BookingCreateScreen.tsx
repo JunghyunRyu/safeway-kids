@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Alert, TextInput } from 
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { DatePickerModal, formatKorean } from '@safeway/core-mobile';
 import { listPets, type Pet } from '../../api/pets';
 import { createBooking } from '../../api/bookings';
 
@@ -12,10 +13,15 @@ const DURATIONS = [
 ];
 
 const TIME_SLOTS = [
+  { label: '오전 8시', hour: 8, minute: 0 },
+  { label: '오전 9시', hour: 9, minute: 0 },
   { label: '오전 10시', hour: 10, minute: 0 },
+  { label: '오후 12시', hour: 12, minute: 0 },
   { label: '오후 2시', hour: 14, minute: 0 },
   { label: '오후 4시', hour: 16, minute: 0 },
   { label: '오후 6시', hour: 18, minute: 0 },
+  { label: '오후 7시', hour: 19, minute: 0 },
+  { label: '오후 8시', hour: 20, minute: 0 },
 ];
 
 // 서울 시청 기본 좌표
@@ -29,10 +35,11 @@ export default function BookingCreateScreen({ route, navigation }: any) {
   const [duration, setDuration] = useState(DURATIONS[0]);
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
-  // 날짜 선택: 'today' | 'tomorrow'
-  const [selectedDay, setSelectedDay] = useState<'today' | 'tomorrow'>('today');
+  // 날짜 선택: ISO yyyy-mm-dd (오늘 ~ 임의 미래 날짜)
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
   // 시간대 선택
-  const [selectedTime, setSelectedTime] = useState(TIME_SLOTS[0]);
+  const [selectedTime, setSelectedTime] = useState(TIME_SLOTS[2]);
   // GPS 좌표
   const [pickupLat, setPickupLat] = useState(DEFAULT_LAT);
   const [pickupLng, setPickupLng] = useState(DEFAULT_LNG);
@@ -52,17 +59,14 @@ export default function BookingCreateScreen({ route, navigation }: any) {
   }, []);
 
   const getScheduledAt = (): string => {
-    const now = new Date();
-    const target = new Date(now);
-    if (selectedDay === 'tomorrow') {
-      target.setDate(target.getDate() + 1);
-    }
-    target.setHours(selectedTime.hour, selectedTime.minute, 0, 0);
+    const [y, m, d] = date.split('-').map(Number);
+    const target = new Date(y, m - 1, d, selectedTime.hour, selectedTime.minute, 0, 0);
     return target.toISOString();
   };
 
   const handleBook = async () => {
-    if (!selectedPet) { Alert.alert('오류', '반려동물을 선택해 주세요'); return; }
+    if (!selectedPet) { Alert.alert('반려동물 선택', '산책할 반려동물을 선택해 주세요'); return; }
+    if (!address.trim()) { Alert.alert('픽업 주소 필요', '산책 도우미가 찾아갈 픽업 주소를 입력해 주세요'); return; }
     setLoading(true);
     try {
       await createBooking({
@@ -71,7 +75,7 @@ export default function BookingCreateScreen({ route, navigation }: any) {
         scheduled_at: getScheduledAt(),
         pickup_latitude: pickupLat,
         pickup_longitude: pickupLng,
-        pickup_address: address || '서울',
+        pickup_address: address.trim(),
         price: duration.price,
       });
       Alert.alert('예약 완료', '산책 예약이 생성되었습니다!\n\n상태: 대기중 - 산책사 수락 대기\n산책사가 수락하면 알림을 보내드립니다', [
@@ -84,7 +88,7 @@ export default function BookingCreateScreen({ route, navigation }: any) {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="뒤로 가기" hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>산책 예약</Text>
@@ -92,17 +96,27 @@ export default function BookingCreateScreen({ route, navigation }: any) {
 
       {/* Pet Selection */}
       <Text style={styles.label}>반려동물 선택</Text>
-      {pets.map((pet) => (
-        <Pressable
-          key={pet.id}
-          style={[styles.optionCard, selectedPet === pet.id && styles.optionSelected]}
-          onPress={() => setSelectedPet(pet.id)}
-        >
-          <Text style={styles.optionEmoji}>{pet.species === 'dog' ? '🐕' : '🐈'}</Text>
-          <Text style={styles.optionLabel}>{pet.name}</Text>
-          {selectedPet === pet.id && <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />}
+      {pets.length === 0 ? (
+        <Pressable style={styles.petEmpty} onPress={() => navigation.navigate('PetRegistration')} accessibilityRole="button" accessibilityLabel="반려동물 먼저 등록하기">
+          <Ionicons name="add-circle-outline" size={22} color={Colors.primary} />
+          <Text style={styles.petEmptyText}>먼저 반려동물을 등록해 주세요</Text>
         </Pressable>
-      ))}
+      ) : (
+        pets.map((pet) => (
+          <Pressable
+            key={pet.id}
+            style={[styles.optionCard, selectedPet === pet.id && styles.optionSelected]}
+            onPress={() => setSelectedPet(pet.id)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: selectedPet === pet.id }}
+            accessibilityLabel={`${pet.name} 선택`}
+          >
+            <Text style={styles.optionEmoji}>{pet.species === 'dog' ? '🐕' : '🐈'}</Text>
+            <Text style={styles.optionLabel}>{pet.name}</Text>
+            {selectedPet === pet.id && <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />}
+          </Pressable>
+        ))
+      )}
 
       {/* Duration Selection */}
       <Text style={styles.label}>산책 시간</Text>
@@ -119,22 +133,20 @@ export default function BookingCreateScreen({ route, navigation }: any) {
         ))}
       </View>
 
-      {/* Date Selection */}
+      {/* Date Selection — 임의 미래 날짜 선택 가능 (O-05) */}
       <Text style={styles.label}>날짜 선택</Text>
-      <View style={styles.durationRow}>
-        <Pressable
-          style={[styles.durationBtn, selectedDay === 'today' && styles.durationBtnActive]}
-          onPress={() => setSelectedDay('today')}
-        >
-          <Text style={[styles.durationText, selectedDay === 'today' && styles.durationTextActive]}>오늘</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.durationBtn, selectedDay === 'tomorrow' && styles.durationBtnActive]}
-          onPress={() => setSelectedDay('tomorrow')}
-        >
-          <Text style={[styles.durationText, selectedDay === 'tomorrow' && styles.durationTextActive]}>내일</Text>
-        </Pressable>
-      </View>
+      <Pressable style={styles.dateBtn} onPress={() => setDatePickerVisible(true)} accessibilityRole="button" accessibilityLabel="예약 날짜 선택">
+        <Ionicons name="calendar-outline" size={18} color={Colors.textSecondary} />
+        <Text style={styles.dateBtnText}>{formatKorean(date)}</Text>
+        <Ionicons name="chevron-down" size={16} color={Colors.textDisabled} />
+      </Pressable>
+      <DatePickerModal
+        visible={datePickerVisible}
+        value={date}
+        onSelect={setDate}
+        onClose={() => setDatePickerVisible(false)}
+        primaryColor={Colors.primary}
+      />
 
       {/* Time Selection */}
       <Text style={styles.label}>시간대 선택</Text>
@@ -164,7 +176,7 @@ export default function BookingCreateScreen({ route, navigation }: any) {
       <View style={styles.summary}>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>예약 일시</Text>
-          <Text style={styles.summaryValue}>{selectedDay === 'today' ? '오늘' : '내일'} {selectedTime.label}</Text>
+          <Text style={styles.summaryValue}>{formatKorean(date)} {selectedTime.label}</Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>산책 시간</Text>
@@ -177,7 +189,7 @@ export default function BookingCreateScreen({ route, navigation }: any) {
         <Text style={styles.escrowNote}>산책 완료 후 안심 결제가 확정됩니다</Text>
       </View>
 
-      <Pressable style={styles.bookBtn} onPress={handleBook} disabled={loading}>
+      <Pressable style={styles.bookBtn} onPress={handleBook} disabled={loading} accessibilityRole="button" accessibilityLabel="예약하기">
         <Text style={styles.bookBtnText}>{loading ? '예약 중...' : '예약하기'}</Text>
       </Pressable>
 
@@ -196,6 +208,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface, borderRadius: Radius.md, borderWidth: 2, borderColor: Colors.borderLight, marginBottom: 8, gap: Spacing.md,
   },
   optionSelected: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  petEmpty: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: Spacing.base,
+    padding: Spacing.base, backgroundColor: Colors.primaryLight, borderRadius: Radius.md,
+    borderWidth: 1, borderColor: Colors.primary, borderStyle: 'dashed',
+  },
+  petEmptyText: { fontSize: Typography.sizes.base, color: Colors.primary, fontWeight: Typography.weights.medium },
+  dateBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: Spacing.base,
+    backgroundColor: Colors.surface, borderRadius: Radius.md, paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md, borderWidth: 1, borderColor: Colors.borderLight,
+  },
+  dateBtnText: { flex: 1, fontSize: Typography.sizes.base, color: Colors.textPrimary },
   optionEmoji: { fontSize: 24 },
   optionLabel: { flex: 1, fontSize: Typography.sizes.md, fontWeight: Typography.weights.medium, color: Colors.textPrimary },
   durationRow: { flexDirection: 'row', gap: Spacing.md, paddingHorizontal: Spacing.base },
