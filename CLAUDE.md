@@ -250,13 +250,15 @@ cd site && npm run dev
 **운영기관 선택**: 프라이머 ★★★★★ ([`artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md`](artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md))
 **Next gate**: **~7월 말 1R 결과 안내** → 통과 시: 사업자등록 + PortOne 계약 + OpenAI 결제 해결 + Track 2 본격 → 7월 말~8월 초 PT V1.0 출시. 미통과 시: 7월 modoo 차회 또는 별도 사업 fallback (산출물 60~70% 재사용)
 **PT 출시 타깃 (재정렬)**: **2026-07월 말 ~ 8월 초** (이전 6/9 ±2d에서 reschedule)
-**Latest handoff**: [`artifacts/handoffs/2026-05-22-session-handoff-v3.md`](artifacts/handoffs/2026-05-22-session-handoff-v3.md) (P1-3 일부 = WalkPhoto 모델 + 마이그 `f1a3c5b7d9e2` + 8/8 PASS, 회귀 0, 커밋 `0d5ea26`. 다음 first step = P1-3 잔여 PortOne v2 mock)
+**Latest handoff**: [`artifacts/handoffs/2026-06-03-session-handoff.md`](artifacts/handoffs/2026-06-03-session-handoff.md) (GPS/SOS 안전핵심 6건 커밋 `61b03aa` + 종료 `c10b1ca`, 회귀 0. 다음 first step = 마일스톤 종료 / OQ-5 G-03 배포이력 사실확인 / SafeWay 재동결 결정 중 택1)
 
 **User Decisions (2026-05-22 갱신)**:
 - **D-1~D-5 / C-1~C-5 / UD-1~UD-4**: modoo 제출 anchor (이력 archive, 변경 없음)
 - **D-6 (NEW 2026-05-22)** PT V1.0 출시 reschedule: 6/9 → **7월 말~8월 초**. 4 제약 동시 정렬 (본업 ~6/15, 1R 결과 ~7월 말, OpenAI 결제, PortOne 사업자). §4 6/9 약속 setback은 1R 통과 후 멘토링 단계에서 운영기관에 설명
 - **D-7 (NEW 2026-05-22)** **SafeWay 샌드박스 동결**: 자문 메모 불만족 + 1인 개발 부담 signal. Claude proactive 작업 0
 - **D-8 (NEW 2026-05-22)** **6/15까지 본업 집중**: PT는 AI 호출 없는 인프라 골격만 슬라이스 (비용 0, burnout 0)
+- **D-9 (NEW 2026-06-03)** GPS/SOS 결함 수정 범위 = 검증된 것 전부 → **D-7 SafeWay 동결 부분 해제** (M-03·G-05·G-01 등 SafeWay 코드 수정). 작업 후 재동결 여부 미결
+- **D-10 (NEW 2026-06-03)** **안전 핵심만 지금**: 19건 중 출시 차단급 6건(G-01·G-21·C-2·M-02·M-03·G-05/M-01)만 구현(커밋 `61b03aa`), 나머지 13건은 6/15 이후. 회귀 0, 신규 테스트 10건
 
 **Blockers / Waiting On (5/22 갱신)**:
 - 🟡 **1R 결과 안내 대기 (~7월 말)** — 외부 의존, action 불가
