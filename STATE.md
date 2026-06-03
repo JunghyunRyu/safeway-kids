@@ -3,7 +3,7 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-06-03 (v13 — 12일 갭 복귀 후 **오늘자 재검증(VERIFIED)**: 백엔드 pytest **215 passed / 3 failed** (197.71s, 3 fail = KI-2 Toss webhook only, 회귀 0 — KI-3 health flaky는 이번 run 통과) + mobile tsc **0 errors** (5.9.3, exit 0). 코드는 커밋 `39a70ad`에서 무변경(read-only 복귀). 증거: `artifacts/verification/2026-06-03-state-reverification.md`. 코드 작업·진행 변화 없음 — phase·blocker·critical path 전부 5/22 v12와 동일. v12 anchor: P1-3 일부 WalkPhoto 모델+마이그 `f1a3c5b7d9e2`+커밋 `0d5ea26`, PortOne v2 mock은 P1-3 잔여 / v9 anchor: 5/15 modoo 제출)
+**Last updated**: 2026-06-03 (v14 — **GPS/SOS 안전핵심 6건 수정·검증·커밋 `61b03aa`** (27파일). 모바일+GPS 감사 50건→검증 25건→수정 Tech Spec(4도메인 팀+검토)→안전핵심 6건만 구현(D-10). 백엔드 회귀 0(unit 82+integration 158 passed / 4 failed=사전 KI-2·3), 신규 테스트 10건, 모바일 tsc 0×2·jest SW71/PT19. tz naive/aware 버그 풀런서 발견·수정. 증거: `artifacts/verification/2026-06-03-*.txt`. v13 anchor: 12일갭 재검증(`39a70ad` 무변경) / v12 anchor: WalkPhoto 마이그 `f1a3c5b7d9e2` `0d5ea26`)
 **Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말 예상)** + PT V1.0 출시 reschedule (7월 말~8월 초) + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
 **Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료(v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임된 상태. 6/15까지 본업 사이 가벼운 P1 작업만, 6/15 이후 Track 2 본격 ramp-up
 **Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**
@@ -22,6 +22,15 @@
 - **D-6 (NEW 2026-05-22) — PT V1.0 출시 reschedule**: 6/9 ±2d → **7월 말~8월 초**. 4 제약 동시 정렬: (1) 본업 ~6/15, (2) 1R 결과 ~7월 말, (3) OpenAI 결제 보류 해결, (4) PortOne 사업자(1R 통과 후 등록). 신청서 §4 6/9 약속 setback 사유는 1R 통과 후 멘토링 단계에서 운영기관에 설명
 - **D-7 (NEW 2026-05-22) — SafeWay 샌드박스 동결**: 자문 메모 불만족 + 1인 개발 부담 signal. 사용자 자발적 재진입 전까지 Claude proactive 작업 0. SafeWay 영역 모든 P3 보류
 - **D-8 (NEW 2026-05-22) — 6/15까지 본업 집중**: 그 사이 PT는 **AI 호출 없는 인프라 골격만** 슬라이스 작업 (LLM client 스켈레톤·Redis cost counter·PortOne mock·WalkPhoto 마이그). 비용 0, burnout 0 원칙
+- **D-9 (NEW 2026-06-03) — GPS/SOS 결함 수정 범위 = 검증된 것 전부**: 모바일+GPS 감사 결과 사용자가 "검증된 19건 전부" 선택 + "Tech Spec 먼저". 이로 인해 **D-7 SafeWay 동결 부분 해제** (M-03·G-05/M-01·G-01 update_gps 등 SafeWay 코드 수정). ⚠️ 작업 후 재동결 여부 미결.
+- **D-10 (NEW 2026-06-03) — 안전 핵심만 지금**: 19건 중 출시 차단급 6건(G-01·G-21·C-2·M-02·M-03·G-05/M-01)만 즉시 구현(커밋 `61b03aa`). 나머지(백그라운드 GPS·지오펜싱·배치·rate limit 등)는 6/15 이후. D-8 가벼운 슬라이스 원칙 유지.
+
+## GPS/SOS Remediation (2026-06-03, D-9/D-10)
+- **완료·커밋 `61b03aa`** (안전핵심 6건): G-01(검증연결: 차량 422 리젝트/도보 로그온리)·G-21(PT 세션 소유권 403)·C-2(SOS nullable)·M-02(`/pt/sos`)·M-03(dev login `__DEV__` 단독)·G-05/M-01(SOSButton (0,0)금지·실패피드백) + tz 정규화 버그수정. 회귀 0.
+- **Tech Spec**: [`artifacts/specs/2026-06-03-mobile-gps-remediation-tech-spec.md`](artifacts/specs/2026-06-03-mobile-gps-remediation-tech-spec.md) (4도메인 팀 작성 + tech-spec-reviewer APPROVE WITH CHANGES)
+- **감사**: [`artifacts/reviews/2026-06-03-mobile-gps-hole-audit.md`](artifacts/reviews/2026-06-03-mobile-gps-hole-audit.md) (50건 발견, 25건 검증, FP 1·강등 1)
+- **6/15 이후 연기 (D-10)**: G-02 동의 fail-closed · G-03 WS dev bypass 제거 · G-06/09/10 accuracy·staleness(스키마 마이그 M1) · G-07/08 백그라운드 GPS(**EAS 빌드 필요**) · G-11 오프라인 큐+배치 · G-12 rate limit · G-13 지오펜싱(마이그 M2, pickup_lat/lng 사용) · M-04 · M-10/11
+- **🔴 변호사 확인 필요 (korea-regulatory-counsel)**: OQ-2 아동 탑승차량 위치 = 아동개보법 추가동의 대상? · **OQ-5 G-03 bypass 과거 prod/staging 배포 이력 → 있었다면 위치정보법 §39 신고 의무** (사실 확인 우선)
 
 ## Critical Path (5/22 ~ 8월 초)
 | 시점 | 작업 | 담당 |
@@ -65,11 +74,13 @@
 - **루넨랩스**: 사업자등록 1R 통과 후 진행 / lunenlabs.com LIVE 유지
 
 ## Latest Handoff
-- [`artifacts/handoffs/2026-05-22-session-handoff-v3.md`](artifacts/handoffs/2026-05-22-session-handoff-v3.md) — P1-3 일부(WalkPhoto 모델+마이그) PASS·커밋. 다음 first step = P1-3 잔여(PortOne v2 mock)
+- [`artifacts/handoffs/2026-06-03-session-handoff.md`](artifacts/handoffs/2026-06-03-session-handoff.md) — GPS/SOS 안전핵심 6건 커밋 `61b03aa`, 회귀 0. 다음 first step = (1)마일스톤 종료 또는 (2)OQ-5 G-03 배포이력 사실확인 또는 (3)SafeWay 재동결 결정
+- [`artifacts/handoffs/2026-05-22-session-handoff-v3.md`](artifacts/handoffs/2026-05-22-session-handoff-v3.md) — P1-3 일부(WalkPhoto 모델+마이그) PASS·커밋
 - [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS
 
 ## Open Gap Notes
 - [`artifacts/gap-notes/2026-05-22-walkphoto-migration-sequencing.md`](artifacts/gap-notes/2026-05-22-walkphoto-migration-sequencing.md) — Tech Spec §16 "4테이블 1마이그" → WalkPhoto 분리(D-8). P2-2에 나머지 3개 테이블 이연 체크리스트 보유
+- [`artifacts/gap-notes/2026-06-03-gps-speed-validation-log-only.md`](artifacts/gap-notes/2026-06-03-gps-speed-validation-log-only.md) — 스펙 §6.1 "422 reject" → PT 도보 속도/정확도는 **로그온리**(GPS 지터 false-positive 회피). 하드리젝트는 실데이터 2주 수집 후 임계 튜닝하여 활성화. 차량 200km/h는 하드리젝트 유지
 
 ## Available Skills
 - `/session-start` · `/session-end` · `/sandbox-followup [email|prep|status|review]` (동결 중)
