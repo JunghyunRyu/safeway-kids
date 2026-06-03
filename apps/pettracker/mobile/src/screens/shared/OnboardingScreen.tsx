@@ -6,9 +6,9 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 const { width } = Dimensions.get('window');
 
 const SLIDES = [
-  { icon: 'paw' as const, title: '안심 산책', desc: '강아지, 고양이 모두\n안심하고 맡기세요.', bg: '#F4A22D' },
-  { icon: 'camera' as const, title: '실시간 사진', desc: '산책 중 사진과 메시지로\n우리 아이의 모습을 확인하세요.', bg: '#2D9E6B' },
-  { icon: 'map' as const, title: 'GPS 추적', desc: '실시간 위치 추적으로\n산책 경로를 직접 확인할 수 있어요.', bg: '#3B82C4' },
+  { icon: 'paw' as const, title: '안심 케어', desc: '우리 아이의 일상을\n믿고 맡기세요.', bg: Colors.primary },
+  { icon: 'camera' as const, title: '실시간 사진', desc: '산책 중 사진과 메시지로\n우리 아이의 모습을 확인하세요.', bg: Colors.accent },
+  { icon: 'map' as const, title: 'GPS 추적', desc: '실시간 위치 추적으로\n산책 경로를 직접 확인할 수 있어요.', bg: Colors.info },
 ];
 
 export default function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
@@ -34,13 +34,15 @@ export default function OnboardingScreen({ onComplete }: { onComplete: () => voi
       <Pressable
         style={styles.btn}
         onPress={() => isLast ? onComplete() : setPage(page + 1)}
+        accessibilityRole="button"
+        accessibilityLabel={isLast ? '시작하기' : '다음'}
       >
         <Text style={styles.btnText}>{isLast ? '시작하기' : '다음'}</Text>
         <Ionicons name={isLast ? 'checkmark' : 'arrow-forward'} size={20} color={Colors.textPrimary} />
       </Pressable>
 
       {!isLast && (
-        <Pressable onPress={onComplete} style={styles.skip}>
+        <Pressable onPress={onComplete} style={styles.skip} hitSlop={12} accessibilityRole="button" accessibilityLabel="온보딩 건너뛰기">
           <Text style={styles.skipText}>건너뛰기</Text>
         </Pressable>
       )}
@@ -61,6 +63,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32, paddingVertical: 14, borderRadius: Radius.lg, marginTop: 40, gap: 8,
   },
   btnText: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
-  skip: { marginTop: Spacing.lg },
+  skip: { marginTop: Spacing.lg, paddingHorizontal: 24, paddingVertical: 4 },
   skipText: { fontSize: Typography.sizes.base, color: 'rgba(255,255,255,0.7)' },
 });

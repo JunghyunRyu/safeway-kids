@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, FlatList, Pressable, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
@@ -26,10 +26,16 @@ export default function MyPetsScreen({ navigation }: any) {
 
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
-  const renderPet = ({ item }: { item: Pet }) => (
+  const renderPet = ({ item }: { item: Pet }) => {
+    const photoUrl = (item as any).photo_url as string | undefined;
+    return (
     <View style={styles.card}>
       <View style={styles.avatarBox}>
-        <Text style={styles.avatarEmoji}>{item.species === 'cat' ? '🐈' : '🐕'}</Text>
+        {photoUrl ? (
+          <Image source={{ uri: photoUrl }} style={styles.avatarImg} />
+        ) : (
+          <Text style={styles.avatarEmoji}>{item.species === 'cat' ? '🐈' : '🐕'}</Text>
+        )}
       </View>
       <View style={styles.cardContent}>
         <Text style={styles.name}>{item.name}</Text>
@@ -40,12 +46,13 @@ export default function MyPetsScreen({ navigation }: any) {
         {item.temperament ? <Text style={styles.tag}>{item.temperament}</Text> : null}
       </View>
     </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="뒤로 가기" hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>내 반려동물</Text>
@@ -67,7 +74,7 @@ export default function MyPetsScreen({ navigation }: any) {
         }
       />
 
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('PetRegistration')}>
+      <Pressable style={styles.fab} onPress={() => navigation.navigate('PetRegistration')} accessibilityRole="button" accessibilityLabel="반려동물 추가">
         <Ionicons name="add" size={24} color={Colors.textInverse} />
         <Text style={styles.fabText}>반려동물 추가</Text>
       </Pressable>
@@ -92,6 +99,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   avatarEmoji: { fontSize: 28 },
+  avatarImg: { width: 56, height: 56, borderRadius: 28 },
   cardContent: { flex: 1 },
   name: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
   detail: { fontSize: Typography.sizes.sm, color: Colors.textSecondary, marginTop: 2 },

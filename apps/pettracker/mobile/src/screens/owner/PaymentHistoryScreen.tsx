@@ -40,8 +40,10 @@ export default function PaymentHistoryScreen({ navigation }: any) {
 
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
+  // 안심 결제(에스크로): 산책 완료 시점에 결제가 확정된다.
+  // 따라서 '총 결제 완료'는 completed 건만 합산 (진행 중/확정 대기 금액 제외, O-27)
   const totalPaid = items
-    .filter((b) => b.status === 'completed' || b.status === 'in_progress' || b.status === 'confirmed')
+    .filter((b) => b.status === 'completed')
     .reduce((sum, b) => sum + (b.price ?? 0), 0);
 
   const renderItem = ({ item }: { item: Booking }) => (
@@ -53,23 +55,26 @@ export default function PaymentHistoryScreen({ navigation }: any) {
         </Text>
       </View>
       <Text style={styles.title}>{item.duration_minutes}분 산책</Text>
-      <Text style={styles.amount}>
-        {item.status === 'cancelled' ? '-' : ''}{(item.price ?? 0).toLocaleString()}원
+      <Text style={[styles.amount, item.status === 'cancelled' && styles.amountRefund]}>
+        {(item.price ?? 0).toLocaleString()}원{item.status === 'cancelled' ? ' (환불 안내)' : ''}
       </Text>
+      {item.status !== 'completed' && item.status !== 'cancelled' && (
+        <Text style={styles.pendingNote}>산책 완료 후 결제가 확정됩니다</Text>
+      )}
     </View>
   );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="뒤로 가기" hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>결제 내역</Text>
       </View>
 
       <View style={styles.summary}>
-        <Text style={styles.summaryLabel}>총 결제 금액</Text>
+        <Text style={styles.summaryLabel}>총 결제 완료 금액</Text>
         <Text style={styles.summaryAmount}>{totalPaid.toLocaleString()}원</Text>
       </View>
 
@@ -114,6 +119,8 @@ const styles = StyleSheet.create({
   status: { fontSize: Typography.sizes.xs, fontWeight: Typography.weights.bold },
   title: { fontSize: Typography.sizes.base, fontWeight: Typography.weights.medium, color: Colors.textPrimary, marginTop: 4 },
   amount: { fontSize: Typography.sizes.lg, fontWeight: Typography.weights.bold, color: Colors.textPrimary, marginTop: 4 },
+  amountRefund: { color: Colors.danger },
+  pendingNote: { fontSize: Typography.sizes.xs, color: Colors.textDisabled, marginTop: 2 },
   empty: { alignItems: 'center', marginTop: 80 },
   emptyText: { fontSize: Typography.sizes.md, color: Colors.textDisabled, marginTop: Spacing.md },
 });
