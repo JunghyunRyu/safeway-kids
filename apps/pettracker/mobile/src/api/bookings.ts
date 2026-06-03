@@ -20,8 +20,13 @@ export interface Booking {
   pet_weight_kg?: number | null;
   pet_special_needs?: string | null;
   owner_name?: string | null;
-  // Active walk session id (populated by backend when status=in_progress)
+  // Walker info (populated from backend relationship when walker assigned)
+  walker_name?: string | null;
+  walker_phone?: string | null;
+  // Active walk session id (populated by backend when status=in_progress/completed)
   session_id?: string | null;
+  // True once owner has submitted a review for this booking
+  has_review?: boolean;
 }
 
 export interface BookingCreateData {
