@@ -17,7 +17,7 @@ import { devLogin, sendOtp, verifyOtp } from "../api/auth";
 import { useAuth } from "../hooks/useAuth";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../constants/theme";
 
-const IS_DEV = __DEV__ || process.env.EXPO_PUBLIC_DEV_MODE === "true";
+const IS_DEV = __DEV__;
 
 type RoleOption = "parent" | "driver" | "safety_escort" | "academy_admin" | "student";
 
@@ -289,10 +289,6 @@ function DevLoginScreen() {
             )}
           </Pressable>
 
-          <Text style={styles.hint}>
-            테스트: 01033333333 / 박보호자{"\n"}
-            01011111111 / 김기사
-          </Text>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>

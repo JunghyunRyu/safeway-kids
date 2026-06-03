@@ -1,7 +1,7 @@
 """GPS validation utilities — speed/accuracy sanity checks for anti-spoofing."""
 
 import math
-from datetime import datetime
+from datetime import UTC, datetime
 
 
 def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -31,7 +31,14 @@ def validate_gps_speed(
 
     Returns (is_valid, speed_ms).
     If time delta is 0, returns (True, 0) to avoid division by zero.
+
+    naive/aware datetime이 섞여 들어와도(예: SQLite는 naive로 읽힘, Pydantic은 aware)
+    안전하게 비교하기 위해 naive는 UTC로 간주한다.
     """
+    if prev_time.tzinfo is None:
+        prev_time = prev_time.replace(tzinfo=UTC)
+    if curr_time.tzinfo is None:
+        curr_time = curr_time.replace(tzinfo=UTC)
     dt_seconds = abs((curr_time - prev_time).total_seconds())
     if dt_seconds < 1:
         return True, 0.0

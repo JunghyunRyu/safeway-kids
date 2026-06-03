@@ -187,3 +187,54 @@ class TestGpsBufferFlush:
 
         members = await fake_redis.smembers("active_vehicles")
         assert str(vehicle_id) in members
+
+    async def test_update_gps_rejects_teleport(self, db_session):
+        """G-01: 직전 포인트 대비 비현실적 속도(텔레포트)는 ValidationError."""
+        import json
+        from datetime import UTC, datetime, timedelta
+
+        from app.common.exceptions import ValidationError
+        from app.modules.vehicle_telemetry.schemas import GpsUpdateRequest
+        from app.modules.vehicle_telemetry.service import update_gps
+
+        fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+        vehicle_id = uuid.uuid4()
+        # 직전 포인트: 10초 전 서울시청
+        prev_time = (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
+        await fake_redis.set(
+            f"vehicle:{vehicle_id}:gps",
+            json.dumps({
+                "vehicle_id": str(vehicle_id),
+                "latitude": 37.5665, "longitude": 126.978,
+                "heading": None, "speed": None, "recorded_at": prev_time,
+            }),
+        )
+        # 현재 포인트: 부산(~325km) — 10초 내 이동 불가
+        request = GpsUpdateRequest(vehicle_id=vehicle_id, latitude=35.1796, longitude=129.0756)
+        with pytest.raises(ValidationError):
+            await update_gps(fake_redis, request)
+
+    async def test_update_gps_accepts_normal_movement(self, db_session):
+        """G-01: 정상 속도(직전 대비 ~10m/s)는 통과."""
+        import json
+        from datetime import UTC, datetime, timedelta
+
+        from app.modules.vehicle_telemetry.schemas import GpsUpdateRequest
+        from app.modules.vehicle_telemetry.service import update_gps
+
+        fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+        vehicle_id = uuid.uuid4()
+        prev_time = (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
+        await fake_redis.set(
+            f"vehicle:{vehicle_id}:gps",
+            json.dumps({
+                "vehicle_id": str(vehicle_id),
+                "latitude": 37.5665, "longitude": 126.978,
+                "heading": None, "speed": None, "recorded_at": prev_time,
+            }),
+        )
+        # ~100m 이동 (10초) = 10 m/s, 200km/h 미만 → 통과
+        request = GpsUpdateRequest(vehicle_id=vehicle_id, latitude=37.56741, longitude=126.978)
+        await update_gps(fake_redis, request)
+        members = await fake_redis.smembers("active_vehicles")
+        assert str(vehicle_id) in members

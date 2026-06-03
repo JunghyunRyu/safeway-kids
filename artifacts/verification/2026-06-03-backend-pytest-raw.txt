@@ -1,0 +1,40 @@
+.......FFF.............................................................. [ 33%]
+........................................................................ [ 66%]
+........................................................................ [ 99%]
+..                                                                       [100%]C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\_pytest\unraisableexception.py:33: RuntimeWarning: coroutine 'Connection._cancel' was never awaited
+  gc.collect()
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+
+================================== FAILURES ===================================
+E   assert 403 == 200
+     +  where 403 = <Response [403 Forbidden]>.status_code
+---------------------------- Captured stdout call -----------------------------
+{"event": "Toss webhook secret not configured \u2014 rejecting webhook", "logger": "app.modules.billing.router", "level": "error", "timestamp": "2026-06-03T04:48:20.132924Z"}
+{"event": "ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured", "logger": "app.main", "level": "warning", "timestamp": "2026-06-03T04:48:20.133247Z"}
+{"method": "POST", "path": "/api/v1/billing/webhook", "status_code": 403, "duration_ms": 3.43, "event": "request", "logger": "request", "level": "info", "timestamp": "2026-06-03T04:48:20.133429Z"}
+------------------------------ Captured log call ------------------------------
+ERROR    app.modules.billing.router:router.py:283 Toss webhook secret not configured \u2014 rejecting webhook\nWARNING  app.main:main.py:295 ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured\nINFO     request:request_logging.py:26 {'method': 'POST', 'path': '/api/v1/billing/webhook', 'status_code': 403, 'duration_ms': 3.43, 'event': 'request', 'logger': 'request', 'level': 'info', 'timestamp': '2026-06-03T04:48:20.133429Z'}
+C:\jhryu\01_project\safeway_kids\backend\tests\integration\test_billing_pg.py:259: assert 403 == 200
+E   assert 403 == 200
+     +  where 403 = <Response [403 Forbidden]>.status_code
+---------------------------- Captured stdout call -----------------------------
+{"event": "Toss webhook secret not configured \u2014 rejecting webhook", "logger": "app.modules.billing.router", "level": "error", "timestamp": "2026-06-03T04:48:20.330536Z"}
+{"event": "ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured", "logger": "app.main", "level": "warning", "timestamp": "2026-06-03T04:48:20.331043Z"}
+{"method": "POST", "path": "/api/v1/billing/webhook", "status_code": 403, "duration_ms": 2.64, "event": "request", "logger": "request", "level": "info", "timestamp": "2026-06-03T04:48:20.331349Z"}
+------------------------------ Captured log call ------------------------------
+ERROR    app.modules.billing.router:router.py:283 Toss webhook secret not configured \u2014 rejecting webhook\nWARNING  app.main:main.py:295 ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured\nINFO     request:request_logging.py:26 {'method': 'POST', 'path': '/api/v1/billing/webhook', 'status_code': 403, 'duration_ms': 2.64, 'event': 'request', 'logger': 'request', 'level': 'info', 'timestamp': '2026-06-03T04:48:20.331349Z'}
+C:\jhryu\01_project\safeway_kids\backend\tests\integration\test_billing_pg.py:268: assert 403 == 200
+E   assert 403 == 200
+     +  where 403 = <Response [403 Forbidden]>.status_code
+---------------------------- Captured stdout call -----------------------------
+{"event": "Toss webhook secret not configured \u2014 rejecting webhook", "logger": "app.modules.billing.router", "level": "error", "timestamp": "2026-06-03T04:48:20.540681Z"}
+{"event": "ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured", "logger": "app.main", "level": "warning", "timestamp": "2026-06-03T04:48:20.541262Z"}
+{"method": "POST", "path": "/api/v1/billing/webhook", "status_code": 403, "duration_ms": 2.13, "event": "request", "logger": "request", "level": "info", "timestamp": "2026-06-03T04:48:20.541599Z"}
+------------------------------ Captured log call ------------------------------
+ERROR    app.modules.billing.router:router.py:283 Toss webhook secret not configured \u2014 rejecting webhook\nWARNING  app.main:main.py:295 ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured\nINFO     request:request_logging.py:26 {'method': 'POST', 'path': '/api/v1/billing/webhook', 'status_code': 403, 'duration_ms': 2.13, 'event': 'request', 'logger': 'request', 'level': 'info', 'timestamp': '2026-06-03T04:48:20.541599Z'}
+C:\jhryu\01_project\safeway_kids\backend\tests\integration\test_billing_pg.py:283: assert 403 == 200
+=========================== short test summary info ===========================
+FAILED tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_updates_payment_status
+FAILED tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_empty_payload_ignored
+FAILED tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_unknown_payment_key_ignored
+3 failed, 215 passed in 197.71s (0:03:17)

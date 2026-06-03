@@ -1,0 +1,18 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- C:\jhryu\01_project\safeway_kids\backend\.venv\Scripts\python.exe
+rootdir: C:\jhryu\01_project\safeway_kids\backend
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 8 items
+
+tests/integration/test_pt_gps_sos_security.py::test_g21_other_walker_gps_injection_blocked PASSED [ 12%]
+tests/integration/test_pt_gps_sos_security.py::test_g21_owner_walker_gps_accepted PASSED [ 25%]
+tests/integration/test_pt_gps_sos_security.py::test_g21_nonexistent_session_404 PASSED [ 37%]
+tests/integration/test_pt_gps_sos_security.py::test_g01_pt_teleport_logged_not_rejected PASSED [ 50%]
+tests/integration/test_pt_gps_sos_security.py::test_m02_pt_sos_location_unknown PASSED [ 62%]
+tests/integration/test_pt_gps_sos_security.py::test_m02_pt_sos_with_location PASSED [ 75%]
+tests/integration/test_pt_gps_sos_security.py::test_c2_safeway_sos_null_location PASSED [ 87%]
+tests/integration/test_pt_gps_sos_security.py::test_c2_safeway_sos_with_location PASSED [100%]
+
+============================== 8 passed in 4.42s ==============================

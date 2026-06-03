@@ -4,7 +4,7 @@ import asyncio
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,8 @@ from app.apps.pettracker.schemas import (
     PetCreate,
     PetResponse,
     PetUpdate,
+    PtSosRequest,
+    PtSosResponse,
     ReviewCreate,
     ReviewReplyRequest,
     ReviewWithReplyResponse,
@@ -40,7 +42,7 @@ from app.apps.pettracker.schemas import (
 from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.middleware.rbac import require_pet_owner, require_platform_admin, require_pt_any, require_walker
-from app.modules.auth.models import User
+from app.modules.auth.models import User, UserRole
 
 router = APIRouter(prefix="/pt", tags=["PetTracker"])
 
@@ -262,9 +264,83 @@ async def record_gps(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_walker),
 ) -> dict:
-    await service.record_gps(db, session_id, body)
+    await service.record_gps(db, session_id, body, walker_id=user.id)  # G-21: 소유권 검증
     await db.commit()
     return {"status": "ok"}
+
+
+@router.post("/sos", response_model=PtSosResponse)
+async def pt_sos_alert(
+    body: PtSosRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_pt_any),
+) -> PtSosResponse:
+    """M-02: PT 긴급 신고 — 플랫폼 관리자에게 즉시 알림 + 감사 로그.
+
+    위치 미확인 시 (0,0) 대신 명시적 표기 (G-05 동일 정책).
+    """
+    from app.modules.admin.service import log_audit
+    from app.modules.notification import service as notif_service
+    from app.modules.notification.providers.fcm import FCMProvider
+
+    location_known = (
+        not body.location_unknown
+        and body.latitude is not None
+        and body.longitude is not None
+    )
+
+    await log_audit(
+        db,
+        user_id=str(user.id),
+        user_name=user.name,
+        action="SOS",
+        entity_type="pt_sos_alert",
+        entity_id=str(body.session_id) if body.session_id else "",
+        details={
+            "latitude": body.latitude,
+            "longitude": body.longitude,
+            "location_unknown": not location_known,
+            "session_id": str(body.session_id) if body.session_id else None,
+            "message": body.message,
+            "user_role": user.role.value if hasattr(user.role, "value") else user.role,
+        },
+        ip_address=request.client.host if request.client else None,
+    )
+
+    location_str = (
+        f"위치: ({body.latitude:.6f}, {body.longitude:.6f})"
+        if location_known
+        else "위치: 미확인 (주소 수동 확인 필요)"
+    )
+    sos_msg = f"[PT SOS 긴급] {user.name} {location_str}"
+    if body.message:
+        sos_msg += f" 메시지: {body.message}"
+
+    _fcm = FCMProvider()
+    admins = (await db.execute(
+        select(User).where(
+            User.role == UserRole.PLATFORM_ADMIN,
+            User.is_active.is_(True),
+            User.deleted_at.is_(None),
+        )
+    )).scalars().all()
+    for admin in admins:
+        try:
+            if admin.fcm_token:
+                await _fcm.send_push(
+                    device_token=admin.fcm_token,
+                    title="🚨 PT SOS 긴급 신고",
+                    body=sos_msg,
+                    data={"type": "pt_sos", "session_id": str(body.session_id) if body.session_id else ""},
+                )
+            if admin.phone and not admin.phone.startswith("kakao_"):
+                await notif_service.send_critical_alert_sms(admin.phone, sos_msg)
+        except Exception:
+            logger.warning("Failed to send PT SOS alert to admin %s", admin.id, exc_info=True)
+
+    logger.info("[PT SOS] Alert from user=%s session=%s", user.id, body.session_id)
+    return PtSosResponse(success=True)
 
 
 @router.post("/walks/{session_id}/end")

@@ -2,9 +2,11 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, Linking, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
+import * as Location from 'expo-location';
 import { useWebSocket } from '@safeway/core-mobile/hooks/useWebSocket';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { getWalkReport } from '../../api/walks';
+import { apiClient } from '../../api/client';
 
 type GpsMsg = {
   type?: string;
@@ -20,6 +22,7 @@ export default function LiveTrackScreen({ route, navigation }: any) {
   const [isLoading, setIsLoading] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [startedAt, setStartedAt] = useState<Date | null>(null);
+  const [sending, setSending] = useState(false);
   const webviewRef = useRef<WebView>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -109,6 +112,7 @@ export default function LiveTrackScreen({ route, navigation }: any) {
   };
 
   const handleSOS = () => {
+    if (sending) return;
     Alert.alert(
       '긴급 신고',
       '긴급 상황을 신고하시겠습니까?\n관제 센터에 즉시 알림이 전달됩니다.',
@@ -117,9 +121,48 @@ export default function LiveTrackScreen({ route, navigation }: any) {
         {
           text: '신고',
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement SOS API call
-            Alert.alert('신고 완료', '관제 센터에 신고가 접수되었습니다. 곧 연락드리겠습니다.');
+          onPress: async () => {
+            setSending(true);
+            let latitude: number | null = null;
+            let longitude: number | null = null;
+            let location_unknown = false;
+            try {
+              const { status } = await Location.getForegroundPermissionsAsync();
+              if (status === 'granted') {
+                const pos = await Location.getCurrentPositionAsync({
+                  accuracy: Location.Accuracy.High,
+                });
+                latitude = pos.coords.latitude;
+                longitude = pos.coords.longitude;
+              } else {
+                location_unknown = true;
+              }
+            } catch {
+              location_unknown = true;
+            }
+            try {
+              await apiClient.post('/pt/sos', {
+                session_id: sessionId ?? null,
+                latitude,
+                longitude,
+                location_unknown,
+              });
+              Alert.alert('신고 완료', '관제 센터에 신고가 접수되었습니다.');
+            } catch {
+              Alert.alert(
+                '신고 실패',
+                '신고 전송에 실패했습니다. 119에 직접 신고해 주세요.',
+                [
+                  {
+                    text: '119 신고',
+                    onPress: () => Linking.openURL('tel:119').catch(() => null),
+                  },
+                  { text: '닫기', style: 'cancel' },
+                ],
+              );
+            } finally {
+              setSending(false);
+            }
           },
         },
       ],
@@ -233,9 +276,13 @@ export default function LiveTrackScreen({ route, navigation }: any) {
           <Ionicons name="call" size={20} color={Colors.textInverse} />
           <Text style={styles.contactBtnText}>산책사 연락</Text>
         </Pressable>
-        <Pressable style={styles.sosBtn} onPress={handleSOS}>
-          <Ionicons name="warning" size={20} color={Colors.textInverse} />
-          <Text style={styles.sosBtnText}>SOS 긴급 신고</Text>
+        <Pressable style={[styles.sosBtn, sending && { opacity: 0.6 }]} onPress={handleSOS} disabled={sending}>
+          {sending ? (
+            <ActivityIndicator size="small" color={Colors.textInverse} />
+          ) : (
+            <Ionicons name="warning" size={20} color={Colors.textInverse} />
+          )}
+          <Text style={styles.sosBtnText}>{sending ? '신고 중...' : 'SOS 긴급 신고'}</Text>
         </Pressable>
       </View>
     </View>

@@ -1,0 +1,308 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- C:\jhryu\01_project\safeway_kids\backend\.venv\Scripts\python.exe
+rootdir: C:\jhryu\01_project\safeway_kids\backend
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 138 items
+
+tests/integration/test_billing_pg.py::TestPaymentPrepare::test_prepare_returns_order_id_and_client_key PASSED [  0%]
+tests/integration/test_billing_pg.py::TestPaymentPrepare::test_prepare_nonexistent_invoice_returns_404 PASSED [  1%]
+tests/integration/test_billing_pg.py::TestPaymentPrepare::test_prepare_already_paid_returns_422 PASSED [  2%]
+tests/integration/test_billing_pg.py::TestPaymentPrepare::test_prepare_other_parents_invoice_returns_403 PASSED [  2%]
+tests/integration/test_billing_pg.py::TestPaymentConfirm::test_confirm_creates_payment_and_marks_invoice_paid PASSED [  3%]
+tests/integration/test_billing_pg.py::TestPaymentConfirm::test_confirm_amount_mismatch_returns_422 PASSED [  4%]
+tests/integration/test_billing_pg.py::TestPaymentConfirm::test_confirm_invalid_order_id_returns_422 PASSED [  5%]
+tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_updates_payment_status FAILED [  5%]
+tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_empty_payload_ignored FAILED [  6%]
+tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_unknown_payment_key_ignored FAILED [  7%]
+tests/integration/test_bulk_upload.py::TestBulkUpload::test_successful_upload PASSED [  7%]
+tests/integration/test_bulk_upload.py::TestBulkUpload::test_duplicate_detection PASSED [  8%]
+tests/integration/test_bulk_upload.py::TestBulkUpload::test_invalid_data_handling PASSED [  9%]
+tests/integration/test_bulk_upload.py::TestBulkUpload::test_missing_required_columns PASSED [ 10%]
+tests/integration/test_bulk_upload.py::TestBulkUpload::test_forbidden_for_parent PASSED [ 10%]
+tests/integration/test_compliance.py::TestGuardianConsent::test_create_consent PASSED [ 11%]
+tests/integration/test_compliance.py::TestGuardianConsent::test_list_consents PASSED [ 12%]
+tests/integration/test_compliance.py::TestGuardianConsent::test_withdraw_consent PASSED [ 13%]
+tests/integration/test_compliance.py::TestGuardianConsent::test_duplicate_consent_rejected PASSED [ 13%]
+tests/integration/test_compliance.py::TestGuardianConsent::test_driver_cannot_create_consent PASSED [ 14%]
+tests/integration/test_cross_app_isolation_e2e.py::TestCrossAppIsolation::test_pt_walker_cannot_access_safeway_students PASSED [ 15%]
+tests/integration/test_cross_app_isolation_e2e.py::TestCrossAppIsolation::test_safeway_academy_admin_cannot_access_pt_bookings PASSED [ 15%]
+tests/integration/test_cross_app_isolation_e2e.py::TestCrossAppIsolation::test_safeway_parent_cannot_access_cc_bookings PASSED [ 16%]
+tests/integration/test_cross_app_isolation_e2e.py::TestCrossAppIsolation::test_pt_owner_cannot_create_safeway_student PASSED [ 17%]
+tests/integration/test_cross_app_isolation_e2e.py::TestCrossAppIsolation::test_cc_caregiver_cannot_access_safeway_vehicles PASSED [ 18%]
+tests/integration/test_e2e_flow.py::TestEndToEndFlow::test_full_ride_lifecycle PASSED [ 18%]
+tests/integration/test_e2e_flow.py::TestEndToEndFlow::test_schedule_cancel_flow PASSED [ 19%]
+tests/integration/test_e2e_flow.py::TestGpsFlow::test_gps_update_and_retrieve PASSED [ 20%]
+tests/integration/test_e2e_flow.py::TestConsentBlocksSchedule::test_no_consent_blocks_schedule PASSED [ 21%]
+tests/integration/test_e2e_hardening.py::TestE2EHealthCheck::test_health_endpoint_returns_ok FAILED [ 21%]
+tests/integration/test_e2e_hardening.py::TestE2EOtpLoginFlow::test_otp_send_verify_login PASSED [ 22%]
+tests/integration/test_e2e_hardening.py::TestE2EOtpLoginFlow::test_dev_login_blocked_in_production PASSED [ 23%]
+tests/integration/test_e2e_hardening.py::TestE2EWebSocketGps::test_ws_requires_valid_token PASSED [ 23%]
+tests/integration/test_e2e_hardening.py::TestE2EWebSocketGps::test_ws_auth_and_gps_relay PASSED [ 24%]
+tests/integration/test_e2e_hardening.py::TestE2EFileUploadValidation::test_bulk_upload_xlsx_validation PASSED [ 25%]
+tests/integration/test_e2e_hardening.py::TestE2EFileUploadValidation::test_bulk_upload_missing_columns_rejected PASSED [ 26%]
+tests/integration/test_e2e_hardening.py::TestE2EFileUploadValidation::test_csv_file_rejected PASSED [ 26%]
+tests/integration/test_e2e_hardening.py::TestE2ENotificationFlow::test_fcm_token_register_and_boarding_push PASSED [ 27%]
+tests/integration/test_e2e_hardening.py::TestE2EBillingFlow::test_billing_plan_create_and_invoice PASSED [ 28%]
+tests/integration/test_e2e_hardening.py::TestE2ESecurityHardening::test_aes256_encryption_roundtrip PASSED [ 28%]
+tests/integration/test_e2e_hardening.py::TestE2ESecurityHardening::test_unauthenticated_access_rejected PASSED [ 29%]
+tests/integration/test_e2e_hardening.py::TestE2ESecurityHardening::test_rbac_enforcement PASSED [ 30%]
+tests/integration/test_e2e_hardening.py::TestE2ESecurityHardening::test_consent_required_for_schedule PASSED [ 31%]
+tests/integration/test_e2e_hardening.py::TestE2ESecurityHardening::test_jwt_token_refresh_flow PASSED [ 31%]
+tests/integration/test_e2e_hardening.py::TestE2ESecurityHardening::test_invalid_refresh_token_rejected PASSED [ 32%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayPost::test_create_edge_event PASSED [ 33%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayPost::test_create_abnormal_behavior_event PASSED [ 34%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayPost::test_create_remaining_passenger_event PASSED [ 34%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayPost::test_invalid_event_type PASSED [ 35%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayPost::test_post_without_api_key_returns_401 PASSED [ 36%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayPost::test_post_with_wrong_api_key_returns_401 PASSED [ 36%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayPost::test_dev_bypass_when_no_key_configured PASSED [ 37%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayGet::test_list_edge_events PASSED [ 38%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayGet::test_list_edge_events_filtered PASSED [ 39%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayGet::test_list_without_auth_returns_401 PASSED [ 39%]
+tests/integration/test_edge_gateway.py::TestEdgeGatewayGet::test_list_with_non_admin_returns_403 PASSED [ 40%]
+tests/integration/test_health.py::TestHealthCheck::test_health_endpoint PASSED [ 41%]
+tests/integration/test_m2_apis.py::TestFcmTokenRegistration::test_register_token PASSED [ 42%]
+tests/integration/test_m2_apis.py::TestFcmTokenRegistration::test_register_token_unauthenticated PASSED [ 42%]
+tests/integration/test_m2_apis.py::TestDriverDailySchedule::test_driver_sees_assigned_schedules PASSED [ 43%]
+tests/integration/test_m2_apis.py::TestDriverDailySchedule::test_driver_no_assignment PASSED [ 44%]
+tests/integration/test_m2_apis.py::TestVehicleAssignment::test_driver_gets_assignment PASSED [ 44%]
+tests/integration/test_m2_apis.py::TestVehicleAssignment::test_driver_no_assignment_returns_null PASSED [ 45%]
+tests/integration/test_m2_apis.py::TestStudentEnrollments::test_list_enrollments PASSED [ 46%]
+tests/integration/test_m2_apis.py::TestBoardingPushNotification::test_boarding_triggers_push PASSED [ 47%]
+tests/integration/test_m2_apis.py::TestBoardingPushNotification::test_boarding_without_fcm_token_no_error PASSED [ 47%]
+tests/integration/test_m4_websocket.py::TestWebSocketAuth::test_ws_rejects_missing_token PASSED [ 48%]
+tests/integration/test_m4_websocket.py::TestWebSocketAuth::test_ws_first_message_auth_success PASSED [ 49%]
+tests/integration/test_m4_websocket.py::TestWebSocketAuth::test_ws_rejects_invalid_token PASSED [ 50%]
+tests/integration/test_m4_websocket.py::TestWebSocketAuth::test_ws_accepts_valid_token_query_param PASSED [ 50%]
+tests/integration/test_m4_websocket.py::TestGpsBufferFlush::test_flush_writes_gps_history PASSED [ 51%]
+tests/integration/test_m4_websocket.py::TestGpsBufferFlush::test_flush_empty_buffer PASSED [ 52%]
+tests/integration/test_m4_websocket.py::TestGpsBufferFlush::test_update_gps_tracks_active_vehicles PASSED [ 52%]
+tests/integration/test_m4_websocket.py::TestGpsBufferFlush::test_update_gps_rejects_teleport PASSED [ 53%]
+tests/integration/test_m4_websocket.py::TestGpsBufferFlush::test_update_gps_accepts_normal_movement PASSED [ 54%]
+tests/integration/test_m6_pipeline.py::TestDailyPipeline::test_pipeline_creates_schedules_and_routes PASSED [ 55%]
+tests/integration/test_m6_pipeline.py::TestDailyPipeline::test_pipeline_is_idempotent PASSED [ 55%]
+tests/integration/test_m6_pipeline.py::TestDailyPipeline::test_pipeline_with_no_templates PASSED [ 56%]
+tests/integration/test_m6_pipeline.py::TestDriverRouteEndpoint::test_driver_gets_route PASSED [ 57%]
+tests/integration/test_m6_pipeline.py::TestDriverRouteEndpoint::test_driver_no_assignment_returns_null PASSED [ 57%]
+tests/integration/test_m6_pipeline.py::TestDriverRouteEndpoint::test_parent_cannot_access_driver_route PASSED [ 58%]
+tests/integration/test_m6_pipeline.py::TestPipelineEndpoint::test_pipeline_requires_admin PASSED [ 59%]
+tests/integration/test_m6_pipeline.py::TestPipelineEndpoint::test_pipeline_via_api PASSED [ 60%]
+tests/integration/test_m7_billing.py::TestBillingPlanCreate::test_admin_creates_billing_plan PASSED [ 60%]
+tests/integration/test_m7_billing.py::TestBillingPlanCreate::test_parent_cannot_create_plan PASSED [ 61%]
+tests/integration/test_m7_billing.py::TestBillingPlanCreate::test_create_plan_without_monthly_cap PASSED [ 62%]
+tests/integration/test_m7_billing.py::TestGenerateInvoices::test_generate_invoices_for_month PASSED [ 63%]
+tests/integration/test_m7_billing.py::TestGenerateInvoices::test_generate_invoices_respects_monthly_cap PASSED [ 63%]
+tests/integration/test_m7_billing.py::TestGenerateInvoices::test_generate_invoices_no_rides_creates_nothing PASSED [ 64%]
+tests/integration/test_m7_billing.py::TestGenerateInvoices::test_generate_invoices_idempotent PASSED [ 65%]
+tests/integration/test_m7_billing.py::TestParentInvoices::test_parent_sees_own_invoices PASSED [ 65%]
+tests/integration/test_m7_billing.py::TestParentInvoices::test_parent_no_invoices_returns_empty PASSED [ 66%]
+tests/integration/test_m7_billing.py::TestMarkInvoicePaid::test_admin_marks_invoice_paid PASSED [ 67%]
+tests/integration/test_m7_billing.py::TestMarkInvoicePaid::test_mark_nonexistent_invoice_returns_404 PASSED [ 68%]
+tests/integration/test_m7_billing.py::TestMarkInvoicePaid::test_parent_cannot_mark_paid PASSED [ 68%]
+tests/integration/test_m9_escort.py::TestRegisterAvailability::test_escort_registers_availability PASSED [ 69%]
+tests/integration/test_m9_escort.py::TestRegisterAvailability::test_escort_views_own_availability PASSED [ 70%]
+tests/integration/test_m9_escort.py::TestRegisterAvailability::test_parent_cannot_register_availability PASSED [ 71%]
+tests/integration/test_m9_escort.py::TestAutoMatch::test_auto_match_creates_shifts PASSED [ 71%]
+tests/integration/test_m9_escort.py::TestAutoMatch::test_auto_match_more_assignments_than_escorts PASSED [ 72%]
+tests/integration/test_m9_escort.py::TestAutoMatch::test_auto_match_no_availability_creates_nothing PASSED [ 73%]
+tests/integration/test_m9_escort.py::TestAutoMatch::test_parent_cannot_trigger_match PASSED [ 73%]
+tests/integration/test_m9_escort.py::TestCheckInCheckOut::test_check_in_and_check_out PASSED [ 74%]
+tests/integration/test_m9_escort.py::TestCheckInCheckOut::test_check_in_wrong_escort_returns_404 PASSED [ 75%]
+tests/integration/test_m9_escort.py::TestCheckInCheckOut::test_check_in_nonexistent_shift_returns_404 PASSED [ 76%]
+tests/integration/test_persona_scenarios.py::TestP1_김영희_학부모::test_scenario_register_child_and_schedule PASSED [ 76%]
+tests/integration/test_persona_scenarios.py::TestP1_김영희_학부모::test_scenario_consent_withdrawal_blocks_schedule PASSED [ 77%]
+tests/integration/test_persona_scenarios.py::TestP2_이철수_운전기사::test_scenario_boarding_and_alighting PASSED [ 78%]
+tests/integration/test_persona_scenarios.py::TestP2_이철수_운전기사::test_scenario_no_show_handling PASSED [ 78%]
+tests/integration/test_persona_scenarios.py::TestP3_박원장_학원장::test_scenario_academy_vehicle_management PASSED [ 79%]
+tests/integration/test_persona_scenarios.py::TestP4_정민수_펫오너::test_scenario_register_pet_and_book_walk PASSED [ 80%]
+tests/integration/test_persona_scenarios.py::TestP4_정민수_펫오너::test_scenario_booking_cancellation PASSED [ 81%]
+tests/integration/test_persona_scenarios.py::TestP5_한지은_워커::test_scenario_wallet_check PASSED [ 81%]
+tests/integration/test_persona_scenarios.py::TestP5_한지은_워커::test_scenario_availability_management PASSED [ 82%]
+tests/integration/test_persona_scenarios.py::TestP6_오수진_부모::test_scenario_register_child_and_book_care PASSED [ 83%]
+tests/integration/test_persona_scenarios.py::TestP7_최미래_돌보미::test_scenario_wallet_check PASSED [ 84%]
+tests/integration/test_persona_scenarios.py::TestP7_최미래_돌보미::test_scenario_availability_setup PASSED [ 84%]
+tests/integration/test_persona_scenarios.py::TestX1_크로스앱_차단::test_safeway_parent_cannot_access_pettracker PASSED [ 85%]
+tests/integration/test_persona_scenarios.py::TestX1_크로스앱_차단::test_safeway_parent_cannot_access_careconnect PASSED [ 86%]
+tests/integration/test_persona_scenarios.py::TestX1_크로스앱_차단::test_pettracker_owner_cannot_access_safeway PASSED [ 86%]
+tests/integration/test_persona_scenarios.py::TestX1_크로스앱_차단::test_pettracker_owner_cannot_access_careconnect PASSED [ 87%]
+tests/integration/test_persona_scenarios.py::TestX1_크로스앱_차단::test_careconnect_parent_cannot_access_pettracker PASSED [ 88%]
+tests/integration/test_persona_scenarios.py::TestX1_크로스앱_차단::test_walker_cannot_access_careconnect PASSED [ 89%]
+tests/integration/test_persona_scenarios.py::TestX1_크로스앱_차단::test_caregiver_cannot_access_pettracker PASSED [ 89%]
+tests/integration/test_persona_scenarios.py::TestX2_플랫폼관리자_전체접근::test_admin_can_access_pettracker_dashboard PASSED [ 90%]
+tests/integration/test_persona_scenarios.py::TestX2_플랫폼관리자_전체접근::test_admin_can_access_careconnect_dashboard PASSED [ 91%]
+tests/integration/test_persona_scenarios.py::TestX2_플랫폼관리자_전체접근::test_admin_can_view_careconnect_consents PASSED [ 92%]
+tests/integration/test_rbac.py::TestRBAC::test_parent_cannot_create_academy PASSED [ 92%]
+tests/integration/test_rbac.py::TestRBAC::test_driver_cannot_create_student PASSED [ 93%]
+tests/integration/test_rbac.py::TestRBAC::test_unauthenticated_request_rejected PASSED [ 94%]
+tests/integration/test_rbac.py::TestRBAC::test_academy_admin_can_create_academy PASSED [ 94%]
+tests/integration/test_student_crud.py::TestStudentCRUD::test_create_and_list_students PASSED [ 95%]
+tests/integration/test_student_crud.py::TestStudentCRUD::test_update_student PASSED [ 96%]
+tests/integration/test_student_crud.py::TestStudentCRUD::test_deactivate_student PASSED [ 97%]
+tests/integration/test_student_name_encryption.py::TestStudentNameEncryption::test_keyword_init_triggers_hybrid_property_setter PASSED [ 97%]
+tests/integration/test_student_name_encryption.py::TestStudentNameEncryption::test_unique_constraint_blocks_duplicate_same_guardian PASSED [ 98%]
+tests/integration/test_student_name_encryption.py::TestStudentNameEncryption::test_different_guardian_same_name_dob_allowed PASSED [ 99%]
+tests/integration/test_student_name_encryption.py::TestStudentNameEncryption::test_db_has_no_plaintext_name_column PASSED [100%]C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\_pytest\unraisableexception.py:33: RuntimeWarning: coroutine 'Connection._cancel' was never awaited
+  gc.collect()
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+
+
+================================== FAILURES ===================================
+_____________ TestTossWebhook.test_webhook_updates_payment_status _____________
+
+self = <tests.integration.test_billing_pg.TestTossWebhook object at 0x000002DFFA5BC190>
+client = <httpx.AsyncClient object at 0x000002DFFF49F020>
+db_session = <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x000002DFFF49EF10>
+parent_user = <app.modules.auth.models.User object at 0x000002DFFF4C9750>
+parent_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxOWE0MWQ2OC1hMDMyLTRhZTAtYmM4Ni1iYTlmY2I5M2ZhYzQiLCJyb2xlIjoicGFyZW50...LCJhdWQiOiJzYWZld2F5X2tpZHMiLCJleHAiOjE3ODA0ODI5MzQsInR5cGUiOiJhY2Nlc3MifQ.vnl12cjZWjqb32EdMfjTFuSqqL0ilDHxIcCbdMhbXVI'
+
+    async def test_webhook_updates_payment_status(
+        self, client, db_session, parent_user, parent_token,
+    ):
+        scenario = await _setup_invoice(db_session, parent_user)
+        invoice = scenario["invoice"]
+    
+        # Create a payment record directly
+        payment = Payment(
+            id=uuid.uuid4(),
+            invoice_id=invoice.id,
+            amount=25000,
+            method="카드",
+            pg_payment_key="wh_test_pk_123",
+            pg_order_id=f"SAFEWAY-{invoice.id}-abc12345",
+            pg_status="DONE",
+        )
+        db_session.add(payment)
+        invoice.status = "paid"
+        await db_session.flush()
+    
+        # Send cancel webhook
+        response = await client.post(
+            "/api/v1/billing/webhook",
+            json={
+                "event_type": "PAYMENT_STATUS_CHANGED",
+                "data": {
+                    "paymentKey": "wh_test_pk_123",
+                    "status": "CANCELED",
+                },
+            },
+        )
+>       assert response.status_code == 200
+E       assert 403 == 200
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests\integration\test_billing_pg.py:259: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"event": "Toss webhook secret not configured \u2014 rejecting webhook", "logger": "app.modules.billing.router", "level": "error", "timestamp": "2026-06-03T09:35:34.043294Z"}
+{"event": "ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured", "logger": "app.main", "level": "warning", "timestamp": "2026-06-03T09:35:34.043641Z"}
+{"method": "POST", "path": "/api/v1/billing/webhook", "status_code": 403, "duration_ms": 2.02, "event": "request", "logger": "request", "level": "info", "timestamp": "2026-06-03T09:35:34.043846Z"}
+------------------------------ Captured log call ------------------------------
+ERROR    app.modules.billing.router:router.py:283 Toss webhook secret not configured \u2014 rejecting webhook\nWARNING  app.main:main.py:295 ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured\nINFO     request:request_logging.py:26 {'method': 'POST', 'path': '/api/v1/billing/webhook', 'status_code': 403, 'duration_ms': 2.02, 'event': 'request', 'logger': 'request', 'level': 'info', 'timestamp': '2026-06-03T09:35:34.043846Z'}
+_____________ TestTossWebhook.test_webhook_empty_payload_ignored ______________
+
+self = <tests.integration.test_billing_pg.TestTossWebhook object at 0x000002DFFA5BC690>
+client = <httpx.AsyncClient object at 0x000002DFFF217350>
+
+    async def test_webhook_empty_payload_ignored(self, client):
+        response = await client.post(
+            "/api/v1/billing/webhook",
+            json={"event_type": None, "data": None},
+        )
+>       assert response.status_code == 200
+E       assert 403 == 200
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests\integration\test_billing_pg.py:268: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"event": "Toss webhook secret not configured \u2014 rejecting webhook", "logger": "app.modules.billing.router", "level": "error", "timestamp": "2026-06-03T09:35:34.434624Z"}
+{"event": "ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured", "logger": "app.main", "level": "warning", "timestamp": "2026-06-03T09:35:34.434964Z"}
+{"method": "POST", "path": "/api/v1/billing/webhook", "status_code": 403, "duration_ms": 1.43, "event": "request", "logger": "request", "level": "info", "timestamp": "2026-06-03T09:35:34.435165Z"}
+------------------------------ Captured log call ------------------------------
+ERROR    app.modules.billing.router:router.py:283 Toss webhook secret not configured \u2014 rejecting webhook\nWARNING  app.main:main.py:295 ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured\nINFO     request:request_logging.py:26 {'method': 'POST', 'path': '/api/v1/billing/webhook', 'status_code': 403, 'duration_ms': 1.43, 'event': 'request', 'logger': 'request', 'level': 'info', 'timestamp': '2026-06-03T09:35:34.435165Z'}
+__________ TestTossWebhook.test_webhook_unknown_payment_key_ignored ___________
+
+self = <tests.integration.test_billing_pg.TestTossWebhook object at 0x000002DFFA5ACB00>
+client = <httpx.AsyncClient object at 0x000002DFFF4CA150>
+
+    async def test_webhook_unknown_payment_key_ignored(self, client):
+        response = await client.post(
+            "/api/v1/billing/webhook",
+            json={
+                "event_type": "PAYMENT_STATUS_CHANGED",
+                "data": {
+                    "paymentKey": "unknown_key_999",
+                    "status": "DONE",
+                },
+            },
+        )
+>       assert response.status_code == 200
+E       assert 403 == 200
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests\integration\test_billing_pg.py:283: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"event": "Toss webhook secret not configured \u2014 rejecting webhook", "logger": "app.modules.billing.router", "level": "error", "timestamp": "2026-06-03T09:35:34.585817Z"}
+{"event": "ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured", "logger": "app.main", "level": "warning", "timestamp": "2026-06-03T09:35:34.586064Z"}
+{"method": "POST", "path": "/api/v1/billing/webhook", "status_code": 403, "duration_ms": 1.07, "event": "request", "logger": "request", "level": "info", "timestamp": "2026-06-03T09:35:34.586199Z"}
+------------------------------ Captured log call ------------------------------
+ERROR    app.modules.billing.router:router.py:283 Toss webhook secret not configured \u2014 rejecting webhook\nWARNING  app.main:main.py:295 ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured\nINFO     request:request_logging.py:26 {'method': 'POST', 'path': '/api/v1/billing/webhook', 'status_code': 403, 'duration_ms': 1.07, 'event': 'request', 'logger': 'request', 'level': 'info', 'timestamp': '2026-06-03T09:35:34.586199Z'}
+_____________ TestE2EHealthCheck.test_health_endpoint_returns_ok ______________
+
+self = <tests.integration.test_e2e_hardening.TestE2EHealthCheck object at 0x000002DFFF066350>
+client = <httpx.AsyncClient object at 0x000002DFFF856450>
+
+    async def test_health_endpoint_returns_ok(self, client: AsyncClient) -> None:
+        resp = await client.get("/health")
+        assert resp.status_code == 200
+        data = resp.json()
+>       assert data["status"] == "ok"
+E       AssertionError: assert 'degraded' == 'ok'
+E         
+E         - ok
+E         + degraded
+
+tests\integration\test_e2e_hardening.py:84: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"event": "Redis unavailable, falling back to NoOp (first hit on ping): Timeout connecting to server", "logger": "app.redis", "level": "warning", "timestamp": "2026-06-03T09:35:40.204892Z"}
+{"event": "Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000002DFFF793020>>", "logger": "sqlalchemy.pool.impl.AsyncAdaptedQueuePool", "level": "error", "timestamp": "2026-06-03T09:35:40.205813Z", "exception": "Traceback (most recent call last):\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\pool\\base.py\", line 373, in _close_connection\n    self._dialect.do_terminate(connection)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 1127, in do_terminate\n    dbapi_connection.terminate()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\connectors\\asyncio.py\", line 402, in terminate\n    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 132, in await_only\n    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501\n           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 196, in greenlet_spawn\n    value = await result\n            ^^^^^^^^^^^^\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 912, in _terminate_graceful_close\n    await self._connection.close(timeout=2)\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\asyncpg\\connection.py\", line 1513, in close\n    await self._protocol.close(timeout)\n  File \"asyncpg/protocol/protocol.pyx\", line 617, in close\n  File \"asyncpg/protocol/protocol.pyx\", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\asyncpg\\connection.py\", line 1682, in _cancel_current_command\n    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))\n                            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\jhryu\\python\\Lib\\asyncio\\base_events.py\", line 466, in create_task\n    self._check_closed()\n    ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\jhryu\\python\\Lib\\asyncio\\base_events.py\", line 550, in _check_closed\n    raise RuntimeError('Event loop is closed')\nRuntimeError: Event loop is closed"}
+------------------------------ Captured log call ------------------------------
+WARNING  app.redis:redis.py:207 Redis unavailable, falling back to NoOp (first hit on ping): Timeout connecting to server
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000002DFFF793020>>
+Traceback (most recent call last):
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\jhryu\python\Lib\asyncio\base_events.py", line 466, in create_task
+    self._check_closed()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\jhryu\python\Lib\asyncio\base_events.py", line 550, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+=========================== short test summary info ===========================
+FAILED tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_updates_payment_status
+FAILED tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_empty_payload_ignored
+FAILED tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_unknown_payment_key_ignored
+FAILED tests/integration/test_e2e_hardening.py::TestE2EHealthCheck::test_health_endpoint_returns_ok
+================== 4 failed, 134 passed in 148.29s (0:02:28) ==================

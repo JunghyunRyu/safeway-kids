@@ -7,8 +7,9 @@ from redis.asyncio import Redis
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.exceptions import NotFoundError
+from app.common.exceptions import NotFoundError, ValidationError
 from app.config import settings
+from app.core.gps_validation import MAX_VEHICLE_SPEED_MS, validate_gps_speed
 from app.modules.vehicle_telemetry.models import GpsHistory, LocationAccessLog, Vehicle, VehicleAssignment
 from app.modules.vehicle_telemetry.schemas import (
     GpsUpdateRequest,
@@ -156,10 +157,36 @@ async def update_gps(redis: Redis, request: GpsUpdateRequest) -> None:  # type: 
     2. Publish to Redis channel (for WebSocket subscribers)
     3. Buffer for batch write to PostgreSQL
     """
-    now = datetime.now(UTC).isoformat()
+    now_dt = datetime.now(UTC)
+    now = now_dt.isoformat()
     vehicle_key = f"vehicle:{request.vehicle_id}:gps"
     channel = f"vehicle:{request.vehicle_id}:gps_updates"
     buffer_key = f"gps_buffer:{request.vehicle_id}"
+
+    # G-01: 속도 기반 텔레포트 탐지 (직전 Redis 포인트 대비). 차량 임계 200km/h는
+    # GPS 지터로 초과되지 않으므로 하드 리젝트(422) 적용 — 명백한 스푸핑/오류 좌표 차단.
+    # 파싱 실패는 검증 skip, raise는 try 밖에서 (ValidationError가 삼켜지지 않도록).
+    speed_anomaly: float | None = None
+    prev_raw = await redis.get(vehicle_key)
+    if prev_raw:
+        try:
+            prev = json.loads(prev_raw)
+            prev_time = datetime.fromisoformat(prev["recorded_at"])
+            is_valid, speed_ms = validate_gps_speed(
+                prev["latitude"], prev["longitude"], prev_time,
+                request.latitude, request.longitude, now_dt,
+                max_speed_ms=MAX_VEHICLE_SPEED_MS,
+            )
+            if not is_valid:
+                speed_anomaly = speed_ms
+        except (KeyError, ValueError, TypeError):
+            speed_anomaly = None  # 직전 포인트 파싱 실패 시 속도 검증 skip
+    if speed_anomaly is not None:
+        logger.warning(
+            "[GPS TELEPORT] vehicle=%s speed=%.1f m/s — 좌표 거부",
+            request.vehicle_id, speed_anomaly,
+        )
+        raise ValidationError(detail="GPS 속도 이상 감지: 텔레포트 의심 좌표")
 
     location_data = {
         "vehicle_id": str(request.vehicle_id),

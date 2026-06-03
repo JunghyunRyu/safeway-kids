@@ -12,8 +12,10 @@ class RegisterFcmTokenRequest(BaseModel):
 
 
 class SosRequest(BaseModel):
-    latitude: float = Field(..., ge=-90, le=90, description="GPS 위도")
-    longitude: float = Field(..., ge=-180, le=180, description="GPS 경도")
+    # G-05/C-2: 위치는 nullable. 권한 거부/취득 실패 시 (0,0) 대신 null + location_unknown=True 전송.
+    latitude: float | None = Field(default=None, ge=-90, le=90, description="GPS 위도 (미확인 시 null)")
+    longitude: float | None = Field(default=None, ge=-180, le=180, description="GPS 경도 (미확인 시 null)")
+    location_unknown: bool = Field(default=False, description="위치 미확인 여부 (true면 관제에 주소 수동확인 유도)")
     sos_type: str = Field(default="emergency", description="SOS 유형")
     message: str | None = Field(default=None, max_length=500, description="추가 메시지")
 

@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
@@ -16,14 +16,57 @@ const SOS_TYPES = [
 // Set to true to enable when ready for production use.
 const SOS_ENABLED = true;
 
+const LOCATION_CACHE_INTERVAL_MS = 30_000;
+const MAX_RETRY_COUNT = 2;
+
 export default function SOSButton() {
   const { user } = useAuth();
   const isCrewRole = user?.role === "driver" || user?.role === "safety_escort";
 
+  const cachedLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const sendingRef = useRef(false);
+  const retryCountRef = useRef(0);
+
+  // Mount 시 30초 주기로 위치 캐싱 (permission granted일 때만)
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval>;
+
+    const cacheLocation = async () => {
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === "granted") {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          cachedLocationRef.current = {
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          };
+        }
+      } catch {
+        // 캐싱 실패 시 기존 캐시 유지
+      }
+    };
+
+    cacheLocation();
+    intervalId = setInterval(cacheLocation, LOCATION_CACHE_INTERVAL_MS);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
   const sendSos = useCallback(
     async (sosType: string, message?: string) => {
-      let latitude = 0;
-      let longitude = 0;
+      // 중복 탭 방지
+      if (sendingRef.current) return;
+      sendingRef.current = true;
+
+      // 최신 위치 시도(High accuracy), 실패 시 캐시 사용, 둘 다 없으면 null
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      let location_unknown = false;
+
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === "granted") {
@@ -34,21 +77,66 @@ export default function SOSButton() {
           longitude = loc.coords.longitude;
         }
       } catch {
-        // proceed without location
+        // High accuracy 실패 → 캐시로 폴백
+      }
+
+      if (latitude === null || longitude === null) {
+        if (cachedLocationRef.current !== null) {
+          latitude = cachedLocationRef.current.latitude;
+          longitude = cachedLocationRef.current.longitude;
+        } else {
+          location_unknown = true;
+        }
       }
 
       try {
         await apiClient.post("/notifications/sos", {
           latitude,
           longitude,
+          location_unknown,
           sos_type: sosType,
           message,
         });
-      } catch {
-        // even if API fails, still try to call 112
-      }
 
-      Linking.openURL("tel:112");
+        // API 성공 시에만 112 연결
+        retryCountRef.current = 0;
+        sendingRef.current = false;
+        Linking.openURL("tel:112");
+      } catch {
+        sendingRef.current = false;
+        retryCountRef.current += 1;
+        const canRetry = retryCountRef.current <= MAX_RETRY_COUNT;
+
+        Alert.alert(
+          "SOS 전송 실패",
+          "관리자에게 전달되지 않았습니다.\n재시도하거나 직접 112에 신고하세요.",
+          [
+            ...(canRetry
+              ? [
+                  {
+                    text: "재시도",
+                    onPress: () => sendSos(sosType, message),
+                  },
+                ]
+              : []),
+            {
+              text: "112 직접 신고",
+              style: "destructive" as const,
+              onPress: () => {
+                retryCountRef.current = 0;
+                Linking.openURL("tel:112");
+              },
+            },
+            {
+              text: "취소",
+              style: "cancel" as const,
+              onPress: () => {
+                // 재시도 횟수 유지 (다음 탭에서 이어서 카운트)
+              },
+            },
+          ]
+        );
+      }
     },
     []
   );

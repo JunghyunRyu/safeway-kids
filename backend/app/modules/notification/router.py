@@ -89,9 +89,20 @@ async def sos_alert(
     result = await db.execute(admin_stmt)
     admins = result.scalars().all()
 
+    # G-05/C-2: 위치 미확인 시 (0,0) 좌표 대신 명시적 "위치 미확인" 표기
+    location_known = (
+        not body.location_unknown
+        and body.latitude is not None
+        and body.longitude is not None
+    )
+    location_str = (
+        f"위치: ({body.latitude:.6f}, {body.longitude:.6f})"
+        if location_known
+        else "위치: 미확인 (주소 수동 확인 필요)"
+    )
     sos_msg = (
         f"[SOS 긴급] {current_user.name}({current_user.role.value if hasattr(current_user.role, 'value') else current_user.role}) "
-        f"위치: ({body.latitude:.6f}, {body.longitude:.6f}) "
+        f"{location_str} "
         f"유형: {body.sos_type}"
     )
     if body.message:
@@ -104,7 +115,12 @@ async def sos_alert(
                     device_token=admin.fcm_token,
                     title="🚨 SOS 긴급 호출",
                     body=sos_msg,
-                    data={"type": "sos", "latitude": str(body.latitude), "longitude": str(body.longitude)},
+                    data={
+                        "type": "sos",
+                        "latitude": str(body.latitude) if body.latitude is not None else "",
+                        "longitude": str(body.longitude) if body.longitude is not None else "",
+                        "location_unknown": str(not location_known).lower(),
+                    },
                 )
             if admin.phone and not admin.phone.startswith("kakao_"):
                 await notif_service.send_critical_alert_sms(admin.phone, sos_msg)

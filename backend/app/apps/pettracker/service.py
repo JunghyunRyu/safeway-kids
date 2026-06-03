@@ -33,6 +33,7 @@ from app.apps.pettracker.schemas import (
     WalkerSearchParams,
 )
 from app.common.exceptions import ForbiddenError, NotFoundError, ValidationError
+from app.core.gps_validation import MAX_WALK_SPEED_MS, validate_gps_accuracy, validate_gps_speed
 from app.core.models import CommissionRecord, WalletTransaction
 from app.modules.auth.models import APP_PETTRACKER
 
@@ -427,13 +428,68 @@ async def end_walk(db: AsyncSession, session_id: uuid.UUID, walker_id: uuid.UUID
     return session
 
 
-async def record_gps(db: AsyncSession, session_id: uuid.UUID, point: GpsPoint) -> None:
+async def _get_owned_walk_session(
+    db: AsyncSession, session_id: uuid.UUID, walker_id: uuid.UUID
+) -> WalkSession:
+    """G-21: 세션 소유권 검증. 세션이 없으면 404, 소유자가 아니면 403.
+
+    워커 토큰을 가진 임의 사용자가 타인의 session_id에 GPS를 주입하는 것을 차단한다.
+    """
+    session = (await db.execute(
+        select(WalkSession).where(WalkSession.id == session_id)
+    )).scalar_one_or_none()
+    if session is None:
+        raise NotFoundError(detail="산책 세션을 찾을 수 없습니다")
+    if session.walker_id != walker_id:
+        logger.warning(
+            "[PT AUTHZ] GPS 주입 시도 차단: session=%s owner=%s requester=%s",
+            session_id, session.walker_id, walker_id,
+        )
+        raise ForbiddenError(detail="해당 산책 세션의 소유자가 아닙니다")
+    return session
+
+
+async def record_gps(
+    db: AsyncSession, session_id: uuid.UUID, point: GpsPoint, walker_id: uuid.UUID
+) -> None:
     """Record a single GPS point for a walk session.
 
+    G-21: walker_id로 세션 소유권을 먼저 검증한다.
+    G-01: 직전 포인트 대비 속도·정확도 이상을 검증한다 (현재는 로그온리 — 아래 참조).
     DB 영속 후 Redis pub/sub 채널 `pt:walk:{session_id}:updates`에 발행.
     Publish 실패는 영속을 깨지 않음 (fail-soft).
     Gap Note: artifacts/gap-notes/2026-04-30-record-gps-publish-missing.md
+    Gap Note: artifacts/gap-notes/2026-06-03-gps-speed-validation-log-only.md (도보 임계 로그온리 사유)
     """
+    # G-21: 소유권 검증 (반환 세션을 polyline 갱신에 재사용)
+    walk_session = await _get_owned_walk_session(db, session_id, walker_id)
+
+    # G-01: 정확도 검증 — 도심 GPS 정확도 변동이 커 현재는 로그온리(거부하지 않음).
+    if not validate_gps_accuracy(point.accuracy, threshold=30.0):
+        logger.warning(
+            "[GPS ACCURACY] session=%s accuracy=%.1fm > 30m (로그온리)",
+            session_id, point.accuracy,
+        )
+
+    # G-01: 속도 기반 텔레포트 탐지 — 직전 DB 포인트 대비. GPS 지터 false-positive 회피 위해 로그온리.
+    last_point = (await db.execute(
+        select(WalkGpsHistory)
+        .where(WalkGpsHistory.session_id == session_id)
+        .order_by(WalkGpsHistory.recorded_at.desc())
+        .limit(1)
+    )).scalar_one_or_none()
+    if last_point is not None:
+        is_valid, speed_ms = validate_gps_speed(
+            last_point.latitude, last_point.longitude, last_point.recorded_at,
+            point.latitude, point.longitude, point.recorded_at,
+            max_speed_ms=MAX_WALK_SPEED_MS,
+        )
+        if not is_valid:
+            logger.warning(
+                "[GPS TELEPORT] session=%s speed=%.1f m/s 도보 임계 초과 (로그온리)",
+                session_id, speed_ms,
+            )
+
     gps = WalkGpsHistory(
         session_id=session_id,
         latitude=point.latitude,
@@ -446,7 +502,6 @@ async def record_gps(db: AsyncSession, session_id: uuid.UUID, point: GpsPoint) -
     db.add(gps)
     await db.flush()
 
-    walk_session = await db.get(WalkSession, session_id)
     if walk_session is not None:
         polyline = list(walk_session.route_polyline) if walk_session.route_polyline else []
         polyline.append([point.latitude, point.longitude])

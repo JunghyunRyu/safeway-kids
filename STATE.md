@@ -3,7 +3,7 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-05-22 (v12 — P1-3 일부: WalkPhoto 모델 + 마이그레이션 `f1a3c5b7d9e2` + 단위 테스트 8/8 PASS. 회귀 0 (백엔드 214 passed / 4 fail = KI-2 Toss 3 + KI-3 health 1 flaky). alembic upgrade/downgrade 라운드트립 PASS. 커밋 `0d5ea26`. PortOne v2 mock은 P1-3 잔여. v11 anchor: P1-2 ai 모듈 / v9 anchor: 5/15 modoo 제출)
+**Last updated**: 2026-06-03 (v13 — 12일 갭 복귀 후 **오늘자 재검증(VERIFIED)**: 백엔드 pytest **215 passed / 3 failed** (197.71s, 3 fail = KI-2 Toss webhook only, 회귀 0 — KI-3 health flaky는 이번 run 통과) + mobile tsc **0 errors** (5.9.3, exit 0). 코드는 커밋 `39a70ad`에서 무변경(read-only 복귀). 증거: `artifacts/verification/2026-06-03-state-reverification.md`. 코드 작업·진행 변화 없음 — phase·blocker·critical path 전부 5/22 v12와 동일. v12 anchor: P1-3 일부 WalkPhoto 모델+마이그 `f1a3c5b7d9e2`+커밋 `0d5ea26`, PortOne v2 mock은 P1-3 잔여 / v9 anchor: 5/15 modoo 제출)
 **Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말 예상)** + PT V1.0 출시 reschedule (7월 말~8월 초) + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
 **Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료(v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임된 상태. 6/15까지 본업 사이 가벼운 P1 작업만, 6/15 이후 Track 2 본격 ramp-up
 **Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**

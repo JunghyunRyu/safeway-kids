@@ -1,0 +1,164 @@
+.......FFF...................F.......................................... [ 44%]
+........................................................................ [ 88%]
+..................                                                       [100%]C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\_pytest\unraisableexception.py:33: RuntimeWarning: coroutine 'Connection._cancel' was never awaited
+  gc.collect()
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+
+================================== FAILURES ===================================
+_____________ TestTossWebhook.test_webhook_updates_payment_status _____________
+
+self = <tests.integration.test_billing_pg.TestTossWebhook object at 0x00000247FF118410>
+client = <httpx.AsyncClient object at 0x000002478F04F460>
+db_session = <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x000002478F04F350>
+parent_user = <app.modules.auth.models.User object at 0x000002478F06A350>
+parent_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjZjI0MTg1Ni0wZjg0LTRiNmItOTM5YS1jNTM1NjFiMTBlNGUiLCJyb2xlIjoicGFyZW50...LCJhdWQiOiJzYWZld2F5X2tpZHMiLCJleHAiOjE3ODA0ODc5NTgsInR5cGUiOiJhY2Nlc3MifQ.3KbPnBAMmTovRhkMBqC2l9Vu_iGhQkStht5nI7NB27c'
+
+    async def test_webhook_updates_payment_status(
+        self, client, db_session, parent_user, parent_token,
+    ):
+        scenario = await _setup_invoice(db_session, parent_user)
+        invoice = scenario["invoice"]
+    
+        # Create a payment record directly
+        payment = Payment(
+            id=uuid.uuid4(),
+            invoice_id=invoice.id,
+            amount=25000,
+            method="Ä«µå",
+            pg_payment_key="wh_test_pk_123",
+            pg_order_id=f"SAFEWAY-{invoice.id}-abc12345",
+            pg_status="DONE",
+        )
+        db_session.add(payment)
+        invoice.status = "paid"
+        await db_session.flush()
+    
+        # Send cancel webhook
+        response = await client.post(
+            "/api/v1/billing/webhook",
+            json={
+                "event_type": "PAYMENT_STATUS_CHANGED",
+                "data": {
+                    "paymentKey": "wh_test_pk_123",
+                    "status": "CANCELED",
+                },
+            },
+        )
+>       assert response.status_code == 200
+E       assert 403 == 200
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests\integration\test_billing_pg.py:259: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"event": "Toss webhook secret not configured \u2014 rejecting webhook", "logger": "app.modules.billing.router", "level": "error", "timestamp": "2026-06-03T10:59:18.771722Z"}
+{"event": "ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured", "logger": "app.main", "level": "warning", "timestamp": "2026-06-03T10:59:18.771973Z"}
+{"method": "POST", "path": "/api/v1/billing/webhook", "status_code": 403, "duration_ms": 1.32, "event": "request", "logger": "request", "level": "info", "timestamp": "2026-06-03T10:59:18.772104Z"}
+------------------------------ Captured log call ------------------------------
+ERROR    app.modules.billing.router:router.py:283 Toss webhook secret not configured \u2014 rejecting webhook\nWARNING  app.main:main.py:295 ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured\nINFO     request:request_logging.py:26 {'method': 'POST', 'path': '/api/v1/billing/webhook', 'status_code': 403, 'duration_ms': 1.32, 'event': 'request', 'logger': 'request', 'level': 'info', 'timestamp': '2026-06-03T10:59:18.772104Z'}
+_____________ TestTossWebhook.test_webhook_empty_payload_ignored ______________
+
+self = <tests.integration.test_billing_pg.TestTossWebhook object at 0x00000247FF118910>
+client = <httpx.AsyncClient object at 0x000002478F069E50>
+
+    async def test_webhook_empty_payload_ignored(self, client):
+        response = await client.post(
+            "/api/v1/billing/webhook",
+            json={"event_type": None, "data": None},
+        )
+>       assert response.status_code == 200
+E       assert 403 == 200
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests\integration\test_billing_pg.py:268: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"event": "Toss webhook secret not configured \u2014 rejecting webhook", "logger": "app.modules.billing.router", "level": "error", "timestamp": "2026-06-03T10:59:19.064717Z"}
+{"event": "ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured", "logger": "app.main", "level": "warning", "timestamp": "2026-06-03T10:59:19.064957Z"}
+{"method": "POST", "path": "/api/v1/billing/webhook", "status_code": 403, "duration_ms": 1.02, "event": "request", "logger": "request", "level": "info", "timestamp": "2026-06-03T10:59:19.065085Z"}
+------------------------------ Captured log call ------------------------------
+ERROR    app.modules.billing.router:router.py:283 Toss webhook secret not configured \u2014 rejecting webhook\nWARNING  app.main:main.py:295 ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured\nINFO     request:request_logging.py:26 {'method': 'POST', 'path': '/api/v1/billing/webhook', 'status_code': 403, 'duration_ms': 1.02, 'event': 'request', 'logger': 'request', 'level': 'info', 'timestamp': '2026-06-03T10:59:19.065085Z'}
+__________ TestTossWebhook.test_webhook_unknown_payment_key_ignored ___________
+
+self = <tests.integration.test_billing_pg.TestTossWebhook object at 0x00000247FF110B00>
+client = <httpx.AsyncClient object at 0x000002478F06B950>
+
+    async def test_webhook_unknown_payment_key_ignored(self, client):
+        response = await client.post(
+            "/api/v1/billing/webhook",
+            json={
+                "event_type": "PAYMENT_STATUS_CHANGED",
+                "data": {
+                    "paymentKey": "unknown_key_999",
+                    "status": "DONE",
+                },
+            },
+        )
+>       assert response.status_code == 200
+E       assert 403 == 200
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests\integration\test_billing_pg.py:283: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"event": "Toss webhook secret not configured \u2014 rejecting webhook", "logger": "app.modules.billing.router", "level": "error", "timestamp": "2026-06-03T10:59:19.256414Z"}
+{"event": "ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured", "logger": "app.main", "level": "warning", "timestamp": "2026-06-03T10:59:19.256659Z"}
+{"method": "POST", "path": "/api/v1/billing/webhook", "status_code": 403, "duration_ms": 1.04, "event": "request", "logger": "request", "level": "info", "timestamp": "2026-06-03T10:59:19.256793Z"}
+------------------------------ Captured log call ------------------------------
+ERROR    app.modules.billing.router:router.py:283 Toss webhook secret not configured \u2014 rejecting webhook\nWARNING  app.main:main.py:295 ACCESS_DENIED path=/api/v1/billing/webhook method=POST ip=127.0.0.1 user=None detail=Webhook verification not configured\nINFO     request:request_logging.py:26 {'method': 'POST', 'path': '/api/v1/billing/webhook', 'status_code': 403, 'duration_ms': 1.04, 'event': 'request', 'logger': 'request', 'level': 'info', 'timestamp': '2026-06-03T10:59:19.256793Z'}
+_____________ TestE2EHealthCheck.test_health_endpoint_returns_ok ______________
+
+self = <tests.integration.test_e2e_hardening.TestE2EHealthCheck object at 0x00000247FFBA25D0>
+client = <httpx.AsyncClient object at 0x000002478F402F90>
+
+    async def test_health_endpoint_returns_ok(self, client: AsyncClient) -> None:
+        resp = await client.get("/health")
+        assert resp.status_code == 200
+        data = resp.json()
+>       assert data["status"] == "ok"
+E       AssertionError: assert 'degraded' == 'ok'
+E         
+E         - ok
+E         + degraded
+
+tests\integration\test_e2e_hardening.py:84: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"event": "Redis unavailable, falling back to NoOp (first hit on ping): Timeout connecting to server", "logger": "app.redis", "level": "warning", "timestamp": "2026-06-03T10:59:24.941690Z"}
+{"event": "Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000002478F3CC230>>", "logger": "sqlalchemy.pool.impl.AsyncAdaptedQueuePool", "level": "error", "timestamp": "2026-06-03T10:59:24.942388Z", "exception": "Traceback (most recent call last):\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\pool\\base.py\", line 373, in _close_connection\n    self._dialect.do_terminate(connection)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 1127, in do_terminate\n    dbapi_connection.terminate()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\connectors\\asyncio.py\", line 402, in terminate\n    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 132, in await_only\n    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501\n           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 196, in greenlet_spawn\n    value = await result\n            ^^^^^^^^^^^^\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 912, in _terminate_graceful_close\n    await self._connection.close(timeout=2)\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\asyncpg\\connection.py\", line 1513, in close\n    await self._protocol.close(timeout)\n  File \"asyncpg/protocol/protocol.pyx\", line 617, in close\n  File \"asyncpg/protocol/protocol.pyx\", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel\n  File \"C:\\jhryu\\01_project\\safeway_kids\\backend\\.venv\\Lib\\site-packages\\asyncpg\\connection.py\", line 1682, in _cancel_current_command\n    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))\n                            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\jhryu\\python\\Lib\\asyncio\\base_events.py\", line 466, in create_task\n    self._check_closed()\n    ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\jhryu\\python\\Lib\\asyncio\\base_events.py\", line 550, in _check_closed\n    raise RuntimeError('Event loop is closed')\nRuntimeError: Event loop is closed"}
+------------------------------ Captured log call ------------------------------
+WARNING  app.redis:redis.py:207 Redis unavailable, falling back to NoOp (first hit on ping): Timeout connecting to server
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000002478F3CC230>>
+Traceback (most recent call last):
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+  File "C:\jhryu\01_project\safeway_kids\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\jhryu\python\Lib\asyncio\base_events.py", line 466, in create_task
+    self._check_closed()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\jhryu\python\Lib\asyncio\base_events.py", line 550, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+=========================== short test summary info ===========================
+FAILED tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_updates_payment_status
+FAILED tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_empty_payload_ignored
+FAILED tests/integration/test_billing_pg.py::TestTossWebhook::test_webhook_unknown_payment_key_ignored
+FAILED tests/integration/test_e2e_hardening.py::TestE2EHealthCheck::test_health_endpoint_returns_ok
+4 failed, 158 passed in 151.92s (0:02:31)

@@ -133,6 +133,22 @@ class GpsPoint(BaseModel):
     recorded_at: datetime
 
 
+# ── PT SOS (M-02) ────────────────────────────────────────────────
+
+class PtSosRequest(BaseModel):
+    """PT 산책 긴급 신고. 위치는 nullable (G-05 동일 정책)."""
+    session_id: uuid.UUID | None = Field(default=None, description="산책 세션 (있으면 컨텍스트 포함)")
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+    location_unknown: bool = Field(default=False)
+    message: str | None = Field(default=None, max_length=500)
+
+
+class PtSosResponse(BaseModel):
+    success: bool
+    emergency_numbers: dict = Field(default_factory=lambda: {"police": "112", "fire": "119"})
+
+
 class WalkReportResponse(BaseModel):
     session_id: uuid.UUID
     booking_id: uuid.UUID
