@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, FlatList, Pressable, RefreshControl, Ale
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
-import { listPets, type Pet } from '../../api/pets';
+import { listPets, deletePet, type Pet } from '../../api/pets';
 
 export default function MyPetsScreen({ navigation }: any) {
   const [pets, setPets] = useState<Pet[]>([]);
@@ -26,10 +26,33 @@ export default function MyPetsScreen({ navigation }: any) {
 
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
+  const handleDelete = (pet: Pet) => {
+    Alert.alert('반려동물 삭제', `${pet.name}을(를) 목록에서 삭제할까요?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deletePet(pet.id);
+            await load();
+          } catch {
+            Alert.alert('오류', '삭제에 실패했습니다. 다시 시도해 주세요.');
+          }
+        },
+      },
+    ]);
+  };
+
   const renderPet = ({ item }: { item: Pet }) => {
     const photoUrl = (item as any).photo_url as string | undefined;
     return (
-    <View style={styles.card}>
+    <Pressable
+      style={styles.card}
+      onPress={() => navigation.navigate('PetRegistration', { pet: item })}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.name} 정보 수정`}
+    >
       <View style={styles.avatarBox}>
         {photoUrl ? (
           <Image source={{ uri: photoUrl }} style={styles.avatarImg} />
@@ -45,7 +68,16 @@ export default function MyPetsScreen({ navigation }: any) {
         </Text>
         {item.temperament ? <Text style={styles.tag}>{item.temperament}</Text> : null}
       </View>
-    </View>
+      <Pressable
+        onPress={() => handleDelete(item)}
+        hitSlop={10}
+        style={styles.deleteBtn}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name} 삭제`}
+      >
+        <Ionicons name="trash-outline" size={20} color={Colors.danger} />
+      </Pressable>
+    </Pressable>
     );
   };
 
@@ -100,6 +132,7 @@ const styles = StyleSheet.create({
   },
   avatarEmoji: { fontSize: 28 },
   avatarImg: { width: 56, height: 56, borderRadius: 28 },
+  deleteBtn: { padding: 6, marginLeft: Spacing.sm },
   cardContent: { flex: 1 },
   name: { fontSize: Typography.sizes.md, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
   detail: { fontSize: Typography.sizes.sm, color: Colors.textSecondary, marginTop: 2 },

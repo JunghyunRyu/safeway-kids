@@ -42,3 +42,7 @@ export async function updatePet(petId: string, data: Partial<PetCreateData>): Pr
   const resp = await apiClient.put(`/pt/pets/${petId}`, data);
   return resp.data;
 }
+
+export async function deletePet(petId: string): Promise<void> {
+  await apiClient.delete(`/pt/pets/${petId}`);
+}

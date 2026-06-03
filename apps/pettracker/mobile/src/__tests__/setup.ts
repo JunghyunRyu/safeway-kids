@@ -215,6 +215,8 @@ jest.mock('../api/bookings', () => ({
 jest.mock('../api/pets', () => ({
   createPet: jest.fn().mockResolvedValue({ id: 'p-1' }),
   listPets: jest.fn().mockResolvedValue([]),
+  updatePet: jest.fn().mockResolvedValue({ id: 'p-1' }),
+  deletePet: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../api/walks', () => ({

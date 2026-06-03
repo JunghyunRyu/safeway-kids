@@ -1,28 +1,62 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, Image, StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
-import { createPet } from '../../api/pets';
+import { createPet, updatePet, type Pet } from '../../api/pets';
+import { getMe } from '@safeway/core-mobile/api/auth';
+import { useImageUpload } from '@safeway/core-mobile/hooks/useImageUpload';
 
-export default function PetRegistrationScreen({ navigation }: any) {
-  const [name, setName] = useState('');
-  const [species, setSpecies] = useState<'dog' | 'cat' | null>(null);
-  const [breed, setBreed] = useState('');
-  const [weightKg, setWeightKg] = useState('');
-  const [medicalNotes, setMedicalNotes] = useState('');
-  const [temperaments, setTemperaments] = useState<string[]>([]);
-  const [specialNeeds, setSpecialNeeds] = useState('');
+export default function PetRegistrationScreen({ navigation, route }: any) {
+  const editingPet: Pet | undefined = route?.params?.pet;
+  const isEdit = !!editingPet;
+
+  const [name, setName] = useState(editingPet?.name ?? '');
+  const [species, setSpecies] = useState<'dog' | 'cat' | null>(
+    editingPet ? (editingPet.species === 'cat' ? 'cat' : 'dog') : null,
+  );
+  const [breed, setBreed] = useState(editingPet?.breed ?? '');
+  const [weightKg, setWeightKg] = useState(editingPet?.weight_kg ? String(editingPet.weight_kg) : '');
+  const [medicalNotes, setMedicalNotes] = useState(editingPet?.medical_notes ?? '');
+  const [temperaments, setTemperaments] = useState<string[]>(
+    editingPet?.temperament ? editingPet.temperament.split(',').map((t) => t.trim()).filter(Boolean) : [],
+  );
+  const [specialNeeds, setSpecialNeeds] = useState(editingPet?.special_needs ?? '');
+  const [photoUri, setPhotoUri] = useState<string | null>((editingPet as any)?.photo_url ?? null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>((editingPet as any)?.photo_url ?? null);
   const [loading, setLoading] = useState(false);
+  const { upload: uploadImage, uploading: photoUploading } = useImageUpload();
 
   const toggleTemperament = (t: string) =>
     setTemperaments((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+
+  const handlePhoto = useCallback(async () => {
+    if (photoUploading) return;
+    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    setPhotoUri(asset.uri);
+    setPhotoUrl(null);
+    try {
+      const me = await getMe();
+      const res = await uploadImage({
+        fileUri: asset.uri,
+        contentType: asset.mimeType ?? 'image/jpeg',
+        entityType: 'pet_photo',
+        userId: me.id,
+      });
+      setPhotoUrl(res.downloadUrl);
+    } catch {
+      Alert.alert('업로드 실패', '사진 업로드에 실패했습니다. 다시 시도해 주세요.');
+    }
+  }, [photoUploading, uploadImage]);
 
   const handleSubmit = async () => {
     if (!name.trim()) { Alert.alert('오류', '이름을 입력해 주세요'); return; }
     if (!species) { Alert.alert('오류', '강아지 또는 고양이를 선택해 주세요'); return; }
     setLoading(true);
     try {
-      await createPet({
+      const payload = {
         name: name.trim(),
         species,
         breed: breed || undefined,
@@ -30,10 +64,17 @@ export default function PetRegistrationScreen({ navigation }: any) {
         medical_notes: medicalNotes || undefined,
         temperament: temperaments.length ? temperaments.join(', ') : undefined,
         special_needs: specialNeeds || undefined,
-      });
-      Alert.alert('등록 완료', `${name}이(가) 등록되었습니다!`);
+        photo_url: photoUrl || undefined,
+      };
+      if (isEdit && editingPet) {
+        await updatePet(editingPet.id, payload);
+        Alert.alert('수정 완료', `${name} 정보가 수정되었습니다.`);
+      } else {
+        await createPet(payload);
+        Alert.alert('등록 완료', `${name}이(가) 등록되었습니다!`);
+      }
       navigation.goBack();
-    } catch { Alert.alert('오류', '등록에 실패했습니다'); }
+    } catch { Alert.alert('오류', isEdit ? '수정에 실패했습니다' : '등록에 실패했습니다'); }
     setLoading(false);
   };
 
@@ -45,8 +86,23 @@ export default function PetRegistrationScreen({ navigation }: any) {
         <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="뒤로 가기" hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>반려동물 등록</Text>
+        <Text style={styles.title}>{isEdit ? '반려동물 수정' : '반려동물 등록'}</Text>
       </View>
+
+      {/* 프로필 사진 (O-36) */}
+      <Pressable style={styles.photoPicker} onPress={handlePhoto} accessibilityRole="button" accessibilityLabel="반려동물 사진 선택">
+        {photoUri ? (
+          <Image source={{ uri: photoUrl ?? photoUri }} style={styles.photoImg} />
+        ) : (
+          <View style={styles.photoPlaceholder}>
+            <Ionicons name="camera" size={28} color={Colors.textDisabled} />
+            <Text style={styles.photoHint}>사진 추가</Text>
+          </View>
+        )}
+        {photoUploading && (
+          <View style={styles.photoOverlay}><ActivityIndicator color="#fff" /></View>
+        )}
+      </Pressable>
 
       {/* Species selector — 초기엔 둘 다 정상 표시, 선택 후 비선택 항목만 흐리게 (O-20) */}
       <View style={styles.speciesRow}>
@@ -106,8 +162,8 @@ export default function PetRegistrationScreen({ navigation }: any) {
       <Text style={styles.label}>특이사항</Text>
       <TextInput style={[styles.input, styles.multiline]} value={specialNeeds} onChangeText={setSpecialNeeds} placeholder="워커가 알아야 할 점" multiline numberOfLines={3} placeholderTextColor={Colors.textDisabled} />
 
-      <Pressable style={styles.submitBtn} onPress={handleSubmit} disabled={loading} accessibilityRole="button" accessibilityLabel="등록하기">
-        <Text style={styles.submitText}>{loading ? '등록 중...' : '등록하기'}</Text>
+      <Pressable style={styles.submitBtn} onPress={handleSubmit} disabled={loading} accessibilityRole="button" accessibilityLabel={isEdit ? '수정하기' : '등록하기'}>
+        <Text style={styles.submitText}>{loading ? '저장 중...' : isEdit ? '수정하기' : '등록하기'}</Text>
       </Pressable>
 
       <View style={{ height: 40 }} />
@@ -119,6 +175,18 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.base, paddingTop: 60, paddingBottom: Spacing.md },
   title: { fontSize: Typography.sizes.xl, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
+  photoPicker: { alignSelf: 'center', marginBottom: Spacing.lg, width: 96, height: 96, borderRadius: 48, overflow: 'hidden' },
+  photoImg: { width: 96, height: 96, borderRadius: 48 },
+  photoPlaceholder: {
+    width: 96, height: 96, borderRadius: 48, backgroundColor: Colors.surface,
+    borderWidth: 1, borderColor: Colors.borderLight, borderStyle: 'dashed',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  photoHint: { fontSize: Typography.sizes.xs, color: Colors.textDisabled, marginTop: 2 },
+  photoOverlay: {
+    position: 'absolute', top: 0, left: 0, width: 96, height: 96, borderRadius: 48,
+    backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center',
+  },
   speciesRow: { flexDirection: 'row', gap: Spacing.md, paddingHorizontal: Spacing.base, marginBottom: Spacing.lg },
   speciesBtn: { flex: 1, alignItems: 'center', padding: Spacing.lg, backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 2, borderColor: Colors.borderLight },
   speciesBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
