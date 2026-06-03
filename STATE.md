@@ -3,7 +3,7 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = `artifacts/reports/` Milestone Reports / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-06-04 (v15 — **PT 모바일 UX 감사 86건 중 84건 구현·검증 (커밋 `d47ecc3`…`f93a965` 8커밋)** + **CLAUDE.md 316→81줄 최적화 `d4fbd48`**. 3 ux-advocate 병렬 감사→Tech Spec→8 마일스톤(프론트 26화면 + 백엔드 M-D). 검증: PT tsc 0×8·jest 20/20×8, 백엔드 pytest 117 passed, 회귀 0. P0 10건 전부. 사용자 "모두 구현"=D-8 명시 오버라이드. 미완 2건=O-02 size필터·O-21 펫편집삭제(스키마/엔드포인트 의존, 출시 차단급 아님). 리포트: `artifacts/reports/2026-06-03-pt-mobile-ux-remediation-milestone.md`. v14 anchor: GPS/SOS 안전핵심 6건 `61b03aa`)
+**Last updated**: 2026-06-04 (v16 — **PT 모바일 UX 감사 86/86 전건 구현·검증 완료** (커밋 `d47ecc3`…`e1516c0` 11커밋) + **CLAUDE.md 316→81줄 최적화 `d4fbd48`**. 3 ux-advocate 병렬 감사→Tech Spec→8 마일스톤(프론트 26화면+백엔드 M-D)→마지막 2건(O-02 size필터: WalkerQualification.accepted_sizes+Alembic `b3d9f1a2c5e4`+search 필터 / O-21 펫편집삭제: DELETE pets+MyPets UI / O-36 펫사진: PetRegistration 업로드). 검증: PT tsc 0·jest 20/20, 백엔드 pytest 117 passed, alembic 단일head, 회귀 0. P0 10건 전부. 사용자 "모두 구현"=D-8 명시 오버라이드. 리포트: `artifacts/reports/2026-06-03-pt-mobile-ux-remediation-milestone.md`. v14 anchor: GPS/SOS 안전핵심 6건 `61b03aa`)
 **Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말 예상)** + PT V1.0 출시 reschedule (7월 말~8월 초) + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
 **Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료(v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임된 상태. 6/15까지 본업 사이 가벼운 P1 작업만, 6/15 이후 Track 2 본격 ramp-up
 **Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**
@@ -74,7 +74,7 @@
 - **루넨랩스**: 사업자등록 1R 통과 후 진행 / lunenlabs.com LIVE 유지
 
 ## Latest Handoff
-- [`artifacts/handoffs/2026-06-04-session-handoff.md`](artifacts/handoffs/2026-06-04-session-handoff.md) — **PT UX 86건 중 84건 구현·검증 (8커밋) + CLAUDE.md 최적화**. 다음 first step = 남은 2건(O-21 펫편집삭제 / O-02 size필터, 출시 차단급 아님) 택1 또는 modoo 1R 대기 복귀
+- [`artifacts/handoffs/2026-06-04-session-handoff.md`](artifacts/handoffs/2026-06-04-session-handoff.md) — **PT UX 86/86 전건 완료 (11커밋) + CLAUDE.md 최적화**. 다음 first step = PT UX 마일스톤 종료 확정 또는 modoo 1R 대기 워크스트림 복귀 (UX 잔여 0)
 - [`artifacts/handoffs/2026-06-03-session-handoff.md`](artifacts/handoffs/2026-06-03-session-handoff.md) — GPS/SOS 안전핵심 6건 커밋 `61b03aa`, 회귀 0. 다음 first step = (1)마일스톤 종료 또는 (2)OQ-5 G-03 배포이력 사실확인 또는 (3)SafeWay 재동결 결정
 - [`artifacts/handoffs/2026-05-22-session-handoff-v3.md`](artifacts/handoffs/2026-05-22-session-handoff-v3.md) — P1-3 일부(WalkPhoto 모델+마이그) PASS·커밋
 - [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS

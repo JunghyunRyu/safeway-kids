@@ -44,11 +44,13 @@ PetTracker 모바일 **전 26개 화면 + 3 네비게이터 + theme + 4 API 모�
 
 `Pet.photo_url`·`WalkSession.walker_memo`·`arrival_photo_url`은 모델에 이미 존재 → 마이그 불필요.
 
-## 진짜 미완료 (2건 — 스키마/엔드포인트 의존)
-| 항목 | 차단 사유 | 다음 작업 |
+## 마지막 2건 완료 (2026-06-04, 커밋 `d5aaca7`·`e1516c0`) → **86/86 전건 완료**
+| 항목 | 구현 | 검증 |
 |---|---|---|
-| O-02 견종 size 필터 | 워커 "수용 견종 크기" 모델 필드 부재 | `WalkerQualification.accepted_sizes` 추가 + 마이그 + search_walkers 필터 (FE는 size param 전달 준비됨) |
-| O-21 MyPets 편집/삭제 | `DELETE/PATCH /pt/pets/{id}` 미연결 (PetUpdate 스키마는 존재) | pets router 엔드포인트 + api/pets.ts + MyPets 스와이프 삭제 UI |
+| O-02 견종 size 필터 | `WalkerQualification.accepted_sizes`(JSON) + Alembic `b3d9f1a2c5e4`(hand-write) + search_walkers 필터(미지정=모든크기) + WalkerSearchParams/router size param | pytest 117, alembic 단일head |
+| O-21 MyPets 편집/삭제 | DELETE /pt/pets/{id} 소프트삭제+소유권검증, MyPets 카드탭→편집·휴지통→삭제, PetRegistration 편집모드+사진업로드(O-36) | tsc 0, jest 20/20 |
+
+> O-36 펫 사진도 함께 완료: `Pet.photo_url`·`PetUpdate.photo_url` 기존 + PetRegistration 이미지 업로드(useImageUpload) + MyPets/SearchScreen 표시.
 
 ## 잔여 리스크
 - 백엔드 미반영 시 워커명/리뷰/필터가 placeholder 상태 (기능 동작엔 무해, UX 미완)

@@ -3,7 +3,7 @@
 > 흐름: UX 감사(3 ux-advocate 병렬) → 86건 발견 → Tech Spec → 8 마일스톤 구현(프론트 26화면 + 백엔드 M-D) → 사용자 요청 전환: CLAUDE.md 최적화(웹검색 기반).
 
 ## Current Status
-**Phase 7 (Milestone Closure)** — PetTracker 모바일 UX 감사 86건 중 **84건 구현·검증 완료**(P0 10건 전부), 진짜 미완료 2건(O-02 size필터·O-21 펫편집삭제, 스키마/엔드포인트 의존, 출시 차단급 아님). 별도로 CLAUDE.md를 316→81줄(-74%) 최적화. 기존 워크스트림(modoo 1R 대기·본업~6/15)은 변화 없음.
+**Phase 7 (Milestone Closure)** — PetTracker 모바일 UX 감사 **86/86 전건 구현·검증 완료**(P0 10건 전부). 8 마일스톤(d47ecc3…f93a965) 후 사용자 "구현해" 지시로 마지막 2건도 완료: O-02 견종 size 필터(`d5aaca7` — WalkerQualification.accepted_sizes + Alembic b3d9f1a2c5e4 + search 필터), O-21 펫 편집/삭제 + O-36 사진(`e1516c0` — DELETE pets + MyPets UI + PetRegistration 편집모드/업로드). 별도로 CLAUDE.md 316→81줄(-74%) 최적화. 기존 워크스트림(modoo 1R 대기·본업~6/15)은 변화 없음. **총 11커밋, UX 잔여 0.**
 
 ## Changed Files (8 커밋 `d47ecc3`…`f93a965`, ~26 파일)
 ### 프론트엔드 (apps/pettracker/mobile) — 전 26화면
@@ -48,7 +48,7 @@
 - untracked `docs/references/` — sdetcode 잔재, 이번 작업 무관 (커밋 제외)
 
 ## Next Exact First Step
-남은 2건 중 택1 (출시 차단급 아님): **(a) O-21 MyPets 편집/삭제** — `backend pets router`에 DELETE/PATCH 추가 + `api/pets.ts` + MyPets 스와이프 삭제 UI. **(b) O-02 size 필터** — `WalkerQualification.accepted_sizes` 모델 필드 + Alembic 마이그 + `search_walkers` 필터. 또는 modoo 1R 대기 워크스트림으로 복귀.
+PT UX 잔여 0 → **PT UX 마일스톤 종료 확정** 후 modoo 1R 대기 워크스트림으로 복귀. (선택 후속: accepted_sizes를 실제로 채우는 워커 자격 등록 UI — WalkerQualificationCreate.accepted_sizes 입력 폼. 현재는 워커가 미지정 시 모든 크기 수용으로 동작하므로 출시 차단 아님.)
 
 ## Residual Risks
 - **R(NEW)** O-02 FE는 size param을 보내지만 백엔드가 무시 → "필터 동작 안 함"이 백엔드 측에 잔존. 모델 필드 추가 전까지 사용자에게 필터 효과 없음
