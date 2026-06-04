@@ -14,7 +14,8 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.apps.pettracker.models import (
-    Pet, PtBooking, WalkSession, WalkerAvailability, WalkerQualification, WalkerReview,
+    Pet, PtBooking, PtPayment, PtPaymentStatus, WalkSession,
+    WalkerAvailability, WalkerQualification, WalkerReview,
 )
 from app.modules.auth.models import APP_PETTRACKER, User, UserRole
 from app.modules.auth.service import create_access_token
@@ -152,3 +153,129 @@ async def test_walker_reviews_endpoint_includes_reviewer_name(client: AsyncClien
     assert data[0]["rating"] == 5
     assert data[0]["comment"] == "최고였어요"
     assert data[0]["reviewer_name"] == "리뷰견주"
+
+
+# ── 산책 세션/예약 헬퍼 ──────────────────────────────────────────
+
+async def _make_session(
+    db: AsyncSession, owner: User, walker: User, status: str = "in_progress",
+) -> tuple[PtBooking, WalkSession]:
+    pet = Pet(id=uuid.uuid4(), owner_id=owner.id, name="멍멍이", species="dog")
+    db.add(pet)
+    await db.flush()
+    booking = PtBooking(
+        id=uuid.uuid4(), owner_id=owner.id, walker_id=walker.id, pet_id=pet.id,
+        service_type="walk", duration_minutes=30, scheduled_at=datetime.now(UTC),
+        pickup_latitude=37.5, pickup_longitude=127.0, status=status,
+        price=15000, commission_rate=15,
+    )
+    db.add(booking)
+    await db.flush()
+    session = WalkSession(
+        id=uuid.uuid4(), booking_id=booking.id, walker_id=walker.id,
+        started_at=datetime.now(UTC),
+    )
+    db.add(session)
+    await db.commit()
+    return booking, session
+
+
+# ── W-04 end_walk 메모/사진 저장 ─────────────────────────────────
+
+async def test_end_walk_saves_memo_and_photo(client: AsyncClient, db_session: AsyncSession):
+    owner = await _make_user(db_session, UserRole.PET_OWNER, "01040000040", "견주")
+    walker = await _make_user(db_session, UserRole.WALKER, "01040000041", "워커")
+    _, session = await _make_session(db_session, owner, walker)
+    token = create_access_token(walker.id, UserRole.WALKER, APP_PETTRACKER)
+
+    resp = await client.post(
+        f"/api/v1/pt/walks/{session.id}/end",
+        json={"walker_memo": "오늘 잘 걸었어요", "photo_url": "https://cdn/x.jpg"},
+        headers=_auth(token),
+    )
+    assert resp.status_code == 200
+
+    fresh = await db_session.get(WalkSession, session.id, populate_existing=True)
+    assert fresh.walker_memo == "오늘 잘 걸었어요"
+    assert fresh.arrival_photo_url == "https://cdn/x.jpg"
+
+
+async def test_end_walk_no_body_no_crash(client: AsyncClient, db_session: AsyncSession):
+    owner = await _make_user(db_session, UserRole.PET_OWNER, "01040000042", "견주")
+    walker = await _make_user(db_session, UserRole.WALKER, "01040000043", "워커")
+    _, session = await _make_session(db_session, owner, walker)
+    token = create_access_token(walker.id, UserRole.WALKER, APP_PETTRACKER)
+
+    resp = await client.post(f"/api/v1/pt/walks/{session.id}/end", headers=_auth(token))
+    assert resp.status_code == 200
+
+
+# ── O-01/O-18 walk_report walker_name/phone ──────────────────────
+
+async def test_get_walk_report_includes_walker_name_and_phone(client: AsyncClient, db_session: AsyncSession):
+    owner = await _make_user(db_session, UserRole.PET_OWNER, "01040000050", "견주")
+    walker = await _make_user(db_session, UserRole.WALKER, "01044445555", "산책왕")
+    _, session = await _make_session(db_session, owner, walker)
+    token = create_access_token(owner.id, UserRole.PET_OWNER, APP_PETTRACKER)
+
+    resp = await client.get(f"/api/v1/pt/walks/{session.id}/report", headers=_auth(token))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["walker_name"] == "산책왕"
+    assert body["walker_phone"] == "01044445555"
+
+
+# ── O-11/O-12/O-19 list_bookings walker 필드 + has_review ────────
+
+async def test_list_bookings_populates_walker_fields_and_has_review(client: AsyncClient, db_session: AsyncSession):
+    owner = await _make_user(db_session, UserRole.PET_OWNER, "01040000060", "견주")
+    walker = await _make_user(db_session, UserRole.WALKER, "01046667777", "워커킴")
+    booking, _ = await _make_session(db_session, owner, walker, status="completed")
+    db_session.add(WalkerReview(
+        id=uuid.uuid4(), booking_id=booking.id, reviewer_id=owner.id,
+        walker_id=walker.id, rating=4, comment=None,
+    ))
+    await db_session.commit()
+    token = create_access_token(owner.id, UserRole.PET_OWNER, APP_PETTRACKER)
+
+    resp = await client.get("/api/v1/pt/bookings", headers=_auth(token))
+    assert resp.status_code == 200
+    row = next(b for b in resp.json() if b["id"] == str(booking.id))
+    assert row["walker_name"] == "워커킴"
+    assert row["walker_phone"] == "01046667777"
+    assert row["has_review"] is True
+    assert row["session_id"] is not None  # completed도 session_id 포함(O-04)
+
+
+# ── P0 회귀 가드: confirm_payment가 PAID 저장 후 반환 ────────────
+
+async def test_confirm_payment_marks_paid(client: AsyncClient, db_session: AsyncSession, monkeypatch):
+    from app.modules.billing.providers import portone as portone_mod
+
+    async def _fake_confirm(*args, **kwargs):
+        return {"status": "PAID"}
+
+    monkeypatch.setattr(portone_mod.portone_provider, "confirm_payment", _fake_confirm)
+
+    owner = await _make_user(db_session, UserRole.PET_OWNER, "01040000070", "견주")
+    walker = await _make_user(db_session, UserRole.WALKER, "01040000071", "워커")
+    booking, _ = await _make_session(db_session, owner, walker, status="accepted")
+    merchant_uid = f"pt_{uuid.uuid4().hex[:16]}"
+    db_session.add(PtPayment(
+        id=uuid.uuid4(), booking_id=booking.id, amount=15000,
+        merchant_uid=merchant_uid, status=PtPaymentStatus.PENDING,
+    ))
+    await db_session.commit()
+    token = create_access_token(owner.id, UserRole.PET_OWNER, APP_PETTRACKER)
+
+    resp = await client.post(
+        "/api/v1/pt/payments/confirm",
+        json={"imp_uid": "imp_test_123", "merchant_uid": merchant_uid},
+        headers=_auth(token),
+    )
+    # 데드코드 버그였다면 confirm_payment가 None 반환 → 500. 수정 후 200 + PAID.
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["status"] == PtPaymentStatus.PAID.value
+    assert data["imp_uid"] == "imp_test_123"
+    assert data["paid_at"] is not None
