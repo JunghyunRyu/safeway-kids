@@ -6,7 +6,7 @@ export default function AboutLunenLabs() {
     },
     {
       title: "공유된 코어",
-      desc: "모든 제품이 인증 · 결제 · 위치 · 알림 인프라를 공유합니다. 한 제품의 검증이 다른 제품의 출시 비용을 줄입니다.",
+      desc: "안심 라인업 제품이 인증 · 결제 · 위치 · 알림 인프라를 공유합니다. 한 제품의 검증이 다른 제품의 출시 비용을 줄입니다.",
     },
     {
       title: "안전이 기능이 아닌 기본",
@@ -50,17 +50,22 @@ export default function AboutLunenLabs() {
           ))}
         </div>
 
-        <div className="mt-16 grid sm:grid-cols-3 gap-6">
+        <div className="mt-16 grid sm:grid-cols-2 gap-6">
           {[
+            {
+              k: "B2C 안심 앱",
+              v: "PetTracker · SafeWay · CareConnect",
+              note: "한국 안심 일상 플랫폼",
+            },
             {
               k: "B2B 사업",
               v: "SDET Code",
-              note: "글로벌 SaaS 테스트 자동화",
+              note: "글로벌 SaaS 테스트 자동화 (점진 축소)",
             },
             {
-              k: "B2C 사업",
-              v: "PetTracker · SafeWay · CareConnect",
-              note: "한국 안심 일상 플랫폼",
+              k: "개발 도구 · OSS",
+              v: "tripwire",
+              note: "AI 변경의 회귀 방화벽",
             },
             {
               k: "법인 상태",
