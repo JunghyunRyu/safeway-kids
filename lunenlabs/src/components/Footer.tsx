@@ -23,7 +23,12 @@ export default function Footer() {
               <li>PetTracker (출시 예정)</li>
               <li>SafeWay Kids (샌드박스)</li>
               <li>CareConnect (개발 중)</li>
-              <li>SDET Code (운영 중)</li>
+              <li>SDET Code (점진 축소)</li>
+              <li>
+                <Link to="/tripwire" className="hover:text-aqua transition-colors">
+                  tripwire (Dev tooling · 개발 중)
+                </Link>
+              </li>
             </ul>
           </div>
 
