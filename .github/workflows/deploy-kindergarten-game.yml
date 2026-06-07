@@ -45,6 +45,10 @@ jobs:
         run: npm run build
 
       - uses: actions/configure-pages@v5
+        with:
+          # repo의 Pages 를 GitHub Actions 소스로 자동 활성화 시도
+          # (GITHUB_TOKEN 에 pages:write 권한이 있어 수동 설정 없이 켜짐)
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
