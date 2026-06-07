@@ -56,10 +56,11 @@
     <div class="stages">
       ① <b>강 하류</b> — 치어가 바다로! (새·큰 물고기)<br/>
       ② <b>넓은 바다</b> — 성장! (상어·바다표범·사람 그물)<br/>
-      ③ <b>강 상류 회귀</b> — 산란! (곰·낚시꾼·독수리)<br/>
-      🔁 산란하면 <b>새 세대</b>가 태어나 다시 ①부터!
+      ③ <b>강 상류 회귀</b> — 곰·독수리·급류! <b>도약</b>으로 점프 🐟⤴<br/>
+      🥚 산란장 도착 → <b>알 낳고 지키기</b>! 많이 지킬수록 보너스<br/>
+      🔁 산란 후 <b>새 세대</b>가 태어나 다시 ①부터!
     </div>
-    <div class="hint">📱 <b>좌/우 스와이프</b>로 레인 이동 · 💻 <b>←/→</b> 또는 <b>A/D</b><br/>✨ 위에서 내려오는 <b>먹이</b>를 먹으면 더 빨리 자라요<br/>포식자에게 잡히면 끝 — 몇 세대까지 잇는지 도전!</div>
+    <div class="hint">📱 <b>좌/우 스와이프</b> 레인 이동 · <b>탭/위로 스와이프</b> 도약<br/>💻 <b>←/→</b>(또는 A/D) 이동 · <b>Space/↑</b> 도약<br/>✨ <b>먹이</b>로 성장 · 상류에선 <b>도약</b>으로 바위·급류 넘기!</div>
     <button id="startBtn">여정 시작</button>
   </div>
 
@@ -130,7 +131,7 @@
     {
       name: "강 상류 회귀", phase: "산란!", flow: -1,
       bg: ["#1d5e6e", "#2a7d7d", "#123f4a"],
-      obstacles: ["bear", "hook", "eagle", "rock"],
+      obstacles: ["bear", "hook", "eagle", "rock", "rapids"],
       salmon: { sizeMul: 1.15, body: "#e8645a", back: "#c44536", fin: "#b73e30" }
     }
   ];
@@ -146,8 +147,15 @@
     bigfish: "큰 물고기에게 잡아먹혔어요! 🐟", heron: "왜가리에게 낚아채였어요! 🐦",
     shark:   "상어에게 당했어요! 🦈", seal: "바다표범에게 잡혔어요! 🦭",
     eagle:   "독수리에게 채여 올라갔어요! 🦅", bear: "곰에게 잡혔어요! 🐻",
-    rock:    "바위에 부딪혔어요! 🪨", hook: "낚싯바늘에 걸렸어요! 🎣", net: "사람의 그물에 걸렸어요! 🕸️"
+    rock:    "바위에 부딪혔어요! 🪨", hook: "낚싯바늘에 걸렸어요! 🎣", net: "사람의 그물에 걸렸어요! 🕸️",
+    rapids:  "급류에 휩쓸렸어요! 🌊"
   };
+  // 도약(점프)으로 뛰어넘을 수 있는 장애물 (물속 장애물). 곰·독수리 등 포식자는 공중에서도 잡음.
+  function isJumpable(t) { return t === "rock" || t === "rapids" || t === "hook" || t === "net"; }
+  var JUMP_DUR = 0.62;        // 도약 지속(초)
+  // 산란 미니게임
+  var GUARD_DUR = 9.0;        // 알 지키는 시간(초)
+  var EGG_START = 24;         // 시작 알 개수
 
   // ---------- 상태 ----------
   var STATE = { MENU: 0, PLAY: 1, OVER: 2, WIN: 3 };
@@ -156,6 +164,8 @@
   var salmon, obstacles, foods, particles;
   var distance, lifetimeDist, foodCount, speed, spawnTimer, foodTimer, elapsed;
   var stageIdx, banner, generation;   // generation = 완성한 산란(세대) 수
+  var phase = "run";                  // "run" 일반 진행 / "guard" 산란 후 알 지키기
+  var eggs, eggsGuarded, threats, guardTimer, guardSpawn, nestX;
   var flowOffset = 0, decos = [];   // 강 흐름 누적치 + 둑 위 풀/나무
   var LEAF_GREEN = ["#3f9142", "#2f7d32", "#57a64a"];
   var LEAF_AUTUMN = ["#d98324", "#c0562b", "#e0a02e"];   // ③ 산란철(가을) 단풍
@@ -171,9 +181,10 @@
     salmon = {
       lane: 1, x: laneX[1], y: salmonY,
       r: baseR * STAGES[0].salmon.sizeMul, targetR: baseR * STAGES[0].salmon.sizeMul,
-      wob: 0, pal: STAGES[0].salmon
+      wob: 0, pal: STAGES[0].salmon, jumpT: 0
     };
-    obstacles = []; foods = []; particles = [];
+    obstacles = []; foods = []; particles = []; threats = [];
+    phase = "run";
     distance = 0; lifetimeDist = 0; foodCount = 0; generation = 0;
     speed = Math.max(210, H * 0.30);
     spawnTimer = 0.7; foodTimer = 0.8; elapsed = 0;
@@ -206,21 +217,31 @@
     var n = salmon.lane + dir;
     salmon.lane = n < 0 ? 0 : n > LANES - 1 ? LANES - 1 : n;
   }
-  var tY = null, tX = null;
-  canvas.addEventListener("touchstart", function (e) { var t = e.changedTouches[0]; tY = t.clientY; tX = t.clientX; }, { passive: true });
+  function jump() {
+    if (state !== STATE.PLAY) return;
+    if (stageIdx !== 2) return;          // 상류로 올라갈 때만 도약 가능
+    if (salmon.jumpT > 0) return;        // 이미 도약 중이면 무시
+    salmon.jumpT = JUMP_DUR;
+    burst(salmon.x, salmonY, "#bfe6f5", 7);   // 물 튀는 효과
+  }
+  var tY = null, tX = null, tMoved = false;
+  canvas.addEventListener("touchstart", function (e) { var t = e.changedTouches[0]; tY = t.clientY; tX = t.clientX; tMoved = false; }, { passive: true });
   canvas.addEventListener("touchmove", function (e) {
     if (tX === null) return;
     var t = e.changedTouches[0], dy = t.clientY - tY, dx = t.clientX - tX;
-    if (Math.abs(dx) > 26 && Math.abs(dx) > Math.abs(dy)) {
-      moveLane(dx > 0 ? 1 : -1); tY = t.clientY; tX = t.clientX;
+    if (Math.abs(dx) > 26 && Math.abs(dx) > Math.abs(dy)) {        // 좌/우 → 레인 이동
+      moveLane(dx > 0 ? 1 : -1); tY = t.clientY; tX = t.clientX; tMoved = true;
+    } else if (dy < -28 && Math.abs(dy) > Math.abs(dx)) {          // 위로 스와이프 → 도약
+      jump(); tY = t.clientY; tX = t.clientX; tMoved = true;
     }
   }, { passive: true });
-  canvas.addEventListener("touchend", function () { tX = null; }, { passive: true });
+  canvas.addEventListener("touchend", function () { if (!tMoved) jump(); tX = null; }, { passive: true });  // 탭 → 도약
   window.addEventListener("keydown", function (e) {
     var k = e.key.toLowerCase();
     if (k === "arrowleft" || k === "a") { moveLane(-1); e.preventDefault(); }
     else if (k === "arrowright" || k === "d") { moveLane(1); e.preventDefault(); }
-    else if (k === " " || k === "enter") { if (state !== STATE.PLAY) startGame(); }
+    else if (k === "arrowup" || k === "w") { jump(); e.preventDefault(); }
+    else if (k === " " || k === "enter") { if (state === STATE.PLAY) jump(); else startGame(); e.preventDefault(); }
   });
 
   // ---------- 스폰 (위에서 아래로 내려옴) ----------
@@ -267,13 +288,35 @@
   function rgbStr(c){ return "rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")"; }
 
   // ---------- 업데이트 ----------
+  function advanceFlow(dt, rate) {       // 강 흐름 + 둑 풀/나무 재활용
+    flowOffset += speed * rate * dt;
+    for (var d = 0; d < decos.length; d++) {
+      if (decos[d].worldY + flowOffset > H + 90) { decos[d].worldY -= (H + 180); randomizeDeco(decos[d]); }
+    }
+  }
+  function jumpLift() {                   // 도약 높이(0~1) — 포물선
+    if (salmon.jumpT <= 0) return 0;
+    var p = 1 - salmon.jumpT / JUMP_DUR;  // 0→1 진행
+    return Math.sin(p * Math.PI);         // 0 → 1 → 0
+  }
+  function updateSalmon(dt) {
+    var tx = laneX[salmon.lane];
+    salmon.x += (tx - salmon.x) * Math.min(1, dt * 12);
+    salmon.r += (salmon.targetR - salmon.r) * Math.min(1, dt * 3);
+    salmon.wob += dt * 10;
+    if (salmon.jumpT > 0) salmon.jumpT -= dt;
+    salmon.y = salmonY + Math.sin(salmon.wob) * 2 - jumpLift() * (H * 0.16);  // 도약 시 위로 떠오름
+  }
+
   function update(dt) {
+    if (phase === "guard") { updateGuard(dt); return; }   // 산란 후 알 지키기 미니게임
+
     elapsed += dt;
     var gain = speed * dt * 0.05;
     distance += gain; lifetimeDist += gain;
     speed += dt * 5.5;
 
-    if (distance >= GOAL_DIST) { spawnCycle(); }   // 상류 산란장 도착 → 새 세대로 순환
+    if (distance >= GOAL_DIST) { enterGuard(); return; }   // 상류 산란장 도착 → 산란/지키기
     checkStage();
 
     var tgt = curStage().bg;
@@ -281,18 +324,8 @@
 
     if (banner && banner.t > 0) banner.t -= dt;
 
-    // 강 흐름 + 둑 위 풀/나무 재활용
-    flowOffset += speed * dt;
-    for (var d = 0; d < decos.length; d++) {
-      if (decos[d].worldY + flowOffset > H + 90) { decos[d].worldY -= (H + 180); randomizeDeco(decos[d]); }
-    }
-
-    // 연어: 좌우 보간 + 위로 헤엄(고정 y) + 성장
-    var tx = laneX[salmon.lane];
-    salmon.x += (tx - salmon.x) * Math.min(1, dt * 12);
-    salmon.r += (salmon.targetR - salmon.r) * Math.min(1, dt * 3);
-    salmon.wob += dt * 10;
-    salmon.y = salmonY + Math.sin(salmon.wob) * 2;
+    advanceFlow(dt, 1);
+    updateSalmon(dt);
 
     // 스폰
     spawnTimer -= dt;
@@ -310,6 +343,8 @@
       o.y += speed * dt; o.t += dt * 4;
       o.x = laneX[o.lane] + ((o.type === "hook") ? Math.sin(o.t) * 6 : (o.type === "heron" || o.type === "eagle") ? Math.sin(o.t) * 8 : 0);
       if (o.y > H + 90) { obstacles.splice(i, 1); continue; }
+      // 도약(공중) 중에는 물속 장애물(바위·급류 등)을 뛰어넘는다
+      if (salmon.jumpT > 0 && isJumpable(o.type)) continue;
       var dx = o.x - salmon.x, dy = o.y - salmon.y, rr = o.r * 0.56 + salmon.r * 0.56;
       if (dx * dx + dy * dy < rr * rr) { burst(salmon.x, salmon.y, "#ff6b6b", 26); gameOver(o.type); return; }
     }
@@ -366,6 +401,7 @@
 
     for (var r = 0; r < foods.length; r++) drawFood(foods[r]);
     for (var o = 0; o < obstacles.length; o++) drawObstacle(obstacles[o]);
+    if (phase === "guard") drawGuard();          // 둥지 + 알을 노리는 포식자
     for (var p = 0; p < particles.length; p++) {
       var pa = particles[p]; ctx.globalAlpha = Math.max(0, pa.life / pa.max);
       ctx.fillStyle = pa.color; ctx.beginPath(); ctx.arc(pa.x, pa.y, pa.r, 0, 6.2832); ctx.fill();
@@ -373,7 +409,47 @@
     ctx.globalAlpha = 1;
 
     if (state === STATE.PLAY || state === STATE.OVER) drawSalmon(salmon);
-    if (state === STATE.PLAY) { drawHUD(); drawBanner(); }
+    if (state === STATE.PLAY) { (phase === "guard" ? drawGuardHUD() : drawHUD()); drawBanner(); }
+  }
+
+  // 산란 미니게임 렌더: 둥지(알 무더기) + 포식자
+  function drawGuard() {
+    var nestY = salmonY + salmon.r * 2.2, cx = nestX;
+    // 둥지(모래 자국)
+    ctx.fillStyle = "rgba(201,178,122,0.35)";
+    ctx.beginPath(); ctx.ellipse(cx, nestY, salmon.r * 2.2, salmon.r * 1.1, 0, 0, 6.2832); ctx.fill();
+    // 알 무더기 (남은 개수만큼, 최대 18개 표시)
+    var show = Math.min(18, eggs);
+    for (var i = 0; i < show; i++) {
+      var ang = (i / 18) * 6.2832, rad = salmon.r * (0.5 + (i % 3) * 0.45);
+      var ex = cx + Math.cos(ang) * rad, ey = nestY + Math.sin(ang) * rad * 0.5;
+      var er = salmon.r * 0.3;
+      var grd = ctx.createRadialGradient(ex - er*0.3, ey - er*0.3, er*0.2, ex, ey, er);
+      grd.addColorStop(0, "#fff1c2"); grd.addColorStop(1, "#ff9f1c");
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(ex, ey, er, 0, 6.2832); ctx.fill();
+    }
+    // 포식자(알 도둑)
+    for (var k = 0; k < threats.length; k++) {
+      var th = threats[k];
+      ctx.font = (th.r * 2.0) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("🐟", th.x, th.y);
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+  }
+  function drawGuardHUD() {
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillStyle = "#eaf6ff"; ctx.font = "700 25px -apple-system, sans-serif";
+    ctx.fillText(Math.floor(lifetimeDist) + " m", 18, 14);
+    ctx.font = "600 16px -apple-system, sans-serif"; ctx.fillStyle = "#ffd166";
+    ctx.fillText("🥚 알 " + eggs + "   🛡️ 막음 " + eggsGuarded, 18, 46);
+    ctx.textAlign = "right"; ctx.fillStyle = "#ff9aa2"; ctx.font = "700 16px -apple-system, sans-serif";
+    ctx.fillText("산란 중 — 알을 지켜라!", W - 16, 16);
+    ctx.textAlign = "left";
+    // 남은 시간 바
+    var bw = W - 32, bx = 16, by = 70, prog = Math.max(0, guardTimer / GUARD_DUR);
+    ctx.fillStyle = "rgba(255,255,255,0.15)"; roundRect(bx, by, bw, 6, 3); ctx.fill();
+    ctx.fillStyle = "#ff8a5c"; roundRect(bx, by, bw * prog, 6, 3); ctx.fill();
+    ctx.font = "14px serif"; ctx.textAlign = "right"; ctx.fillText("⏱️", bx + bw + 2, by - 9); ctx.textAlign = "left";
   }
 
   function drawHUD() {
@@ -414,7 +490,12 @@
   // 연어를 '위'를 향하도록 -90° 회전해서 그림 (기본 그림은 오른쪽을 향함)
   function drawSalmon(s) {
     var pal = s.pal;
-    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(-Math.PI / 2);
+    var lf = s.jumpT > 0 ? Math.sin((1 - s.jumpT / JUMP_DUR) * Math.PI) : 0;   // 도약 높이 0~1
+    if (lf > 0.02) {   // 공중일 때 바닥 그림자
+      ctx.fillStyle = "rgba(0,0,0,0.18)";
+      ctx.beginPath(); ctx.ellipse(s.x, salmonY + s.r * 0.5, s.r * 1.1 * (1 - 0.3 * lf), s.r * 0.4 * (1 - 0.3 * lf), 0, 0, 6.2832); ctx.fill();
+    }
+    ctx.save(); ctx.translate(s.x, s.y); ctx.scale(1 + 0.22 * lf, 1 + 0.22 * lf); ctx.rotate(-Math.PI / 2);
     var tail = Math.sin(s.wob) * 0.25;
     ctx.fillStyle = pal.body;
     ctx.beginPath(); ctx.ellipse(0, 0, s.r * 1.25, s.r * 0.72, 0, 0, 6.2832); ctx.fill();
@@ -454,6 +535,15 @@
         ctx.beginPath(); ctx.moveTo(-n/2 + step*k, -n/2); ctx.lineTo(-n/2 + step*k, n/2); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(-n/2, -n/2 + step*k); ctx.lineTo(n/2, -n/2 + step*k); ctx.stroke();
       }
+    } else if (o.type === "rapids") {
+      // 급류/여울 — 흰 물거품 (도약으로 뛰어넘기)
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      for (var w = -1; w <= 1; w++) {
+        ctx.beginPath(); ctx.arc(w * o.r * 0.6, Math.sin(o.t + w) * o.r * 0.25, o.r * 0.55, 0, 6.2832); ctx.fill();
+      }
+      ctx.strokeStyle = "rgba(120,180,210,0.9)"; ctx.lineWidth = Math.max(2, o.r * 0.16);
+      ctx.beginPath(); ctx.arc(-o.r * 0.4, 0, o.r * 0.4, 0.6, 2.6); ctx.stroke();
+      ctx.beginPath(); ctx.arc(o.r * 0.4, 0, o.r * 0.4, 3.7, 5.7); ctx.stroke();
     } else {
       var def = OB_DEF[o.type];
       ctx.font = (o.r * 2.0) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -541,21 +631,70 @@
   function saveBest() {
     if (Math.floor(lifetimeDist) > best) { best = Math.floor(lifetimeDist); localStorage.setItem(bestKey, String(best)); }
   }
-  // 상류 산란장 도착: 알을 낳고 → 새끼가 부화해 다시 바다로 (세대 순환)
-  function spawnCycle() {
+  // ── 산란 미니게임: 상류 산란장 도착 → 알을 낳고(지키기) ──
+  function enterGuard() {
+    phase = "guard";
+    eggs = EGG_START; eggsGuarded = 0;
+    guardTimer = GUARD_DUR; guardSpawn = 0.8;
+    nestX = laneX[salmon.lane];          // 둥지는 산란한 자리에 고정
+    obstacles = []; foods = []; threats = [];
+    salmon.jumpT = 0;
+    banner = { text: "🥚 산란 중! 알을 지켜라!", t: 2.4 };
+    burst(salmon.x, salmonY + salmon.r * 2, "#ffd166", 20);
+  }
+  function updateGuard(dt) {
+    if (banner && banner.t > 0) banner.t -= dt;
+    advanceFlow(dt, 0.25);          // 산란장은 흐름이 잔잔
+    updateSalmon(dt);
+    guardTimer -= dt;
+    if (guardTimer <= 0) { finishSpawn(); return; }
+
+    // 알을 노리는 포식자 등장(위에서 둥지로 내려옴)
+    guardSpawn -= dt;
+    if (guardSpawn <= 0) {
+      var lane = (Math.random() * LANES) | 0;
+      threats.push({ lane: lane, x: laneX[lane], y: -50, r: baseR * 1.0, t: Math.random() * 6.28 });
+      guardSpawn = Math.max(0.45, 0.95 - (GUARD_DUR - guardTimer) * 0.04);
+    }
+    var nestY = salmonY + salmon.r * 2.2;
+    for (var i = threats.length - 1; i >= 0; i--) {
+      var th = threats[i];
+      th.y += (speed * 0.7) * dt; th.t += dt * 5; th.x = laneX[th.lane] + Math.sin(th.t) * 5;
+      // 연어가 몸으로 막음 → 격퇴 + 지킨 수 증가
+      var dx = th.x - salmon.x, dy = th.y - salmon.y, rr = th.r * 0.55 + salmon.r * 0.6;
+      if (salmon.jumpT <= 0 && dx * dx + dy * dy < rr * rr) {
+        eggsGuarded++; burst(th.x, th.y, "#9fe0a0", 12); threats.splice(i, 1); continue;
+      }
+      // 둥지에 도달 → 알을 빼앗김
+      if (th.y >= nestY) { if (eggs > 0) eggs--; burst(th.x, nestY, "#ff6b6b", 10); threats.splice(i, 1); continue; }
+      if (th.y > H + 60) { threats.splice(i, 1); }
+    }
+
+    for (var p = particles.length - 1; p >= 0; p--) {
+      var pa = particles[p]; pa.life -= dt;
+      if (pa.life <= 0) { particles.splice(p, 1); continue; }
+      pa.x += pa.vx * dt; pa.y += pa.vy * dt; pa.vy += 200 * dt;
+    }
+  }
+  function finishSpawn() {
+    // 보너스: 지켜낸 알 + 막은 포식자 → 누적 거리에 가산
+    var bonus = eggs * 5 + eggsGuarded * 3;
+    lifetimeDist += bonus;
+    startNewGeneration(bonus);
+  }
+  // 새 세대(치어)로 리셋 — 누적 거리·세대·먹이는 유지
+  function startNewGeneration(bonus) {
     generation++;
-    burst(salmon.x, salmon.y, "#ffd166", 22);   // 알 뿌리기
-    burst(salmon.x, salmon.y, "#fff1c2", 16);
-    // 새 세대(치어)로 리셋 — 누적 거리·세대·먹이는 유지
+    phase = "run";
     distance = 0; stageIdx = 0;
-    obstacles = []; foods = [];
+    obstacles = []; foods = []; threats = [];
     salmon.pal = STAGES[0].salmon;
     salmon.r = salmon.targetR = baseR * STAGES[0].salmon.sizeMul;   // 다시 작은 새끼로
-    salmon.lane = 1;
+    salmon.lane = 1; salmon.jumpT = 0;
     bgCur = STAGES[0].bg.map(hexToRgb);
     speed = Math.max(210, H * 0.30) + generation * (H * 0.025);     // 세대마다 조금 더 빠르게
     spawnTimer = 0.8; foodTimer = 0.8;
-    banner = { text: "🥚 " + generation + "세대 산란! 새끼가 바다로", t: 2.4 };
+    banner = { text: "🥚 " + generation + "세대! 알 " + eggs + "개 지킴 +" + bonus, t: 2.4 };
   }
   function showResult(titleText, msg) {
     saveBest();
