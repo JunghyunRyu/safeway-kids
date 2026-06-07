@@ -1,0 +1,14 @@
+{
+  "//": "독립 앱 — 모노레포 루트의 expo tsconfig를 상속하지 않도록 빈 설정을 둔다.",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}
