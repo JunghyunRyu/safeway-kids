@@ -55,12 +55,12 @@
     <div class="sub">상류 민물에서 태어난 연어가 바다로 내려가 자란 뒤,<br/>다시 태어난 강으로 거슬러 올라가 알을 낳고 — 그 알에서<br/>새끼가 부화해 또 바다로! <b>세대가 이어지는 생명의 순환</b>.</div>
     <div class="stages">
       ① <b>강 하류</b> — 치어가 바다로! (새·큰 물고기)<br/>
-      ② <b>넓은 바다</b> — 성장! (상어·바다표범·사람 그물)<br/>
+      ② <b>넓은 바다</b> — 성장! (상어·바다표범·<b>초밥 접시🍣</b>)<br/>
       ③ <b>강 상류 회귀</b> — 곰·독수리·급류! <b>도약</b>으로 점프 🐟⤴<br/>
-      🥚 산란장 도착 → <b>알 낳고 지키기</b>! 많이 지킬수록 보너스<br/>
+      🥚 산란장 → 적이 올 때 <b>탭으로 방어막</b> "딱!" 알 지키기🛡️<br/>
       🔁 산란 후 <b>새 세대</b>가 태어나 다시 ①부터!
     </div>
-    <div class="hint">📱 <b>좌/우 스와이프</b> 레인 이동 · <b>탭/위로 스와이프</b> 도약<br/>💻 <b>←/→</b>(또는 A/D) 이동 · <b>Space/↑</b> 도약<br/>✨ <b>먹이</b>로 성장 · 상류에선 <b>도약</b>으로 바위·급류 넘기!</div>
+    <div class="hint">📱 <b>좌/우 스와이프</b> 레인 이동 · <b>탭/위 스와이프</b> 도약<br/>💻 <b>←/→</b>(또는 A/D) 이동 · <b>Space/↑</b> 도약<br/>🍣 사람에게 잡히면 초밥! · 🛡️ 산란 땐 탭이 <b>방어막</b>으로 바뀜</div>
     <button id="startBtn">여정 시작</button>
   </div>
 
@@ -125,7 +125,7 @@
     {
       name: "넓은 바다", phase: "성장!", flow: 0,
       bg: ["#0a4d6e", "#0e6896", "#062f49"],
-      obstacles: ["shark", "seal", "net"],
+      obstacles: ["shark", "seal", "sushi"],
       salmon: { sizeMul: 1.0, body: "#c4ced6", back: "#8b97a1", fin: "#7a8893" }
     },
     {
@@ -147,15 +147,17 @@
     bigfish: "큰 물고기에게 잡아먹혔어요! 🐟", heron: "왜가리에게 낚아채였어요! 🐦",
     shark:   "상어에게 당했어요! 🦈", seal: "바다표범에게 잡혔어요! 🦭",
     eagle:   "독수리에게 채여 올라갔어요! 🦅", bear: "곰에게 잡혔어요! 🐻",
-    rock:    "바위에 부딪혔어요! 🪨", hook: "낚싯바늘에 걸렸어요! 🎣", net: "사람의 그물에 걸렸어요! 🕸️",
-    rapids:  "급류에 휩쓸렸어요! 🌊"
+    rock:    "바위에 부딪혔어요! 🪨", hook: "낚싯바늘에 걸렸어요! 🎣",
+    sushi:   "사람에게 잡혀 초밥이 됐어요! 🍣", rapids: "급류에 휩쓸렸어요! 🌊"
   };
   // 도약(점프)으로 뛰어넘을 수 있는 장애물 (물속 장애물). 곰·독수리 등 포식자는 공중에서도 잡음.
-  function isJumpable(t) { return t === "rock" || t === "rapids" || t === "hook" || t === "net"; }
+  function isJumpable(t) { return t === "rock" || t === "rapids" || t === "hook"; }
   var JUMP_DUR = 0.62;        // 도약 지속(초)
   // 산란 미니게임
   var GUARD_DUR = 9.0;        // 알 지키는 시간(초)
   var EGG_START = 24;         // 시작 알 개수
+  var SHIELD_DUR = 0.45;      // 방어막 지속(초)
+  var SHIELD_CD = 0.30;       // 방어막 재사용 대기(초)
 
   // ---------- 상태 ----------
   var STATE = { MENU: 0, PLAY: 1, OVER: 2, WIN: 3 };
@@ -165,7 +167,7 @@
   var distance, lifetimeDist, foodCount, speed, spawnTimer, foodTimer, elapsed;
   var stageIdx, banner, generation;   // generation = 완성한 산란(세대) 수
   var phase = "run";                  // "run" 일반 진행 / "guard" 산란 후 알 지키기
-  var eggs, eggsGuarded, threats, guardTimer, guardSpawn, nestX;
+  var eggs, eggsGuarded, threats, guardTimer, guardSpawn, nestX, shieldT, shieldCd;
   var flowOffset = 0, decos = [];   // 강 흐름 누적치 + 둑 위 풀/나무
   var LEAF_GREEN = ["#3f9142", "#2f7d32", "#57a64a"];
   var LEAF_AUTUMN = ["#d98324", "#c0562b", "#e0a02e"];   // ③ 산란철(가을) 단풍
@@ -213,12 +215,19 @@
 
   // ---------- 입력 (좌/우) ----------
   function moveLane(dir) {
-    if (state !== STATE.PLAY) return;
+    if (state !== STATE.PLAY || phase === "guard") return;   // 산란 중엔 둥지에 고정
     var n = salmon.lane + dir;
     salmon.lane = n < 0 ? 0 : n > LANES - 1 ? LANES - 1 : n;
   }
+  function shield() {                       // 산란 가드: 탭 = 방어막 "딱!"
+    if (state !== STATE.PLAY || phase !== "guard") return;
+    if (shieldCd > 0) return;
+    shieldT = SHIELD_DUR; shieldCd = SHIELD_DUR + SHIELD_CD;
+    burst(nestX, salmonY, "#9fe7ff", 10);
+  }
   function jump() {
     if (state !== STATE.PLAY) return;
+    if (phase === "guard") { shield(); return; }   // 산란 중엔 점프 대신 방어막
     if (stageIdx !== 2) return;          // 상류로 올라갈 때만 도약 가능
     if (salmon.jumpT > 0) return;        // 이미 도약 중이면 무시
     salmon.jumpT = JUMP_DUR;
@@ -249,7 +258,7 @@
     var st = curStage();
     var lane = Math.floor(Math.random() * LANES);
     var type = st.obstacles[Math.floor(Math.random() * st.obstacles.length)];
-    var mul = OB_DEF[type] ? OB_DEF[type].mul : (type === "net" ? 1.5 : type === "hook" ? 1.0 : 1.2);
+    var mul = OB_DEF[type] ? OB_DEF[type].mul : (type === "sushi" ? 1.4 : type === "net" ? 1.5 : type === "hook" ? 1.0 : 1.2);
     obstacles.push({ lane: lane, x: laneX[lane], y: -70, type: type, r: salmon.r * mul, t: Math.random() * 6.28 });
   }
   function spawnFood() {
@@ -433,6 +442,26 @@
       var th = threats[k];
       ctx.save(); ctx.translate(th.x, th.y); drawBigFish(th.r * 0.95, th.t); ctx.restore();
     }
+    // 방어막 (켜졌을 때 강 폭을 가로지르는 에너지 막)
+    if (shieldT > 0) {
+      var a = Math.max(0, shieldT / SHIELD_DUR), yb = salmonY - salmon.r * 0.2;
+      var sg = ctx.createLinearGradient(0, yb - 30, 0, yb + 30);
+      sg.addColorStop(0, "rgba(120,220,255,0)");
+      sg.addColorStop(0.5, "rgba(140,225,255," + (0.7 * a) + ")");
+      sg.addColorStop(1, "rgba(120,220,255,0)");
+      ctx.fillStyle = sg; ctx.fillRect(0, yb - 30, W, 60);
+      // 밝은 코어 + 굵은 외곽선
+      for (var pass = 0; pass < 2; pass++) {
+        ctx.strokeStyle = pass === 0 ? "rgba(255,255,255," + (0.9 * a) + ")" : "rgba(150,230,255," + (0.9 * a) + ")";
+        ctx.lineWidth = pass === 0 ? 2.5 : 6; ctx.beginPath();
+        for (var x = 0; x <= W; x += 10) { var yy = yb + Math.sin(x * 0.09 + elapsed * 12) * 4; if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy); }
+        ctx.stroke();
+      }
+    } else if (shieldCd <= 0) {
+      // 준비 완료: 연어 둘레에 옅은 링
+      ctx.strokeStyle = "rgba(159,231,255,0.35)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(nestX, salmonY, salmon.r * 1.8, 0, 6.2832); ctx.stroke();
+    }
   }
   function drawGuardHUD() {
     ctx.textAlign = "left"; ctx.textBaseline = "top";
@@ -440,8 +469,9 @@
     ctx.fillText(Math.floor(lifetimeDist) + " m", 18, 14);
     ctx.font = "600 16px -apple-system, sans-serif"; ctx.fillStyle = "#ffd166";
     ctx.fillText("🥚 알 " + eggs + "   🛡️ 막음 " + eggsGuarded, 18, 46);
-    ctx.textAlign = "right"; ctx.fillStyle = "#ff9aa2"; ctx.font = "700 16px -apple-system, sans-serif";
-    ctx.fillText("산란 중 — 알을 지켜라!", W - 16, 16);
+    ctx.textAlign = "right"; ctx.font = "700 16px -apple-system, sans-serif";
+    ctx.fillStyle = shieldT > 0 ? "#9fe7ff" : shieldCd <= 0 ? "#cfe9f7" : "#7d909c";
+    ctx.fillText(shieldT > 0 ? "🛡️ 방어막!" : shieldCd <= 0 ? "🛡️ 탭=방어막" : "🛡️ …", W - 16, 16);
     ctx.textAlign = "left";
     // 남은 시간 바
     var bw = W - 32, bx = 16, by = 70, prog = Math.max(0, guardTimer / GUARD_DUR);
@@ -689,6 +719,28 @@
     ctx.beginPath(); ctx.arc(R*0.35,R*0.18,R*0.12,0,6.2832); ctx.fill();
   }
 
+  // 연어 초밥 접시 (사람의 위협) — 그물 대체
+  function drawSushi(R) {
+    ctx.fillStyle = "#23262c";                                  // 접시 그림자
+    ctx.beginPath(); ctx.ellipse(0, R * 0.12, R * 1.55, R * 1.02, 0, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#3a3e47";                                  // 접시
+    ctx.beginPath(); ctx.ellipse(0, 0, R * 1.5, R * 1.0, 0, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#4a4f59";
+    ctx.beginPath(); ctx.ellipse(0, 0, R * 1.2, R * 0.78, 0, 0, 6.2832); ctx.fill();
+    for (var n = 0; n < 2; n++) {                               // 니기리 2점
+      var ox = n === 0 ? -R * 0.45 : R * 0.5, oy = n === 0 ? 0 : R * 0.1, rot = n === 0 ? -0.15 : 0.12;
+      ctx.save(); ctx.translate(ox, oy); ctx.rotate(rot);
+      ctx.fillStyle = "#f5f1e6";                                // 밥
+      ctx.beginPath(); ctx.ellipse(0, R * 0.12, R * 0.62, R * 0.34, 0, 0, 6.2832); ctx.fill();
+      var sg = ctx.createLinearGradient(-R * 0.6, 0, R * 0.6, 0);  // 연어 살
+      sg.addColorStop(0, "#ff9a6b"); sg.addColorStop(0.5, "#ff7043"); sg.addColorStop(1, "#ff9a6b");
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(0, -R * 0.12, R * 0.66, R * 0.3, 0, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = Math.max(1, R * 0.05);  // 흰 지방 줄
+      for (var i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(-R * 0.5, -R * 0.16 + i * R * 0.1); ctx.lineTo(R * 0.5, -R * 0.2 + i * R * 0.1); ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+
   function drawObstacle(o) {
     ctx.save(); ctx.translate(o.x, o.y);
     if (o.type === "rock") {
@@ -726,6 +778,7 @@
     else if (o.type === "heron") { drawHeron(o.r, o.t); }
     else if (o.type === "eagle") { drawEagle(o.r, o.t); }
     else if (o.type === "bear") { drawBear(o.r, o.t); }
+    else if (o.type === "sushi") { drawSushi(o.r); }
     else {
       var def = OB_DEF[o.type];
       ctx.font = (o.r * 2.0) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -820,8 +873,8 @@
     guardTimer = GUARD_DUR; guardSpawn = 0.8;
     nestX = laneX[salmon.lane];          // 둥지는 산란한 자리에 고정
     obstacles = []; foods = []; threats = [];
-    salmon.jumpT = 0;
-    banner = { text: "🥚 산란 중! 알을 지켜라!", t: 2.4 };
+    salmon.jumpT = 0; shieldT = 0; shieldCd = 0;
+    banner = { text: "🥚 산란 중! 탭으로 방어막!", t: 2.4 };
     burst(salmon.x, salmonY + salmon.r * 2, "#ffd166", 20);
   }
   function updateGuard(dt) {
@@ -838,14 +891,16 @@
       threats.push({ lane: lane, x: laneX[lane], y: -50, r: baseR * 1.0, t: Math.random() * 6.28 });
       guardSpawn = Math.max(0.45, 0.95 - (GUARD_DUR - guardTimer) * 0.04);
     }
+    if (shieldT > 0) shieldT -= dt;
+    if (shieldCd > 0) shieldCd -= dt;
     var nestY = salmonY + salmon.r * 2.2;
+    var shieldLineY = salmonY - salmon.r * 0.2;   // 방어막 위치(연어 앞)
     for (var i = threats.length - 1; i >= 0; i--) {
       var th = threats[i];
       th.y += (speed * 0.7) * dt; th.t += dt * 5; th.x = laneX[th.lane] + Math.sin(th.t) * 5;
-      // 연어가 몸으로 막음 → 격퇴 + 지킨 수 증가
-      var dx = th.x - salmon.x, dy = th.y - salmon.y, rr = th.r * 0.55 + salmon.r * 0.6;
-      if (salmon.jumpT <= 0 && dx * dx + dy * dy < rr * rr) {
-        eggsGuarded++; burst(th.x, th.y, "#9fe0a0", 12); threats.splice(i, 1); continue;
+      // 방어막이 켜져 있고 적이 막 앞까지 오면 "딱!" 격퇴
+      if (shieldT > 0 && th.y >= shieldLineY) {
+        eggsGuarded++; burst(th.x, shieldLineY, "#9fe7ff", 14); threats.splice(i, 1); continue;
       }
       // 둥지에 도달 → 알을 빼앗김
       if (th.y >= nestY) { if (eggs > 0) eggs--; burst(th.x, nestY, "#ff6b6b", 10); threats.splice(i, 1); continue; }
