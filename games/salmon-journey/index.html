@@ -14,10 +14,7 @@
     user-select: none; -webkit-user-select: none;
     touch-action: none;
   }
-  #wrap {
-    position: fixed; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-  }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
   canvas { display: block; width: 100%; height: 100%; }
 
   .overlay {
@@ -27,24 +24,25 @@
     background: rgba(6, 40, 61, 0.55); backdrop-filter: blur(2px);
   }
   .overlay.hidden { display: none; }
-  .title { font-size: 34px; font-weight: 800; letter-spacing: -1px; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
-  .title .fish { font-size: 40px; }
-  .sub { margin-top: 10px; font-size: 15px; color: #bcdcee; line-height: 1.6; max-width: 320px; }
-  .big { font-size: 56px; font-weight: 800; margin: 6px 0; }
+  .title { font-size: 33px; font-weight: 800; letter-spacing: -1px; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  .title .fish { font-size: 38px; }
+  .sub { margin-top: 10px; font-size: 14.5px; color: #bcdcee; line-height: 1.65; max-width: 340px; }
+  .stages { margin-top: 14px; font-size: 13.5px; color: #cfe9f7; line-height: 1.9; max-width: 340px; text-align: left; }
+  .stages b { color: #ffd479; }
+  .big { font-size: 50px; font-weight: 800; margin: 4px 0; }
   .label { font-size: 14px; color: #9fc4da; letter-spacing: 1px; }
-  .row { display: flex; gap: 28px; margin-top: 14px; }
-  .row .col { display: flex; flex-direction: column; align-items: center; }
-  .row .v { font-size: 28px; font-weight: 700; }
+  .row { display: flex; gap: 18px; margin-top: 14px; }
+  .row .col { display: flex; flex-direction: column; align-items: center; min-width: 78px; }
+  .row .v { font-size: 24px; font-weight: 700; white-space: nowrap; }
   button {
-    margin-top: 26px; border: none; cursor: pointer;
+    margin-top: 24px; border: none; cursor: pointer;
     background: linear-gradient(180deg, #ff8a5c, #ff6b35);
     color: #fff; font-size: 19px; font-weight: 700;
     padding: 15px 44px; border-radius: 999px;
-    box-shadow: 0 6px 18px rgba(255,107,53,.45);
-    font-family: inherit;
+    box-shadow: 0 6px 18px rgba(255,107,53,.45); font-family: inherit;
   }
   button:active { transform: translateY(2px); }
-  .hint { margin-top: 20px; font-size: 13px; color: #8fb6cd; }
+  .hint { margin-top: 16px; font-size: 12.5px; color: #8fb6cd; line-height: 1.7; }
   .hint b { color: #cfe9f7; }
 </style>
 </head>
@@ -54,17 +52,23 @@
 
   <div id="startScreen" class="overlay">
     <div class="title"><span class="fish">🐟</span> 연어의 여행</div>
-    <div class="sub">알을 낳기 위해 강을 거슬러 올라가는 연어.<br/>바위·곰·낚싯바늘을 피해 상류로!</div>
-    <div class="hint">📱 화면을 <b>위/아래로 스와이프</b>해 레인 이동<br/>💻 키보드 <b>↑ / ↓</b> 또는 <b>W / S</b><br/>✨ 떠다니는 <b>알(주황)</b>을 먹으면 보너스</div>
-    <button id="startBtn">여행 시작</button>
+    <div class="sub">민물에서 태어난 연어가 바다로 내려가 자란 뒤,<br/>다시 태어난 강으로 거슬러 올라가 알을 낳기까지.</div>
+    <div class="stages">
+      ① <b>강 하류</b> — 치어가 바다로! (새·큰 물고기)<br/>
+      ② <b>넓은 바다</b> — 성장! (상어·바다표범·사람 그물)<br/>
+      ③ <b>강 상류 회귀</b> — 산란! (곰·낚시꾼·독수리)
+    </div>
+    <div class="hint">📱 <b>좌/우 스와이프</b>로 레인 이동 · 💻 <b>←/→</b> 또는 <b>A/D</b><br/>✨ 위에서 내려오는 <b>먹이</b>를 먹으면 더 빨리 자라요</div>
+    <button id="startBtn">여정 시작</button>
   </div>
 
   <div id="overScreen" class="overlay hidden">
-    <div class="label">상류까지</div>
+    <div class="label" id="overTitle">여정 실패</div>
     <div class="big" id="finalScore">0 m</div>
     <div class="row">
-      <div class="col"><div class="label">먹은 알</div><div class="v" id="finalRoe">0</div></div>
-      <div class="col"><div class="label">최고 기록</div><div class="v" id="bestScore">0 m</div></div>
+      <div class="col"><div class="label">단계</div><div class="v" id="finalStage">-</div></div>
+      <div class="col"><div class="label">먹이</div><div class="v" id="finalFood">0</div></div>
+      <div class="col"><div class="label">최고</div><div class="v" id="bestScore">0 m</div></div>
     </div>
     <div class="sub" id="overMsg"></div>
     <button id="retryBtn">다시 도전</button>
@@ -78,371 +82,399 @@
   var canvas = document.getElementById("game");
   var ctx = canvas.getContext("2d");
 
-  // ---- 화면 / DPI ----
+  // ---------- 화면 / DPI ----------
   var W = 0, H = 0, DPR = 1;
   function resize() {
     DPR = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width = Math.floor(W * DPR);
-    canvas.height = Math.floor(H * DPR);
-    canvas.style.width = W + "px";
-    canvas.style.height = H + "px";
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR); canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + "px"; canvas.style.height = H + "px";
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     computeLanes();
   }
 
-  // ---- 레인 ----
+  // ---------- 레인 (세로 방향: 좌우로 나뉜 칸) ----------
   var LANES = 4;
-  var laneY = [];
+  var laneX = [];
+  var salmonY = 0;
   function computeLanes() {
-    laneY = [];
-    var top = H * 0.20, bottom = H * 0.90;
-    var gap = (bottom - top) / (LANES - 1);
-    for (var i = 0; i < LANES; i++) laneY.push(top + gap * i);
+    laneX = [];
+    var left = W * 0.16, right = W * 0.84;
+    var gap = (right - left) / (LANES - 1);
+    for (var i = 0; i < LANES; i++) laneX.push(left + gap * i);
+    salmonY = H * 0.80;        // 연어는 화면 아래쪽에 고정, 위로 헤엄
   }
 
-  // ---- 상태 ----
-  var STATE = { MENU: 0, PLAY: 1, OVER: 2 };
+  // ---------- 생애 단계 정의 ----------
+  var STAGES = [
+    {
+      name: "강 하류", phase: "바다로!", flow: 1,
+      bg: ["#1f6b4f", "#2e8b6b", "#12513c"],
+      obstacles: ["bigfish", "heron", "rock"],
+      salmon: { sizeMul: 0.62, body: "#9db8c6", back: "#6f8c9c", fin: "#5c7886" }
+    },
+    {
+      name: "넓은 바다", phase: "성장!", flow: 0,
+      bg: ["#0a4d6e", "#0e6896", "#062f49"],
+      obstacles: ["shark", "seal", "net"],
+      salmon: { sizeMul: 1.0, body: "#c4ced6", back: "#8b97a1", fin: "#7a8893" }
+    },
+    {
+      name: "강 상류 회귀", phase: "산란!", flow: -1,
+      bg: ["#1d5e6e", "#2a7d7d", "#123f4a"],
+      obstacles: ["bear", "hook", "eagle", "rock"],
+      salmon: { sizeMul: 1.15, body: "#e8645a", back: "#c44536", fin: "#b73e30" }
+    }
+  ];
+  var STAGE_START = [0, 260, 680];
+  var GOAL_DIST = 1040;
+
+  var OB_DEF = {
+    bigfish: { mul: 1.25, emoji: "🐟" }, heron: { mul: 1.10, emoji: "🐦" },
+    shark:   { mul: 1.75, emoji: "🦈" }, seal:  { mul: 1.45, emoji: "🦭" },
+    eagle:   { mul: 1.20, emoji: "🦅" }, bear:  { mul: 1.60, emoji: "🐻" }
+  };
+  var DEATH_MSG = {
+    bigfish: "큰 물고기에게 잡아먹혔어요! 🐟", heron: "왜가리에게 낚아채였어요! 🐦",
+    shark:   "상어에게 당했어요! 🦈", seal: "바다표범에게 잡혔어요! 🦭",
+    eagle:   "독수리에게 채여 올라갔어요! 🦅", bear: "곰에게 잡혔어요! 🐻",
+    rock:    "바위에 부딪혔어요! 🪨", hook: "낚싯바늘에 걸렸어요! 🎣", net: "사람의 그물에 걸렸어요! 🕸️"
+  };
+
+  // ---------- 상태 ----------
+  var STATE = { MENU: 0, PLAY: 1, OVER: 2, WIN: 3 };
   var state = STATE.MENU;
 
-  var salmon, obstacles, roes, particles;
-  var distance, roeCount, speed, spawnTimer, roeTimer, elapsed;
+  var salmon, obstacles, foods, particles;
+  var distance, foodCount, speed, spawnTimer, foodTimer, elapsed;
+  var stageIdx, banner;
   var bestKey = "salmonJourneyBest";
   var best = parseInt(localStorage.getItem(bestKey) || "0", 10);
+  var baseR = 16;
 
-  var salmonX = 0;
+  function curStage() { return STAGES[stageIdx]; }
 
   function reset() {
-    salmonX = W * 0.26;
+    baseR = Math.max(15, Math.min(W, H) * 0.032);
+    stageIdx = 0;
     salmon = {
-      lane: LANES - 1,           // 맨 아래 레인에서 시작
-      y: laneY[LANES - 1],
-      x: salmonX,
-      r: Math.max(16, Math.min(W, H) * 0.035),
-      wob: 0
+      lane: 1, x: laneX[1], y: salmonY,
+      r: baseR * STAGES[0].salmon.sizeMul, targetR: baseR * STAGES[0].salmon.sizeMul,
+      wob: 0, pal: STAGES[0].salmon
     };
-    obstacles = [];
-    roes = [];
-    particles = [];
-    distance = 0;
-    roeCount = 0;
-    speed = Math.max(220, W * 0.5);   // px/s, 화면폭에 비례
-    spawnTimer = 0.6;
-    roeTimer = 1.2;
-    elapsed = 0;
+    obstacles = []; foods = []; particles = [];
+    distance = 0; foodCount = 0;
+    speed = Math.max(210, H * 0.30);
+    spawnTimer = 0.7; foodTimer = 0.8; elapsed = 0;
+    banner = { text: "① 강 하류 — 바다로!", t: 2.4 };
+    bgCur = STAGES[0].bg.map(hexToRgb);
   }
 
-  // ---- 입력 ----
+  // ---------- 입력 (좌/우) ----------
   function moveLane(dir) {
     if (state !== STATE.PLAY) return;
     var n = salmon.lane + dir;
-    if (n < 0) n = 0;
-    if (n > LANES - 1) n = LANES - 1;
-    salmon.lane = n;
+    salmon.lane = n < 0 ? 0 : n > LANES - 1 ? LANES - 1 : n;
   }
-
-  // 스와이프
-  var touchStartY = null, touchStartX = null, touchMoved = false;
-  canvas.addEventListener("touchstart", function (e) {
-    var t = e.changedTouches[0];
-    touchStartY = t.clientY; touchStartX = t.clientX; touchMoved = false;
-  }, { passive: true });
+  var tY = null, tX = null;
+  canvas.addEventListener("touchstart", function (e) { var t = e.changedTouches[0]; tY = t.clientY; tX = t.clientX; }, { passive: true });
   canvas.addEventListener("touchmove", function (e) {
-    if (touchStartY === null) return;
-    var t = e.changedTouches[0];
-    var dy = t.clientY - touchStartY;
-    var dx = t.clientX - touchStartX;
-    if (!touchMoved && Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx)) {
-      moveLane(dy > 0 ? 1 : -1);
-      touchMoved = true;
-      touchStartY = t.clientY; touchStartX = t.clientX; // 연속 스와이프 허용
-      touchMoved = false;
+    if (tX === null) return;
+    var t = e.changedTouches[0], dy = t.clientY - tY, dx = t.clientX - tX;
+    if (Math.abs(dx) > 26 && Math.abs(dx) > Math.abs(dy)) {
+      moveLane(dx > 0 ? 1 : -1); tY = t.clientY; tX = t.clientX;
     }
   }, { passive: true });
-  canvas.addEventListener("touchend", function () { touchStartY = null; }, { passive: true });
-
-  // 키보드
+  canvas.addEventListener("touchend", function () { tX = null; }, { passive: true });
   window.addEventListener("keydown", function (e) {
     var k = e.key.toLowerCase();
-    if (k === "arrowup" || k === "w") { moveLane(-1); e.preventDefault(); }
-    else if (k === "arrowdown" || k === "s") { moveLane(1); e.preventDefault(); }
-    else if (k === " " || k === "enter") {
-      if (state === STATE.MENU) startGame();
-      else if (state === STATE.OVER) startGame();
-    }
+    if (k === "arrowleft" || k === "a") { moveLane(-1); e.preventDefault(); }
+    else if (k === "arrowright" || k === "d") { moveLane(1); e.preventDefault(); }
+    else if (k === " " || k === "enter") { if (state !== STATE.PLAY) startGame(); }
   });
 
-  // ---- 스폰 ----
-  var OB_TYPES = ["rock", "bear", "hook"];
+  // ---------- 스폰 (위에서 아래로 내려옴) ----------
   function spawnObstacle() {
+    var st = curStage();
     var lane = Math.floor(Math.random() * LANES);
-    var type = OB_TYPES[Math.floor(Math.random() * OB_TYPES.length)];
-    obstacles.push({
-      lane: lane,
-      x: W + 60,
-      y: laneY[lane],
-      type: type,
-      r: salmon.r * (type === "bear" ? 1.5 : type === "hook" ? 1.0 : 1.2),
-      t: Math.random() * 6.28
-    });
+    var type = st.obstacles[Math.floor(Math.random() * st.obstacles.length)];
+    var mul = OB_DEF[type] ? OB_DEF[type].mul : (type === "net" ? 1.5 : type === "hook" ? 1.0 : 1.2);
+    obstacles.push({ lane: lane, x: laneX[lane], y: -70, type: type, r: salmon.r * mul, t: Math.random() * 6.28 });
   }
-  function spawnRoe() {
+  function spawnFood() {
     var lane = Math.floor(Math.random() * LANES);
-    roes.push({ lane: lane, x: W + 40, y: laneY[lane], r: salmon.r * 0.45, t: Math.random() * 6.28, got: false });
+    foods.push({ lane: lane, x: laneX[lane], y: -40, r: baseR * 0.42, t: Math.random() * 6.28 });
   }
-
   function burst(x, y, color, n) {
     for (var i = 0; i < n; i++) {
-      var a = Math.random() * 6.28, sp = 60 + Math.random() * 180;
+      var a = Math.random() * 6.28, sp = 60 + Math.random() * 190;
       particles.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.6, max: 0.6, color: color, r: 2 + Math.random() * 3 });
     }
   }
 
-  // ---- 업데이트 ----
+  // ---------- 단계 전환 ----------
+  function checkStage() {
+    var ni = stageIdx;
+    for (var i = STAGES.length - 1; i >= 0; i--) { if (distance >= STAGE_START[i]) { ni = i; break; } }
+    if (ni !== stageIdx) {
+      stageIdx = ni;
+      var st = STAGES[ni];
+      salmon.targetR = baseR * st.salmon.sizeMul;
+      salmon.pal = st.salmon;
+      var nums = ["①", "②", "③"];
+      banner = { text: nums[ni] + " " + st.name + " — " + st.phase, t: 2.4 };
+      burst(salmon.x, salmon.y, "#ffe08a", 18);
+    }
+  }
+
+  // ---------- 색 보간 ----------
+  var bgCur = [[10,77,110],[14,104,150],[6,47,73]];
+  function hexToRgb(s){ return [parseInt(s.substr(1,2),16), parseInt(s.substr(3,2),16), parseInt(s.substr(5,2),16)]; }
+  function lerpRgb(cur, hex, t) {
+    var tg = hexToRgb(hex);
+    cur[0] += (tg[0]-cur[0])*t; cur[1] += (tg[1]-cur[1])*t; cur[2] += (tg[2]-cur[2])*t;
+  }
+  function rgbStr(c){ return "rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")"; }
+
+  // ---------- 업데이트 ----------
   function update(dt) {
     elapsed += dt;
-    distance += speed * dt * 0.05;            // m
-    speed += dt * 6;                          // 점점 빨라짐
+    distance += speed * dt * 0.05;
+    speed += dt * 5.5;
 
-    // 연어 레인 보간
-    var ty = laneY[salmon.lane];
-    salmon.y += (ty - salmon.y) * Math.min(1, dt * 12);
+    if (distance >= GOAL_DIST) { win(); return; }
+    checkStage();
+
+    var tgt = curStage().bg;
+    for (var c = 0; c < 3; c++) lerpRgb(bgCur[c], tgt[c], Math.min(1, dt * 1.5));
+
+    if (banner && banner.t > 0) banner.t -= dt;
+
+    // 연어: 좌우 보간 + 위로 헤엄(고정 y) + 성장
+    var tx = laneX[salmon.lane];
+    salmon.x += (tx - salmon.x) * Math.min(1, dt * 12);
+    salmon.r += (salmon.targetR - salmon.r) * Math.min(1, dt * 3);
     salmon.wob += dt * 10;
-    salmon.x = salmonX + Math.sin(salmon.wob) * 3;
+    salmon.y = salmonY + Math.sin(salmon.wob) * 2;
 
     // 스폰
     spawnTimer -= dt;
     if (spawnTimer <= 0) {
       spawnObstacle();
-      var base = Math.max(0.45, 1.15 - elapsed * 0.012);
+      var base = Math.max(0.42, 1.1 - elapsed * 0.011);
       spawnTimer = base + Math.random() * 0.5;
     }
-    roeTimer -= dt;
-    if (roeTimer <= 0) { spawnRoe(); roeTimer = 1.3 + Math.random() * 1.6; }
+    foodTimer -= dt;
+    if (foodTimer <= 0) { spawnFood(); foodTimer = 0.9 + Math.random() * 1.2; }
 
-    // 장애물 이동/충돌
+    // 장애물 (아래로)
     for (var i = obstacles.length - 1; i >= 0; i--) {
       var o = obstacles[i];
-      o.x -= speed * dt;
-      o.t += dt * 4;
-      o.y = laneY[o.lane] + (o.type === "hook" ? Math.sin(o.t) * 6 : 0);
-      if (o.x < -80) { obstacles.splice(i, 1); continue; }
-      var dx = o.x - salmon.x, dy = o.y - salmon.y;
-      var rr = (o.r * 0.62 + salmon.r * 0.6);
-      if (dx * dx + dy * dy < rr * rr) {
-        burst(salmon.x, salmon.y, "#ff6b6b", 26);
-        gameOver(o.type);
-        return;
-      }
+      o.y += speed * dt; o.t += dt * 4;
+      o.x = laneX[o.lane] + ((o.type === "hook") ? Math.sin(o.t) * 6 : (o.type === "heron" || o.type === "eagle") ? Math.sin(o.t) * 8 : 0);
+      if (o.y > H + 90) { obstacles.splice(i, 1); continue; }
+      var dx = o.x - salmon.x, dy = o.y - salmon.y, rr = o.r * 0.56 + salmon.r * 0.56;
+      if (dx * dx + dy * dy < rr * rr) { burst(salmon.x, salmon.y, "#ff6b6b", 26); gameOver(o.type); return; }
     }
 
-    // 알 이동/획득
-    for (var j = roes.length - 1; j >= 0; j--) {
-      var e = roes[j];
-      e.x -= speed * dt;
-      e.t += dt * 5;
-      e.y = laneY[e.lane] + Math.sin(e.t) * 5;
-      if (e.x < -40) { roes.splice(j, 1); continue; }
-      var ex = e.x - salmon.x, ey = e.y - salmon.y;
-      var er = (e.r + salmon.r * 0.7);
-      if (ex * ex + ey * ey < er * er) {
-        roeCount++;
-        distance += 5;
-        burst(e.x, e.y, "#ffd166", 14);
-        roes.splice(j, 1);
-      }
+    // 먹이 (아래로)
+    for (var j = foods.length - 1; j >= 0; j--) {
+      var e = foods[j];
+      e.y += speed * dt; e.t += dt * 5; e.x = laneX[e.lane] + Math.sin(e.t) * 5;
+      if (e.y > H + 40) { foods.splice(j, 1); continue; }
+      var ex = e.x - salmon.x, ey = e.y - salmon.y, er = e.r + salmon.r * 0.7;
+      if (ex * ex + ey * ey < er * er) { foodCount++; distance += 4; burst(e.x, e.y, "#ffd166", 12); foods.splice(j, 1); }
     }
 
     // 파티클
     for (var p = particles.length - 1; p >= 0; p--) {
-      var pa = particles[p];
-      pa.life -= dt;
+      var pa = particles[p]; pa.life -= dt;
       if (pa.life <= 0) { particles.splice(p, 1); continue; }
       pa.x += pa.vx * dt; pa.y += pa.vy * dt; pa.vy += 200 * dt;
     }
   }
 
-  // ---- 렌더 ----
+  // ---------- 렌더 ----------
   var scroll = 0;
   function draw() {
-    // 강물 배경 (그라데이션)
     var g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, "#0a4d6e");
-    g.addColorStop(0.5, "#0e6896");
-    g.addColorStop(1, "#0a3d62");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+    g.addColorStop(0, rgbStr(bgCur[0])); g.addColorStop(0.5, rgbStr(bgCur[1])); g.addColorStop(1, rgbStr(bgCur[2]));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-    // 흐르는 물결 선 (상류로 가는 느낌: 오른→왼)
+    // 물결: 가로선이 아래로 흐름(연어가 위로 가는 느낌). 단계 흐름 방향으로 살짝 기울임.
+    var flow = (state === STATE.PLAY ? curStage().flow : 0);
     scroll = (scroll + speed * 0.016) % 60;
-    ctx.strokeStyle = "rgba(255,255,255,0.06)";
-    ctx.lineWidth = 2;
-    for (var x = -scroll; x < W; x += 60) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0); ctx.lineTo(x - 30, H);
-      ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.06)"; ctx.lineWidth = 2;
+    var skew = flow * 30;
+    for (var y = (scroll % 60) - 60; y < H + 60; y += 60) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y + skew); ctx.stroke();
+    }
+    // 바다 단계: 위로 올라가는 거품
+    if (state === STATE.PLAY && stageIdx === 1) {
+      ctx.fillStyle = "rgba(255,255,255,0.05)";
+      for (var b = 0; b < 7; b++) {
+        var bx = (b * 91 + 37) % W;
+        var by = (H - ((elapsed * 50 + b * 120) % (H + 80)));
+        ctx.beginPath(); ctx.arc(bx, by, 3 + (b % 3), 0, 6.28); ctx.fill();
+      }
     }
 
-    // 레인 가이드(은은하게)
-    ctx.strokeStyle = "rgba(255,255,255,0.045)";
-    ctx.setLineDash([6, 10]);
-    for (var i = 0; i < LANES; i++) {
-      ctx.beginPath(); ctx.moveTo(0, laneY[i]); ctx.lineTo(W, laneY[i]); ctx.stroke();
-    }
+    // 레인 가이드 (세로선)
+    ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.setLineDash([6, 10]);
+    for (var i = 0; i < LANES; i++) { ctx.beginPath(); ctx.moveTo(laneX[i], 0); ctx.lineTo(laneX[i], H); ctx.stroke(); }
     ctx.setLineDash([]);
 
-    // 알
-    for (var r = 0; r < roes.length; r++) drawRoe(roes[r]);
-    // 장애물
+    for (var r = 0; r < foods.length; r++) drawFood(foods[r]);
     for (var o = 0; o < obstacles.length; o++) drawObstacle(obstacles[o]);
-    // 파티클
     for (var p = 0; p < particles.length; p++) {
-      var pa = particles[p];
-      ctx.globalAlpha = Math.max(0, pa.life / pa.max);
-      ctx.fillStyle = pa.color;
-      ctx.beginPath(); ctx.arc(pa.x, pa.y, pa.r, 0, 6.2832); ctx.fill();
+      var pa = particles[p]; ctx.globalAlpha = Math.max(0, pa.life / pa.max);
+      ctx.fillStyle = pa.color; ctx.beginPath(); ctx.arc(pa.x, pa.y, pa.r, 0, 6.2832); ctx.fill();
     }
     ctx.globalAlpha = 1;
 
-    // 연어
     if (state === STATE.PLAY || state === STATE.OVER) drawSalmon(salmon);
-
-    // HUD
-    if (state === STATE.PLAY) {
-      ctx.fillStyle = "#eaf6ff";
-      ctx.font = "700 26px -apple-system, sans-serif";
-      ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillText(Math.floor(distance) + " m", 18, 16);
-      ctx.font = "600 18px -apple-system, sans-serif";
-      ctx.fillStyle = "#ffd166";
-      ctx.fillText("🟠 " + roeCount, 18, 50);
-    }
+    if (state === STATE.PLAY) { drawHUD(); drawBanner(); }
   }
 
+  function drawHUD() {
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillStyle = "#eaf6ff"; ctx.font = "700 25px -apple-system, sans-serif";
+    ctx.fillText(Math.floor(distance) + " m", 18, 14);
+    ctx.font = "600 16px -apple-system, sans-serif"; ctx.fillStyle = "#ffd166";
+    ctx.fillText("🍤 " + foodCount, 18, 46);
+    ctx.textAlign = "right"; ctx.fillStyle = "#cfe9f7"; ctx.font = "700 16px -apple-system, sans-serif";
+    ctx.fillText(["①","②","③"][stageIdx] + " " + curStage().name, W - 16, 16);
+    ctx.textAlign = "left";
+
+    // 여정 진행 바 (상단 가로)
+    var bw = W - 32, bx = 16, by = 70, prog = Math.min(1, distance / GOAL_DIST);
+    ctx.fillStyle = "rgba(255,255,255,0.15)"; roundRect(bx, by, bw, 6, 3); ctx.fill();
+    ctx.fillStyle = "#ffd166"; roundRect(bx, by, bw * prog, 6, 3); ctx.fill();
+    ctx.font = "14px serif"; ctx.textAlign = "right"; ctx.fillText("🏁", bx + bw + 2, by - 9); ctx.textAlign = "left";
+    ctx.font = "13px serif"; ctx.fillText("🐟", bx + bw * prog - 6, by - 9);
+  }
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function drawBanner() {
+    if (!banner || banner.t <= 0) return;
+    var a = Math.min(1, banner.t) * Math.min(1, (2.4 - banner.t) * 3 + 0.2);
+    ctx.globalAlpha = Math.max(0, Math.min(1, a));
+    ctx.fillStyle = "rgba(6,40,61,0.72)";
+    ctx.font = "800 26px -apple-system, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    var tw = ctx.measureText(banner.text).width;
+    roundRect(W/2 - tw/2 - 22, H*0.16 - 26, tw + 44, 52, 14); ctx.fill();
+    ctx.fillStyle = "#ffe08a"; ctx.fillText(banner.text, W/2, H*0.16);
+    ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "top";
+  }
+
+  // 연어를 '위'를 향하도록 -90° 회전해서 그림 (기본 그림은 오른쪽을 향함)
   function drawSalmon(s) {
-    ctx.save();
-    ctx.translate(s.x, s.y);
+    var pal = s.pal;
+    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(-Math.PI / 2);
     var tail = Math.sin(s.wob) * 0.25;
-    // 몸통
-    ctx.fillStyle = "#e8645a";
+    ctx.fillStyle = pal.body;
+    ctx.beginPath(); ctx.ellipse(0, 0, s.r * 1.25, s.r * 0.72, 0, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = pal.back;
+    ctx.beginPath(); ctx.ellipse(0, -s.r * 0.18, s.r * 1.05, s.r * 0.42, 0, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = pal.body;
     ctx.beginPath();
-    ctx.ellipse(0, 0, s.r * 1.25, s.r * 0.72, 0, 0, 6.2832);
-    ctx.fill();
-    // 등쪽 진한색
-    ctx.fillStyle = "#c44536";
-    ctx.beginPath();
-    ctx.ellipse(0, -s.r * 0.18, s.r * 1.05, s.r * 0.42, 0, 0, 6.2832);
-    ctx.fill();
-    // 꼬리
-    ctx.fillStyle = "#d65a4e";
-    ctx.beginPath();
-    ctx.moveTo(-s.r * 1.1, 0);
-    ctx.lineTo(-s.r * 1.9, -s.r * 0.7 + tail * s.r);
-    ctx.lineTo(-s.r * 1.9, s.r * 0.7 + tail * s.r);
+    ctx.moveTo(-s.r * 1.1, 0); ctx.lineTo(-s.r * 1.9, -s.r * 0.7 + tail * s.r); ctx.lineTo(-s.r * 1.9, s.r * 0.7 + tail * s.r);
     ctx.closePath(); ctx.fill();
-    // 지느러미
-    ctx.fillStyle = "#b73e30";
-    ctx.beginPath();
-    ctx.moveTo(s.r * 0.1, s.r * 0.5);
-    ctx.lineTo(-s.r * 0.5, s.r * 0.95);
-    ctx.lineTo(s.r * 0.5, s.r * 0.62);
+    ctx.fillStyle = pal.fin;
+    ctx.beginPath(); ctx.moveTo(s.r * 0.1, s.r * 0.5); ctx.lineTo(-s.r * 0.5, s.r * 0.95); ctx.lineTo(s.r * 0.5, s.r * 0.62);
     ctx.closePath(); ctx.fill();
-    // 눈
-    ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.arc(s.r * 0.75, -s.r * 0.12, s.r * 0.2, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = "#1b2b34";
-    ctx.beginPath(); ctx.arc(s.r * 0.82, -s.r * 0.12, s.r * 0.1, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(s.r * 0.75, -s.r * 0.12, s.r * 0.2, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#1b2b34"; ctx.beginPath(); ctx.arc(s.r * 0.82, -s.r * 0.12, s.r * 0.1, 0, 6.2832); ctx.fill();
     ctx.restore();
   }
 
   function drawObstacle(o) {
-    ctx.save();
-    ctx.translate(o.x, o.y);
+    ctx.save(); ctx.translate(o.x, o.y);
     if (o.type === "rock") {
       ctx.fillStyle = "#6b7b8c";
-      ctx.beginPath();
-      ctx.moveTo(-o.r, o.r * 0.6);
-      ctx.lineTo(-o.r * 0.5, -o.r * 0.7);
-      ctx.lineTo(o.r * 0.3, -o.r * 0.5);
-      ctx.lineTo(o.r, o.r * 0.5);
+      ctx.beginPath(); ctx.moveTo(-o.r, o.r*0.6); ctx.lineTo(-o.r*0.5, -o.r*0.7); ctx.lineTo(o.r*0.3, -o.r*0.5); ctx.lineTo(o.r, o.r*0.5);
       ctx.closePath(); ctx.fill();
       ctx.fillStyle = "rgba(255,255,255,0.12)";
       ctx.beginPath(); ctx.ellipse(-o.r*0.2, -o.r*0.2, o.r*0.35, o.r*0.18, -0.5, 0, 6.28); ctx.fill();
-    } else if (o.type === "bear") {
-      ctx.font = (o.r * 2.1) + "px serif";
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText("🐻", 0, 0);
-    } else { // hook
-      ctx.strokeStyle = "#cfd8e0";
-      ctx.lineWidth = Math.max(2, o.r * 0.18);
-      ctx.beginPath();
-      ctx.moveTo(0, -o.r * 1.4);
-      ctx.lineTo(0, o.r * 0.2);
-      ctx.arc(0, o.r * 0.2, o.r * 0.5, -1.57, 1.2, false);
-      ctx.stroke();
-      ctx.fillStyle = "#ff5252"; // 미끼
-      ctx.beginPath(); ctx.arc(o.r * 0.18, o.r * 0.55, o.r * 0.3, 0, 6.28); ctx.fill();
+    } else if (o.type === "hook") {
+      // 위에서 내려오는 낚싯줄 + 바늘
+      ctx.strokeStyle = "#cfd8e0"; ctx.lineWidth = Math.max(2, o.r * 0.18);
+      ctx.beginPath(); ctx.moveTo(0, -o.r*1.8); ctx.lineTo(0, o.r*0.2); ctx.arc(0, o.r*0.2, o.r*0.5, -1.57, 1.2, false); ctx.stroke();
+      ctx.fillStyle = "#ff5252"; ctx.beginPath(); ctx.arc(o.r*0.18, o.r*0.55, o.r*0.3, 0, 6.28); ctx.fill();
+    } else if (o.type === "net") {
+      var n = o.r * 1.5;
+      ctx.strokeStyle = "rgba(225,235,240,0.85)"; ctx.lineWidth = 2;
+      ctx.strokeRect(-n/2, -n/2, n, n);
+      var step = n / 4;
+      for (var k = 1; k < 4; k++) {
+        ctx.beginPath(); ctx.moveTo(-n/2 + step*k, -n/2); ctx.lineTo(-n/2 + step*k, n/2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-n/2, -n/2 + step*k); ctx.lineTo(n/2, -n/2 + step*k); ctx.stroke();
+      }
+    } else {
+      var def = OB_DEF[o.type];
+      ctx.font = (o.r * 2.0) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(def ? def.emoji : "❔", 0, 0);
     }
     ctx.restore();
   }
 
-  function drawRoe(e) {
-    ctx.save();
-    ctx.translate(e.x, e.y);
+  function drawFood(e) {
+    ctx.save(); ctx.translate(e.x, e.y);
     var pulse = 1 + Math.sin(e.t * 1.5) * 0.12;
     var grd = ctx.createRadialGradient(-e.r*0.3, -e.r*0.3, e.r*0.2, 0, 0, e.r*pulse);
-    grd.addColorStop(0, "#fff1c2");
-    grd.addColorStop(1, "#ff9f1c");
-    ctx.fillStyle = grd;
-    ctx.beginPath(); ctx.arc(0, 0, e.r * pulse, 0, 6.2832); ctx.fill();
+    grd.addColorStop(0, "#fff1c2"); grd.addColorStop(1, "#ff9f1c");
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(0, 0, e.r*pulse, 0, 6.2832); ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(0, 0, e.r * pulse, 0, 6.2832); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, e.r*pulse, 0, 6.2832); ctx.stroke();
     ctx.restore();
   }
 
-  // ---- 게임 흐름 ----
+  // ---------- 게임 흐름 ----------
+  var overTitleEl = document.getElementById("overTitle");
   var overMsgEl = document.getElementById("overMsg");
-  function gameOver(type) {
-    state = STATE.OVER;
-    if (Math.floor(distance) > best) {
-      best = Math.floor(distance);
-      localStorage.setItem(bestKey, String(best));
-    }
-    document.getElementById("finalScore").textContent = Math.floor(distance) + " m";
-    document.getElementById("finalRoe").textContent = roeCount;
+  function saveBest() {
+    if (Math.floor(distance) > best) { best = Math.floor(distance); localStorage.setItem(bestKey, String(best)); }
+  }
+  function showResult(titleText, msg, won) {
+    saveBest();
+    overTitleEl.textContent = titleText;
+    document.getElementById("finalScore").textContent = won ? "산란 성공! 🥚" : Math.floor(distance) + " m";
+    document.getElementById("finalStage").textContent = ["①","②","③"][stageIdx] + "/③";
+    document.getElementById("finalFood").textContent = foodCount;
     document.getElementById("bestScore").textContent = best + " m";
-    var msg = type === "bear" ? "곰에게 잡혔어요! 🐻"
-            : type === "hook" ? "낚싯바늘에 걸렸어요! 🎣"
-            : "바위에 부딪혔어요! 🪨";
     overMsgEl.textContent = msg;
+    document.getElementById("retryBtn").textContent = won ? "다시 여정 시작" : "다시 도전";
     document.getElementById("overScreen").classList.remove("hidden");
   }
-
+  function gameOver(type) { state = STATE.OVER; showResult("여정 중단", DEATH_MSG[type] || "여정이 끝났어요.", false); }
+  function win() {
+    state = STATE.WIN; distance = GOAL_DIST;
+    showResult("산란장 도착! 🎉", "태어난 강으로 무사히 돌아와 알을 낳았어요. 생명의 여정 완성! 🐟🥚", true);
+  }
   function startGame() {
     document.getElementById("startScreen").classList.add("hidden");
     document.getElementById("overScreen").classList.add("hidden");
-    reset();
-    state = STATE.PLAY;
+    reset(); state = STATE.PLAY;
   }
-
   document.getElementById("startBtn").addEventListener("click", startGame);
   document.getElementById("retryBtn").addEventListener("click", startGame);
 
-  // ---- 루프 ----
+  // ---------- 루프 ----------
   var last = 0;
   function loop(ts) {
     if (!last) last = ts;
-    var dt = Math.min(0.05, (ts - last) / 1000);
-    last = ts;
+    var dt = Math.min(0.05, (ts - last) / 1000); last = ts;
     if (state === STATE.PLAY) update(dt);
     draw();
     requestAnimationFrame(loop);
   }
 
   window.addEventListener("resize", resize);
-  resize();
-  reset();              // 메뉴 배경용
+  resize(); reset(); state = STATE.MENU;
   requestAnimationFrame(loop);
 })();
 </script>
