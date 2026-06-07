@@ -93,6 +93,7 @@
     canvas.style.width = W + "px"; canvas.style.height = H + "px";
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     computeLanes();
+    initCurrents();
   }
 
   // ---------- 레인 (세로 방향: 좌우로 나뉜 칸) ----------
@@ -169,6 +170,7 @@
   var phase = "run";                  // "run" 일반 진행 / "guard" 산란 후 알 지키기
   var eggs, eggsGuarded, threats, guardTimer, guardSpawn, nestX, shieldT, shieldCd;
   var flowOffset = 0, decos = [];   // 강 흐름 누적치 + 둑 위 풀/나무
+  var currents = [];                // 아래로 흐르는 물줄기(흐름 표현)
   var LEAF_GREEN = ["#3f9142", "#2f7d32", "#57a64a"];
   var LEAF_AUTUMN = ["#d98324", "#c0562b", "#e0a02e"];   // ③ 산란철(가을) 단풍
   var bestKey = "salmonJourneyBest";
@@ -296,6 +298,36 @@
   }
   function rgbStr(c){ return "rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")"; }
 
+  // ---------- 물 흐름 (아래로 흐르는 물줄기) ----------
+  function newCurrent(y) {
+    return { x: Math.random() * W, y: y, len: 16 + Math.random() * 48, w: 1 + Math.random() * 1.8,
+             a: 0.05 + Math.random() * 0.12, sp: 0.7 + Math.random() * 0.7 };
+  }
+  function initCurrents() {
+    currents = [];
+    var n = Math.max(16, Math.round(W / 22));
+    for (var i = 0; i < n; i++) currents.push(newCurrent(Math.random() * H));
+  }
+  function updateAmbient(dt) {            // 상태와 무관하게 항상 물이 흐르게
+    var base = (state === STATE.PLAY ? speed : 240);
+    scroll = (scroll + base * 0.016) % 60;
+    for (var i = 0; i < currents.length; i++) {
+      var c = currents[i]; c.y += base * c.sp * dt;
+      if (c.y - c.len > H) currents[i] = newCurrent(-c.len - Math.random() * 60);
+    }
+  }
+  function drawCurrents() {
+    var flow = (state === STATE.PLAY ? curStage().flow : 1);
+    ctx.lineCap = "round";
+    for (var i = 0; i < currents.length; i++) {
+      var c = currents[i];
+      ctx.strokeStyle = "rgba(235,248,255," + c.a + ")"; ctx.lineWidth = c.w;
+      var sk = flow * (c.len * 0.14);     // 단계 흐름 방향으로 살짝 비스듬히
+      ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(c.x - sk, c.y - c.len); ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+  }
+
   // ---------- 업데이트 ----------
   function advanceFlow(dt, rate) {       // 강 흐름 + 둑 풀/나무 재활용
     flowOffset += speed * rate * dt;
@@ -384,12 +416,12 @@
 
     // 물결: 가로선이 아래로 흐름(연어가 위로 가는 느낌). 단계 흐름 방향으로 살짝 기울임.
     var flow = (state === STATE.PLAY ? curStage().flow : 0);
-    scroll = (scroll + speed * 0.016) % 60;
-    ctx.strokeStyle = "rgba(255,255,255,0.06)"; ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 2;
     var skew = flow * 30;
     for (var y = (scroll % 60) - 60; y < H + 60; y += 60) {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y + skew); ctx.stroke();
     }
+    drawCurrents();    // 아래로 흐르는 물줄기
     // 바다 단계: 위로 올라가는 거품
     if (state === STATE.PLAY && stageIdx === 1) {
       ctx.fillStyle = "rgba(255,255,255,0.05)";
@@ -962,6 +994,7 @@
   function loop(ts) {
     if (!last) last = ts;
     var dt = Math.min(0.05, (ts - last) / 1000); last = ts;
+    updateAmbient(dt);
     if (state === STATE.PLAY) update(dt);
     draw();
     requestAnimationFrame(loop);
