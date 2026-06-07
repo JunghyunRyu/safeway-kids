@@ -148,9 +148,9 @@
   function addPop(x, y, text, color) { pops.push({ x: x, y: y, text: text, color: color || "#ffd166", life: 0.9, max: 0.9 }); }
 
   // ---------- 화면 / DPI ----------
-  var W = 0, H = 0, DPR = 1;
+  var W = 0, H = 0, DPR = 1, qualityScale = 1;   // qualityScale: 끊기면 자동 하향
   function resize() {
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 2) * qualityScale);
     W = window.innerWidth; H = window.innerHeight;
     canvas.width = Math.floor(W * DPR); canvas.height = Math.floor(H * DPR);
     canvas.style.width = W + "px"; canvas.style.height = H + "px";
@@ -173,6 +173,12 @@
     salmonY = H * 0.80;        // 연어는 화면 아래쪽에 고정, 위로 헤엄
     BANK_BASE = W * 0.085;     // 둑 기본 폭
     BANK_AMP = W * 0.03;       // 굽이치는 진폭
+    // 성능: 색이 고정인 강둑 그라데이션은 리사이즈 때 한 번만 생성
+    bankGradL = ctx.createLinearGradient(0, 0, W * 0.2, 0);
+    bankGradL.addColorStop(0, "#274d23"); bankGradL.addColorStop(1, "#3a6b34");
+    bankGradR = ctx.createLinearGradient(W, 0, W * 0.8, 0);
+    bankGradR.addColorStop(0, "#274d23"); bankGradR.addColorStop(1, "#3a6b34");
+    bgKey = "";                // 배경 그라데이션 캐시 무효화
   }
   // 강둑 가장자리(물길과 땅의 경계). flowOffset로 아래로 흐르게.
   function leftEdge(y)  { return BANK_BASE + BANK_AMP * Math.sin((y - flowOffset) * BANK_FREQ); }
@@ -235,6 +241,7 @@
   var flowOffset = 0, decos = [];   // 강 흐름 누적치 + 둑 위 풀/나무
   var currents = [];                // 아래로 흐르는 물줄기(흐름 표현)
   var waveTimer = 0;                // 적 무리(웨이브) 타이머
+  var bankGradL = null, bankGradR = null, bgGrad = null, bgKey = "";   // 성능: 그라데이션 캐시
   var LEAF_GREEN = ["#3f9142", "#2f7d32", "#57a64a"];
   var LEAF_AUTUMN = ["#d98324", "#c0562b", "#e0a02e"];   // ③ 산란철(가을) 단풍
   var bestKey = "salmonJourneyBest";
@@ -516,9 +523,14 @@
   // ---------- 렌더 ----------
   var scroll = 0;
   function draw() {
-    var g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, rgbStr(bgCur[0])); g.addColorStop(0.5, rgbStr(bgCur[1])); g.addColorStop(1, rgbStr(bgCur[2]));
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // 성능: 배경 그라데이션은 색이 바뀔 때만 재생성(전환 중에만)
+    var key = (bgCur[0][0]|0)+","+(bgCur[0][1]|0)+","+(bgCur[0][2]|0)+"|"+(bgCur[1][0]|0)+","+(bgCur[1][1]|0)+","+(bgCur[1][2]|0)+"|"+(bgCur[2][0]|0)+","+(bgCur[2][1]|0)+","+(bgCur[2][2]|0)+"|"+H;
+    if (key !== bgKey || !bgGrad) {
+      bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+      bgGrad.addColorStop(0, rgbStr(bgCur[0])); bgGrad.addColorStop(0.5, rgbStr(bgCur[1])); bgGrad.addColorStop(1, rgbStr(bgCur[2]));
+      bgKey = key;
+    }
+    ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
 
     // 물결: 가로선이 아래로 흐름(연어가 위로 가는 느낌). 단계 흐름 방향으로 살짝 기울임.
     var flow = (state === STATE.PLAY ? curStage().flow : 0);
@@ -613,15 +625,10 @@
   }
   function drawGuardHUD() {
     ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.shadowColor = "rgba(0,0,0,0.55)"; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1;
-    ctx.fillStyle = "#eaf6ff"; ctx.font = "700 25px -apple-system, sans-serif";
-    ctx.fillText(Math.floor(lifetimeDist) + " m", 16, 12);
-    ctx.font = "600 15px -apple-system, sans-serif"; ctx.fillStyle = "#ffd166";
-    ctx.fillText("🥚 알 " + eggs + "   🛡️ 막음 " + eggsGuarded, 16, 44);
+    ctx.font = "700 25px -apple-system, sans-serif"; hudText(Math.floor(lifetimeDist) + " m", 16, 12, "#eaf6ff");
+    ctx.font = "600 15px -apple-system, sans-serif"; hudText("🥚 알 " + eggs + "   🛡️ 막음 " + eggsGuarded, 16, 44, "#ffd166");
     ctx.font = "700 15px -apple-system, sans-serif";
-    ctx.fillStyle = shieldT > 0 ? "#9fe7ff" : shieldCd <= 0 ? "#cfe9f7" : "#7d909c";
-    ctx.fillText(shieldT > 0 ? "🛡️ 방어막!" : shieldCd <= 0 ? "🛡️ 탭=방어막" : "🛡️ 충전중…", 16, 66);
-    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    hudText(shieldT > 0 ? "🛡️ 방어막!" : shieldCd <= 0 ? "🛡️ 탭=방어막" : "🛡️ 충전중…", 16, 66, shieldT > 0 ? "#9fe7ff" : shieldCd <= 0 ? "#cfe9f7" : "#7d909c");
     // 남은 시간 바
     var bw = W - 32, bx = 16, by = 90, prog = Math.max(0, guardTimer / GUARD_DUR);
     ctx.fillStyle = "rgba(255,255,255,0.15)"; roundRect(bx, by, bw, 6, 3); ctx.fill();
@@ -629,17 +636,17 @@
     ctx.font = "14px serif"; ctx.textAlign = "right"; ctx.fillText("⏱️", bx + bw + 2, by - 9); ctx.textAlign = "left";
   }
 
+  function hudText(txt, x, y, color) {     // 성능: shadowBlur 대신 저비용 오프셋 이중 렌더
+    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillText(txt, x + 1.5, y + 1.5);
+    ctx.fillStyle = color; ctx.fillText(txt, x, y);
+  }
   function drawHUD() {
     ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.shadowColor = "rgba(0,0,0,0.55)"; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1;
-    ctx.fillStyle = "#eaf6ff"; ctx.font = "700 25px -apple-system, sans-serif";
-    ctx.fillText(Math.floor(lifetimeDist) + " m", 16, 12);
-    ctx.font = "600 15px -apple-system, sans-serif"; ctx.fillStyle = "#ffd166";
-    ctx.fillText("🍤 " + foodCount + "   🥚 " + generation + "세대", 16, 44);
-    if (combo >= 2) { ctx.fillStyle = "#ff9a5c"; ctx.fillText("🔥 x" + combo + " 콤보", 16, 66); }
-    ctx.fillStyle = "#cfe9f7"; ctx.font = "600 14px -apple-system, sans-serif";
-    ctx.fillText(["①","②","③"][stageIdx] + " " + curStage().name, 16, combo >= 2 ? 88 : 66);
-    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.font = "700 25px -apple-system, sans-serif"; hudText(Math.floor(lifetimeDist) + " m", 16, 12, "#eaf6ff");
+    ctx.font = "600 15px -apple-system, sans-serif"; hudText("🍤 " + foodCount + "   🥚 " + generation + "세대", 16, 44, "#ffd166");
+    if (combo >= 2) hudText("🔥 x" + combo + " 콤보", 16, 66, "#ff9a5c");
+    ctx.font = "600 14px -apple-system, sans-serif";
+    hudText(["①","②","③"][stageIdx] + " " + curStage().name, 16, combo >= 2 ? 88 : 66, "#cfe9f7");
 
     // 여정 진행 바 (상단 가로)
     var bw = W - 32, bx = 16, by = combo >= 2 ? 112 : 90, prog = Math.min(1, distance / GOAL_DIST);
@@ -1005,17 +1012,13 @@
 
   // ---------- 강둑 + 풀/나무 렌더 ----------
   function drawBanks() {
-    var STEP = 18;
-    // 좌측 땅
-    var lg = ctx.createLinearGradient(0, 0, W * 0.2, 0);
-    lg.addColorStop(0, "#274d23"); lg.addColorStop(1, "#3a6b34");
-    ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(0, 0);
+    var STEP = 26;
+    // 좌측 땅 (캐시된 그라데이션 사용)
+    ctx.fillStyle = bankGradL; ctx.beginPath(); ctx.moveTo(0, 0);
     for (var y = 0; y <= H; y += STEP) ctx.lineTo(leftEdge(y), y);
     ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
     // 우측 땅
-    var rg = ctx.createLinearGradient(W, 0, W * 0.8, 0);
-    rg.addColorStop(0, "#274d23"); rg.addColorStop(1, "#3a6b34");
-    ctx.fillStyle = rg; ctx.beginPath(); ctx.moveTo(W, 0);
+    ctx.fillStyle = bankGradR; ctx.beginPath(); ctx.moveTo(W, 0);
     for (var y2 = 0; y2 <= H; y2 += STEP) ctx.lineTo(rightEdge(y2), y2);
     ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
     // 모래톱(물가) 라인
@@ -1181,13 +1184,21 @@
   document.addEventListener("visibilitychange", function () { if (document.hidden && state === STATE.PLAY) setPaused(true); });
 
   // ---------- 루프 ----------
-  var last = 0;
+  var last = 0, fpsAccum = 0, fpsSamples = 0, qualityChecked = false;
   function loop(ts) {
     if (!last) last = ts;
     var dt = Math.min(0.05, (ts - last) / 1000); last = ts;
     if (!paused) {
       updateAmbient(dt);
       if (state === STATE.PLAY) update(dt);
+      // 적응형 품질: 첫 ~2초 평균 프레임이 느리면 해상도 한 단계 하향
+      if (state === STATE.PLAY && !qualityChecked) {
+        fpsAccum += dt; fpsSamples++;
+        if (fpsSamples >= 120) {
+          if (fpsAccum / fpsSamples > 0.0215 && qualityScale === 1) { qualityScale = 0.7; resize(); }
+          qualityChecked = true;
+        }
+      }
     }
     draw();
     requestAnimationFrame(loop);
