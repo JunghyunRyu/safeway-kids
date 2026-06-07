@@ -44,11 +44,10 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Pages 는 repo Settings → Pages → Source = "GitHub Actions" 로
+      # 최초 1회 활성화해야 한다. (기본 GITHUB_TOKEN 은 Pages 사이트를
+      # 자동 생성할 권한이 없어 enablement:true 가 동작하지 않음)
       - uses: actions/configure-pages@v5
-        with:
-          # repo의 Pages 를 GitHub Actions 소스로 자동 활성화 시도
-          # (GITHUB_TOKEN 에 pages:write 권한이 있어 수동 설정 없이 켜짐)
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
