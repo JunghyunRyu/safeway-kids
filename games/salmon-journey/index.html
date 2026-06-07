@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0a3d62" />
+<title>연어의 여행 🐟</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #06283d;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    user-select: none; -webkit-user-select: none;
+    touch-action: none;
+  }
+  #wrap {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; color: #eaf6ff; padding: 24px;
+    background: rgba(6, 40, 61, 0.55); backdrop-filter: blur(2px);
+  }
+  .overlay.hidden { display: none; }
+  .title { font-size: 34px; font-weight: 800; letter-spacing: -1px; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  .title .fish { font-size: 40px; }
+  .sub { margin-top: 10px; font-size: 15px; color: #bcdcee; line-height: 1.6; max-width: 320px; }
+  .big { font-size: 56px; font-weight: 800; margin: 6px 0; }
+  .label { font-size: 14px; color: #9fc4da; letter-spacing: 1px; }
+  .row { display: flex; gap: 28px; margin-top: 14px; }
+  .row .col { display: flex; flex-direction: column; align-items: center; }
+  .row .v { font-size: 28px; font-weight: 700; }
+  button {
+    margin-top: 26px; border: none; cursor: pointer;
+    background: linear-gradient(180deg, #ff8a5c, #ff6b35);
+    color: #fff; font-size: 19px; font-weight: 700;
+    padding: 15px 44px; border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(255,107,53,.45);
+    font-family: inherit;
+  }
+  button:active { transform: translateY(2px); }
+  .hint { margin-top: 20px; font-size: 13px; color: #8fb6cd; }
+  .hint b { color: #cfe9f7; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <div id="startScreen" class="overlay">
+    <div class="title"><span class="fish">🐟</span> 연어의 여행</div>
+    <div class="sub">알을 낳기 위해 강을 거슬러 올라가는 연어.<br/>바위·곰·낚싯바늘을 피해 상류로!</div>
+    <div class="hint">📱 화면을 <b>위/아래로 스와이프</b>해 레인 이동<br/>💻 키보드 <b>↑ / ↓</b> 또는 <b>W / S</b><br/>✨ 떠다니는 <b>알(주황)</b>을 먹으면 보너스</div>
+    <button id="startBtn">여행 시작</button>
+  </div>
+
+  <div id="overScreen" class="overlay hidden">
+    <div class="label">상류까지</div>
+    <div class="big" id="finalScore">0 m</div>
+    <div class="row">
+      <div class="col"><div class="label">먹은 알</div><div class="v" id="finalRoe">0</div></div>
+      <div class="col"><div class="label">최고 기록</div><div class="v" id="bestScore">0 m</div></div>
+    </div>
+    <div class="sub" id="overMsg"></div>
+    <button id="retryBtn">다시 도전</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById("game");
+  var ctx = canvas.getContext("2d");
+
+  // ---- 화면 / DPI ----
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    computeLanes();
+  }
+
+  // ---- 레인 ----
+  var LANES = 4;
+  var laneY = [];
+  function computeLanes() {
+    laneY = [];
+    var top = H * 0.20, bottom = H * 0.90;
+    var gap = (bottom - top) / (LANES - 1);
+    for (var i = 0; i < LANES; i++) laneY.push(top + gap * i);
+  }
+
+  // ---- 상태 ----
+  var STATE = { MENU: 0, PLAY: 1, OVER: 2 };
+  var state = STATE.MENU;
+
+  var salmon, obstacles, roes, particles;
+  var distance, roeCount, speed, spawnTimer, roeTimer, elapsed;
+  var bestKey = "salmonJourneyBest";
+  var best = parseInt(localStorage.getItem(bestKey) || "0", 10);
+
+  var salmonX = 0;
+
+  function reset() {
+    salmonX = W * 0.26;
+    salmon = {
+      lane: LANES - 1,           // 맨 아래 레인에서 시작
+      y: laneY[LANES - 1],
+      x: salmonX,
+      r: Math.max(16, Math.min(W, H) * 0.035),
+      wob: 0
+    };
+    obstacles = [];
+    roes = [];
+    particles = [];
+    distance = 0;
+    roeCount = 0;
+    speed = Math.max(220, W * 0.5);   // px/s, 화면폭에 비례
+    spawnTimer = 0.6;
+    roeTimer = 1.2;
+    elapsed = 0;
+  }
+
+  // ---- 입력 ----
+  function moveLane(dir) {
+    if (state !== STATE.PLAY) return;
+    var n = salmon.lane + dir;
+    if (n < 0) n = 0;
+    if (n > LANES - 1) n = LANES - 1;
+    salmon.lane = n;
+  }
+
+  // 스와이프
+  var touchStartY = null, touchStartX = null, touchMoved = false;
+  canvas.addEventListener("touchstart", function (e) {
+    var t = e.changedTouches[0];
+    touchStartY = t.clientY; touchStartX = t.clientX; touchMoved = false;
+  }, { passive: true });
+  canvas.addEventListener("touchmove", function (e) {
+    if (touchStartY === null) return;
+    var t = e.changedTouches[0];
+    var dy = t.clientY - touchStartY;
+    var dx = t.clientX - touchStartX;
+    if (!touchMoved && Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx)) {
+      moveLane(dy > 0 ? 1 : -1);
+      touchMoved = true;
+      touchStartY = t.clientY; touchStartX = t.clientX; // 연속 스와이프 허용
+      touchMoved = false;
+    }
+  }, { passive: true });
+  canvas.addEventListener("touchend", function () { touchStartY = null; }, { passive: true });
+
+  // 키보드
+  window.addEventListener("keydown", function (e) {
+    var k = e.key.toLowerCase();
+    if (k === "arrowup" || k === "w") { moveLane(-1); e.preventDefault(); }
+    else if (k === "arrowdown" || k === "s") { moveLane(1); e.preventDefault(); }
+    else if (k === " " || k === "enter") {
+      if (state === STATE.MENU) startGame();
+      else if (state === STATE.OVER) startGame();
+    }
+  });
+
+  // ---- 스폰 ----
+  var OB_TYPES = ["rock", "bear", "hook"];
+  function spawnObstacle() {
+    var lane = Math.floor(Math.random() * LANES);
+    var type = OB_TYPES[Math.floor(Math.random() * OB_TYPES.length)];
+    obstacles.push({
+      lane: lane,
+      x: W + 60,
+      y: laneY[lane],
+      type: type,
+      r: salmon.r * (type === "bear" ? 1.5 : type === "hook" ? 1.0 : 1.2),
+      t: Math.random() * 6.28
+    });
+  }
+  function spawnRoe() {
+    var lane = Math.floor(Math.random() * LANES);
+    roes.push({ lane: lane, x: W + 40, y: laneY[lane], r: salmon.r * 0.45, t: Math.random() * 6.28, got: false });
+  }
+
+  function burst(x, y, color, n) {
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * 6.28, sp = 60 + Math.random() * 180;
+      particles.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.6, max: 0.6, color: color, r: 2 + Math.random() * 3 });
+    }
+  }
+
+  // ---- 업데이트 ----
+  function update(dt) {
+    elapsed += dt;
+    distance += speed * dt * 0.05;            // m
+    speed += dt * 6;                          // 점점 빨라짐
+
+    // 연어 레인 보간
+    var ty = laneY[salmon.lane];
+    salmon.y += (ty - salmon.y) * Math.min(1, dt * 12);
+    salmon.wob += dt * 10;
+    salmon.x = salmonX + Math.sin(salmon.wob) * 3;
+
+    // 스폰
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnObstacle();
+      var base = Math.max(0.45, 1.15 - elapsed * 0.012);
+      spawnTimer = base + Math.random() * 0.5;
+    }
+    roeTimer -= dt;
+    if (roeTimer <= 0) { spawnRoe(); roeTimer = 1.3 + Math.random() * 1.6; }
+
+    // 장애물 이동/충돌
+    for (var i = obstacles.length - 1; i >= 0; i--) {
+      var o = obstacles[i];
+      o.x -= speed * dt;
+      o.t += dt * 4;
+      o.y = laneY[o.lane] + (o.type === "hook" ? Math.sin(o.t) * 6 : 0);
+      if (o.x < -80) { obstacles.splice(i, 1); continue; }
+      var dx = o.x - salmon.x, dy = o.y - salmon.y;
+      var rr = (o.r * 0.62 + salmon.r * 0.6);
+      if (dx * dx + dy * dy < rr * rr) {
+        burst(salmon.x, salmon.y, "#ff6b6b", 26);
+        gameOver(o.type);
+        return;
+      }
+    }
+
+    // 알 이동/획득
+    for (var j = roes.length - 1; j >= 0; j--) {
+      var e = roes[j];
+      e.x -= speed * dt;
+      e.t += dt * 5;
+      e.y = laneY[e.lane] + Math.sin(e.t) * 5;
+      if (e.x < -40) { roes.splice(j, 1); continue; }
+      var ex = e.x - salmon.x, ey = e.y - salmon.y;
+      var er = (e.r + salmon.r * 0.7);
+      if (ex * ex + ey * ey < er * er) {
+        roeCount++;
+        distance += 5;
+        burst(e.x, e.y, "#ffd166", 14);
+        roes.splice(j, 1);
+      }
+    }
+
+    // 파티클
+    for (var p = particles.length - 1; p >= 0; p--) {
+      var pa = particles[p];
+      pa.life -= dt;
+      if (pa.life <= 0) { particles.splice(p, 1); continue; }
+      pa.x += pa.vx * dt; pa.y += pa.vy * dt; pa.vy += 200 * dt;
+    }
+  }
+
+  // ---- 렌더 ----
+  var scroll = 0;
+  function draw() {
+    // 강물 배경 (그라데이션)
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#0a4d6e");
+    g.addColorStop(0.5, "#0e6896");
+    g.addColorStop(1, "#0a3d62");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // 흐르는 물결 선 (상류로 가는 느낌: 오른→왼)
+    scroll = (scroll + speed * 0.016) % 60;
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.lineWidth = 2;
+    for (var x = -scroll; x < W; x += 60) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(x - 30, H);
+      ctx.stroke();
+    }
+
+    // 레인 가이드(은은하게)
+    ctx.strokeStyle = "rgba(255,255,255,0.045)";
+    ctx.setLineDash([6, 10]);
+    for (var i = 0; i < LANES; i++) {
+      ctx.beginPath(); ctx.moveTo(0, laneY[i]); ctx.lineTo(W, laneY[i]); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // 알
+    for (var r = 0; r < roes.length; r++) drawRoe(roes[r]);
+    // 장애물
+    for (var o = 0; o < obstacles.length; o++) drawObstacle(obstacles[o]);
+    // 파티클
+    for (var p = 0; p < particles.length; p++) {
+      var pa = particles[p];
+      ctx.globalAlpha = Math.max(0, pa.life / pa.max);
+      ctx.fillStyle = pa.color;
+      ctx.beginPath(); ctx.arc(pa.x, pa.y, pa.r, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 연어
+    if (state === STATE.PLAY || state === STATE.OVER) drawSalmon(salmon);
+
+    // HUD
+    if (state === STATE.PLAY) {
+      ctx.fillStyle = "#eaf6ff";
+      ctx.font = "700 26px -apple-system, sans-serif";
+      ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText(Math.floor(distance) + " m", 18, 16);
+      ctx.font = "600 18px -apple-system, sans-serif";
+      ctx.fillStyle = "#ffd166";
+      ctx.fillText("🟠 " + roeCount, 18, 50);
+    }
+  }
+
+  function drawSalmon(s) {
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    var tail = Math.sin(s.wob) * 0.25;
+    // 몸통
+    ctx.fillStyle = "#e8645a";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, s.r * 1.25, s.r * 0.72, 0, 0, 6.2832);
+    ctx.fill();
+    // 등쪽 진한색
+    ctx.fillStyle = "#c44536";
+    ctx.beginPath();
+    ctx.ellipse(0, -s.r * 0.18, s.r * 1.05, s.r * 0.42, 0, 0, 6.2832);
+    ctx.fill();
+    // 꼬리
+    ctx.fillStyle = "#d65a4e";
+    ctx.beginPath();
+    ctx.moveTo(-s.r * 1.1, 0);
+    ctx.lineTo(-s.r * 1.9, -s.r * 0.7 + tail * s.r);
+    ctx.lineTo(-s.r * 1.9, s.r * 0.7 + tail * s.r);
+    ctx.closePath(); ctx.fill();
+    // 지느러미
+    ctx.fillStyle = "#b73e30";
+    ctx.beginPath();
+    ctx.moveTo(s.r * 0.1, s.r * 0.5);
+    ctx.lineTo(-s.r * 0.5, s.r * 0.95);
+    ctx.lineTo(s.r * 0.5, s.r * 0.62);
+    ctx.closePath(); ctx.fill();
+    // 눈
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(s.r * 0.75, -s.r * 0.12, s.r * 0.2, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#1b2b34";
+    ctx.beginPath(); ctx.arc(s.r * 0.82, -s.r * 0.12, s.r * 0.1, 0, 6.2832); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawObstacle(o) {
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    if (o.type === "rock") {
+      ctx.fillStyle = "#6b7b8c";
+      ctx.beginPath();
+      ctx.moveTo(-o.r, o.r * 0.6);
+      ctx.lineTo(-o.r * 0.5, -o.r * 0.7);
+      ctx.lineTo(o.r * 0.3, -o.r * 0.5);
+      ctx.lineTo(o.r, o.r * 0.5);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.12)";
+      ctx.beginPath(); ctx.ellipse(-o.r*0.2, -o.r*0.2, o.r*0.35, o.r*0.18, -0.5, 0, 6.28); ctx.fill();
+    } else if (o.type === "bear") {
+      ctx.font = (o.r * 2.1) + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("🐻", 0, 0);
+    } else { // hook
+      ctx.strokeStyle = "#cfd8e0";
+      ctx.lineWidth = Math.max(2, o.r * 0.18);
+      ctx.beginPath();
+      ctx.moveTo(0, -o.r * 1.4);
+      ctx.lineTo(0, o.r * 0.2);
+      ctx.arc(0, o.r * 0.2, o.r * 0.5, -1.57, 1.2, false);
+      ctx.stroke();
+      ctx.fillStyle = "#ff5252"; // 미끼
+      ctx.beginPath(); ctx.arc(o.r * 0.18, o.r * 0.55, o.r * 0.3, 0, 6.28); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawRoe(e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    var pulse = 1 + Math.sin(e.t * 1.5) * 0.12;
+    var grd = ctx.createRadialGradient(-e.r*0.3, -e.r*0.3, e.r*0.2, 0, 0, e.r*pulse);
+    grd.addColorStop(0, "#fff1c2");
+    grd.addColorStop(1, "#ff9f1c");
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(0, 0, e.r * pulse, 0, 6.2832); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, e.r * pulse, 0, 6.2832); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- 게임 흐름 ----
+  var overMsgEl = document.getElementById("overMsg");
+  function gameOver(type) {
+    state = STATE.OVER;
+    if (Math.floor(distance) > best) {
+      best = Math.floor(distance);
+      localStorage.setItem(bestKey, String(best));
+    }
+    document.getElementById("finalScore").textContent = Math.floor(distance) + " m";
+    document.getElementById("finalRoe").textContent = roeCount;
+    document.getElementById("bestScore").textContent = best + " m";
+    var msg = type === "bear" ? "곰에게 잡혔어요! 🐻"
+            : type === "hook" ? "낚싯바늘에 걸렸어요! 🎣"
+            : "바위에 부딪혔어요! 🪨";
+    overMsgEl.textContent = msg;
+    document.getElementById("overScreen").classList.remove("hidden");
+  }
+
+  function startGame() {
+    document.getElementById("startScreen").classList.add("hidden");
+    document.getElementById("overScreen").classList.add("hidden");
+    reset();
+    state = STATE.PLAY;
+  }
+
+  document.getElementById("startBtn").addEventListener("click", startGame);
+  document.getElementById("retryBtn").addEventListener("click", startGame);
+
+  // ---- 루프 ----
+  var last = 0;
+  function loop(ts) {
+    if (!last) last = ts;
+    var dt = Math.min(0.05, (ts - last) / 1000);
+    last = ts;
+    if (state === STATE.PLAY) update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+  reset();              // 메뉴 배경용
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
