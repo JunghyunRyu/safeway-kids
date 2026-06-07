@@ -487,29 +487,80 @@
     ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "top";
   }
 
-  // 연어를 '위'를 향하도록 -90° 회전해서 그림 (기본 그림은 오른쪽을 향함)
+  // 위에서 내려다본(등쪽) 연어 — 위를 향해 헤엄, 꼬리가 좌우로 흔들림
   function drawSalmon(s) {
     var pal = s.pal;
     var lf = s.jumpT > 0 ? Math.sin((1 - s.jumpT / JUMP_DUR) * Math.PI) : 0;   // 도약 높이 0~1
     if (lf > 0.02) {   // 공중일 때 바닥 그림자
-      ctx.fillStyle = "rgba(0,0,0,0.18)";
-      ctx.beginPath(); ctx.ellipse(s.x, salmonY + s.r * 0.5, s.r * 1.1 * (1 - 0.3 * lf), s.r * 0.4 * (1 - 0.3 * lf), 0, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,0.16)";
+      ctx.beginPath(); ctx.ellipse(s.x, salmonY, s.r * 0.85 * (1 - 0.3 * lf), s.r * 1.9 * (1 - 0.3 * lf), 0, 0, 6.2832); ctx.fill();
     }
-    ctx.save(); ctx.translate(s.x, s.y); ctx.scale(1 + 0.22 * lf, 1 + 0.22 * lf); ctx.rotate(-Math.PI / 2);
-    var tail = Math.sin(s.wob) * 0.25;
-    ctx.fillStyle = pal.body;
-    ctx.beginPath(); ctx.ellipse(0, 0, s.r * 1.25, s.r * 0.72, 0, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = pal.back;
-    ctx.beginPath(); ctx.ellipse(0, -s.r * 0.18, s.r * 1.05, s.r * 0.42, 0, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = pal.body;
-    ctx.beginPath();
-    ctx.moveTo(-s.r * 1.1, 0); ctx.lineTo(-s.r * 1.9, -s.r * 0.7 + tail * s.r); ctx.lineTo(-s.r * 1.9, s.r * 0.7 + tail * s.r);
-    ctx.closePath(); ctx.fill();
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    var sc = 1 + 0.22 * lf; ctx.scale(sc, sc);
+    ctx.translate(0, s.r * 0.8);          // 몸 중심을 충돌점에 맞춤
+
+    var r = s.r, L = r * 2.6, Wd = r * 0.82;
+    var pedY = L * 0.40, pw = Wd * 0.20;          // 꼬리자루
+    var tailY = L * 0.74, tw = Wd * 0.95;          // 꼬리 끝
+    var sway = Math.sin(s.wob) * r * 0.7;          // 꼬리 흔들림
+
+    // 꼬리지느러미 (갈라진 V자, 흔들림)
     ctx.fillStyle = pal.fin;
-    ctx.beginPath(); ctx.moveTo(s.r * 0.1, s.r * 0.5); ctx.lineTo(-s.r * 0.5, s.r * 0.95); ctx.lineTo(s.r * 0.5, s.r * 0.62);
+    ctx.beginPath();
+    ctx.moveTo(pw, pedY);
+    ctx.lineTo(tw + sway, tailY);
+    ctx.lineTo(sway * 0.6, tailY - L * 0.14);
+    ctx.lineTo(-tw + sway, tailY);
+    ctx.lineTo(-pw, pedY);
     ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(s.r * 0.75, -s.r * 0.12, s.r * 0.2, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = "#1b2b34"; ctx.beginPath(); ctx.arc(s.r * 0.82, -s.r * 0.12, s.r * 0.1, 0, 6.2832); ctx.fill();
+
+    // 가슴지느러미 (양쪽)
+    ctx.fillStyle = pal.fin;
+    for (var sgn = -1; sgn <= 1; sgn += 2) {
+      ctx.beginPath();
+      ctx.moveTo(sgn * Wd * 0.5, -L * 0.04);
+      ctx.quadraticCurveTo(sgn * Wd * 1.5, 0, sgn * Wd * 1.2, L * 0.15);
+      ctx.quadraticCurveTo(sgn * Wd * 0.7, L * 0.07, sgn * Wd * 0.45, L * 0.1);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // 몸통 (등 어두움 → 옆구리 밝음 그라데이션, 어뢰형)
+    var bg = ctx.createLinearGradient(-Wd, 0, Wd, 0);
+    bg.addColorStop(0, pal.back); bg.addColorStop(0.5, pal.body); bg.addColorStop(1, pal.back);
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.moveTo(0, -L);
+    ctx.bezierCurveTo(Wd * 0.85, -L * 0.78, Wd, -L * 0.12, Wd * 0.5, pedY * 0.7);
+    ctx.quadraticCurveTo(pw * 1.4, pedY * 0.95, pw, pedY);
+    ctx.lineTo(-pw, pedY);
+    ctx.quadraticCurveTo(-pw * 1.4, pedY * 0.95, -Wd * 0.5, pedY * 0.7);
+    ctx.bezierCurveTo(-Wd, -L * 0.12, -Wd * 0.85, -L * 0.78, 0, -L);
+    ctx.closePath(); ctx.fill();
+
+    // 등지느러미 (중앙) + 기름지느러미
+    ctx.fillStyle = pal.back;
+    ctx.beginPath();
+    ctx.moveTo(0, -L * 0.22);
+    ctx.quadraticCurveTo(Wd * 0.26, -L * 0.02, sway * 0.15, L * 0.13);
+    ctx.quadraticCurveTo(-Wd * 0.26, -L * 0.02, 0, -L * 0.22);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(sway * 0.4, pedY * 0.82, Wd * 0.12, L * 0.05, 0, 0, 6.2832); ctx.fill();
+
+    // 등 반점
+    ctx.fillStyle = "rgba(35,45,55,0.4)";
+    var spots = [[Wd*0.22,-L*0.55],[-Wd*0.28,-L*0.42],[Wd*0.12,-L*0.27],[-Wd*0.16,-L*0.12],[Wd*0.26,-L*0.66],[-Wd*0.05,-L*0.34]];
+    for (var i = 0; i < spots.length; i++) { ctx.beginPath(); ctx.arc(spots[i][0], spots[i][1], r * 0.075, 0, 6.2832); ctx.fill(); }
+
+    // 머리 음영 + 양쪽 눈
+    ctx.fillStyle = "rgba(255,255,255,0.10)";
+    ctx.beginPath(); ctx.ellipse(0, -L * 0.72, Wd * 0.42, L * 0.16, 0, 0, 6.2832); ctx.fill();
+    for (var e = -1; e <= 1; e += 2) {
+      ctx.fillStyle = "#11202a";
+      ctx.beginPath(); ctx.arc(e * Wd * 0.42, -L * 0.66, r * 0.13, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.beginPath(); ctx.arc(e * Wd * 0.42 + r * 0.04, -L * 0.69, r * 0.05, 0, 6.2832); ctx.fill();
+    }
     ctx.restore();
   }
 
