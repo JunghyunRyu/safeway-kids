@@ -52,13 +52,14 @@
 
   <div id="startScreen" class="overlay">
     <div class="title"><span class="fish">🐟</span> 연어의 여행</div>
-    <div class="sub">민물에서 태어난 연어가 바다로 내려가 자란 뒤,<br/>다시 태어난 강으로 거슬러 올라가 알을 낳기까지.</div>
+    <div class="sub">상류 민물에서 태어난 연어가 바다로 내려가 자란 뒤,<br/>다시 태어난 강으로 거슬러 올라가 알을 낳고 — 그 알에서<br/>새끼가 부화해 또 바다로! <b>세대가 이어지는 생명의 순환</b>.</div>
     <div class="stages">
       ① <b>강 하류</b> — 치어가 바다로! (새·큰 물고기)<br/>
       ② <b>넓은 바다</b> — 성장! (상어·바다표범·사람 그물)<br/>
-      ③ <b>강 상류 회귀</b> — 산란! (곰·낚시꾼·독수리)
+      ③ <b>강 상류 회귀</b> — 산란! (곰·낚시꾼·독수리)<br/>
+      🔁 산란하면 <b>새 세대</b>가 태어나 다시 ①부터!
     </div>
-    <div class="hint">📱 <b>좌/우 스와이프</b>로 레인 이동 · 💻 <b>←/→</b> 또는 <b>A/D</b><br/>✨ 위에서 내려오는 <b>먹이</b>를 먹으면 더 빨리 자라요</div>
+    <div class="hint">📱 <b>좌/우 스와이프</b>로 레인 이동 · 💻 <b>←/→</b> 또는 <b>A/D</b><br/>✨ 위에서 내려오는 <b>먹이</b>를 먹으면 더 빨리 자라요<br/>포식자에게 잡히면 끝 — 몇 세대까지 잇는지 도전!</div>
     <button id="startBtn">여정 시작</button>
   </div>
 
@@ -66,7 +67,7 @@
     <div class="label" id="overTitle">여정 실패</div>
     <div class="big" id="finalScore">0 m</div>
     <div class="row">
-      <div class="col"><div class="label">단계</div><div class="v" id="finalStage">-</div></div>
+      <div class="col"><div class="label">세대</div><div class="v" id="finalStage">-</div></div>
       <div class="col"><div class="label">먹이</div><div class="v" id="finalFood">0</div></div>
       <div class="col"><div class="label">최고</div><div class="v" id="bestScore">0 m</div></div>
     </div>
@@ -153,8 +154,8 @@
   var state = STATE.MENU;
 
   var salmon, obstacles, foods, particles;
-  var distance, foodCount, speed, spawnTimer, foodTimer, elapsed;
-  var stageIdx, banner;
+  var distance, lifetimeDist, foodCount, speed, spawnTimer, foodTimer, elapsed;
+  var stageIdx, banner, generation;   // generation = 완성한 산란(세대) 수
   var flowOffset = 0, decos = [];   // 강 흐름 누적치 + 둑 위 풀/나무
   var LEAF_GREEN = ["#3f9142", "#2f7d32", "#57a64a"];
   var LEAF_AUTUMN = ["#d98324", "#c0562b", "#e0a02e"];   // ③ 산란철(가을) 단풍
@@ -173,7 +174,7 @@
       wob: 0, pal: STAGES[0].salmon
     };
     obstacles = []; foods = []; particles = [];
-    distance = 0; foodCount = 0;
+    distance = 0; lifetimeDist = 0; foodCount = 0; generation = 0;
     speed = Math.max(210, H * 0.30);
     spawnTimer = 0.7; foodTimer = 0.8; elapsed = 0;
     banner = { text: "① 강 하류 — 바다로!", t: 2.4 };
@@ -268,10 +269,11 @@
   // ---------- 업데이트 ----------
   function update(dt) {
     elapsed += dt;
-    distance += speed * dt * 0.05;
+    var gain = speed * dt * 0.05;
+    distance += gain; lifetimeDist += gain;
     speed += dt * 5.5;
 
-    if (distance >= GOAL_DIST) { win(); return; }
+    if (distance >= GOAL_DIST) { spawnCycle(); }   // 상류 산란장 도착 → 새 세대로 순환
     checkStage();
 
     var tgt = curStage().bg;
@@ -318,7 +320,7 @@
       e.y += speed * dt; e.t += dt * 5; e.x = laneX[e.lane] + Math.sin(e.t) * 5;
       if (e.y > H + 40) { foods.splice(j, 1); continue; }
       var ex = e.x - salmon.x, ey = e.y - salmon.y, er = e.r + salmon.r * 0.7;
-      if (ex * ex + ey * ey < er * er) { foodCount++; distance += 4; burst(e.x, e.y, "#ffd166", 12); foods.splice(j, 1); }
+      if (ex * ex + ey * ey < er * er) { foodCount++; distance += 4; lifetimeDist += 4; burst(e.x, e.y, "#ffd166", 12); foods.splice(j, 1); }
     }
 
     // 파티클
@@ -377,9 +379,9 @@
   function drawHUD() {
     ctx.textAlign = "left"; ctx.textBaseline = "top";
     ctx.fillStyle = "#eaf6ff"; ctx.font = "700 25px -apple-system, sans-serif";
-    ctx.fillText(Math.floor(distance) + " m", 18, 14);
+    ctx.fillText(Math.floor(lifetimeDist) + " m", 18, 14);
     ctx.font = "600 16px -apple-system, sans-serif"; ctx.fillStyle = "#ffd166";
-    ctx.fillText("🍤 " + foodCount, 18, 46);
+    ctx.fillText("🍤 " + foodCount + "   🥚 " + generation + "세대", 18, 46);
     ctx.textAlign = "right"; ctx.fillStyle = "#cfe9f7"; ctx.font = "700 16px -apple-system, sans-serif";
     ctx.fillText(["①","②","③"][stageIdx] + " " + curStage().name, W - 16, 16);
     ctx.textAlign = "left";
@@ -537,23 +539,39 @@
   var overTitleEl = document.getElementById("overTitle");
   var overMsgEl = document.getElementById("overMsg");
   function saveBest() {
-    if (Math.floor(distance) > best) { best = Math.floor(distance); localStorage.setItem(bestKey, String(best)); }
+    if (Math.floor(lifetimeDist) > best) { best = Math.floor(lifetimeDist); localStorage.setItem(bestKey, String(best)); }
   }
-  function showResult(titleText, msg, won) {
+  // 상류 산란장 도착: 알을 낳고 → 새끼가 부화해 다시 바다로 (세대 순환)
+  function spawnCycle() {
+    generation++;
+    burst(salmon.x, salmon.y, "#ffd166", 22);   // 알 뿌리기
+    burst(salmon.x, salmon.y, "#fff1c2", 16);
+    // 새 세대(치어)로 리셋 — 누적 거리·세대·먹이는 유지
+    distance = 0; stageIdx = 0;
+    obstacles = []; foods = [];
+    salmon.pal = STAGES[0].salmon;
+    salmon.r = salmon.targetR = baseR * STAGES[0].salmon.sizeMul;   // 다시 작은 새끼로
+    salmon.lane = 1;
+    bgCur = STAGES[0].bg.map(hexToRgb);
+    speed = Math.max(210, H * 0.30) + generation * (H * 0.025);     // 세대마다 조금 더 빠르게
+    spawnTimer = 0.8; foodTimer = 0.8;
+    banner = { text: "🥚 " + generation + "세대 산란! 새끼가 바다로", t: 2.4 };
+  }
+  function showResult(titleText, msg) {
     saveBest();
     overTitleEl.textContent = titleText;
-    document.getElementById("finalScore").textContent = won ? "산란 성공! 🥚" : Math.floor(distance) + " m";
-    document.getElementById("finalStage").textContent = ["①","②","③"][stageIdx] + "/③";
+    document.getElementById("finalScore").textContent = Math.floor(lifetimeDist) + " m";
+    document.getElementById("finalStage").textContent = generation + "세대";
     document.getElementById("finalFood").textContent = foodCount;
     document.getElementById("bestScore").textContent = best + " m";
     overMsgEl.textContent = msg;
-    document.getElementById("retryBtn").textContent = won ? "다시 여정 시작" : "다시 도전";
+    document.getElementById("retryBtn").textContent = "다시 도전";
     document.getElementById("overScreen").classList.remove("hidden");
   }
-  function gameOver(type) { state = STATE.OVER; showResult("여정 중단", DEATH_MSG[type] || "여정이 끝났어요.", false); }
-  function win() {
-    state = STATE.WIN; distance = GOAL_DIST;
-    showResult("산란장 도착! 🎉", "태어난 강으로 무사히 돌아와 알을 낳았어요. 생명의 여정 완성! 🐟🥚", true);
+  function gameOver(type) {
+    state = STATE.OVER;
+    var tail = generation > 0 ? " — " + generation + "세대까지 생명을 이었어요." : "";
+    showResult("여정의 끝", (DEATH_MSG[type] || "여정이 끝났어요.") + tail);
   }
   function startGame() {
     document.getElementById("startScreen").classList.add("hidden");
