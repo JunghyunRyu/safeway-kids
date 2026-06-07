@@ -50,6 +50,20 @@ npm run build    # dist/ 생성 (base: './' 라 어디든 그대로 호스팅)
 npm run preview
 ```
 
+## 웹 배포 (GitHub Pages)
+
+`.github/workflows/deploy-kindergarten-game.yml` 가 이 폴더를 빌드해 **GitHub Pages** 로 올린다.
+
+**최초 1회 설정** (repo 관리자):
+1. GitHub repo → **Settings → Pages**
+2. **Source** 를 **"GitHub Actions"** 로 변경
+
+이후 `games/kindergarten-dropoff/**` 가 바뀌어 푸시되면 워크플로가 자동으로
+빌드·배포한다. 수동 실행은 Actions 탭 → 해당 워크플로 → **Run workflow**.
+
+공개 주소(프로젝트 페이지): `https://junghyunryu.github.io/safeway-kids/`
+(Vite `base: './'` 라 서브경로에서 그대로 동작한다.)
+
 ## 구조
 
 ```
