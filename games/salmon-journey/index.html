@@ -264,11 +264,15 @@
     var type = st.obstacles[Math.floor(Math.random() * st.obstacles.length)];
     obstacles.push({ lane: lane, x: laneX[lane], y: -70, type: type, r: salmon.r * obMul(type), t: Math.random() * 6.28 });
   }
-  // 다이나믹: 적 무리가 한 줄로 몰려오고 한 칸만 비어 있음 → 그 칸으로 피하기
+  // 다이나믹: 적 무리가 몰려옴 — 최대 2개 열에만 등장(나머지 열은 비어 회피 가능)
   function spawnWave() {
-    var st = curStage(), gap = Math.floor(Math.random() * LANES);
-    for (var l = 0; l < LANES; l++) {
-      if (l === gap) continue;
+    var st = curStage();
+    var a = Math.floor(Math.random() * LANES);
+    var bn = Math.floor(Math.random() * LANES);
+    while (bn === a) bn = Math.floor(Math.random() * LANES);
+    var lanesArr = [a, bn];
+    for (var i = 0; i < lanesArr.length; i++) {
+      var l = lanesArr[i];
       var type = st.obstacles[Math.floor(Math.random() * st.obstacles.length)];
       obstacles.push({ lane: l, x: laneX[l], y: -75 - Math.random() * 16, type: type, r: salmon.r * obMul(type), t: Math.random() * 6.28 });
     }
