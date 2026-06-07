@@ -97,13 +97,20 @@
   var LANES = 4;
   var laneX = [];
   var salmonY = 0;
+  // 구불구불한 강둑 파라미터 (resize 시 W 기준 재계산)
+  var BANK_BASE = 0, BANK_AMP = 0, BANK_FREQ = 0.0125;
   function computeLanes() {
     laneX = [];
-    var left = W * 0.16, right = W * 0.84;
+    var left = W * 0.20, right = W * 0.80;   // 둑과 겹치지 않게 안쪽으로
     var gap = (right - left) / (LANES - 1);
     for (var i = 0; i < LANES; i++) laneX.push(left + gap * i);
     salmonY = H * 0.80;        // 연어는 화면 아래쪽에 고정, 위로 헤엄
+    BANK_BASE = W * 0.085;     // 둑 기본 폭
+    BANK_AMP = W * 0.03;       // 굽이치는 진폭
   }
+  // 강둑 가장자리(물길과 땅의 경계). flowOffset로 아래로 흐르게.
+  function leftEdge(y)  { return BANK_BASE + BANK_AMP * Math.sin((y - flowOffset) * BANK_FREQ); }
+  function rightEdge(y) { return W - BANK_BASE - BANK_AMP * Math.sin((y - flowOffset) * BANK_FREQ + 2.1); }
 
   // ---------- 생애 단계 정의 ----------
   var STAGES = [
@@ -148,6 +155,9 @@
   var salmon, obstacles, foods, particles;
   var distance, foodCount, speed, spawnTimer, foodTimer, elapsed;
   var stageIdx, banner;
+  var flowOffset = 0, decos = [];   // 강 흐름 누적치 + 둑 위 풀/나무
+  var LEAF_GREEN = ["#3f9142", "#2f7d32", "#57a64a"];
+  var LEAF_AUTUMN = ["#d98324", "#c0562b", "#e0a02e"];   // ③ 산란철(가을) 단풍
   var bestKey = "salmonJourneyBest";
   var best = parseInt(localStorage.getItem(bestKey) || "0", 10);
   var baseR = 16;
@@ -168,6 +178,25 @@
     spawnTimer = 0.7; foodTimer = 0.8; elapsed = 0;
     banner = { text: "① 강 하류 — 바다로!", t: 2.4 };
     bgCur = STAGES[0].bg.map(hexToRgb);
+    flowOffset = 0; initDecos();
+  }
+
+  // ---------- 강둑 위 풀/나무 ----------
+  function randomizeDeco(d) {
+    var types = ["tree", "tree", "tree", "bush", "grass", "grass"];
+    d.type = types[(Math.random() * types.length) | 0];
+    d.size = baseR * (d.type === "tree" ? 1.1 + Math.random() * 1.1 : 0.8 + Math.random() * 0.7);
+    d.frac = 0.18 + Math.random() * 0.64;   // 땅 폭 내 위치 비율
+    d.cidx = (Math.random() * 3) | 0;
+  }
+  function initDecos() {
+    decos = [];
+    for (var side = 0; side < 2; side++) {
+      for (var i = 0; i < 9; i++) {
+        var d = { side: side, worldY: -90 + Math.random() * (H + 180) };
+        randomizeDeco(d); decos.push(d);
+      }
+    }
   }
 
   // ---------- 입력 (좌/우) ----------
@@ -250,6 +279,12 @@
 
     if (banner && banner.t > 0) banner.t -= dt;
 
+    // 강 흐름 + 둑 위 풀/나무 재활용
+    flowOffset += speed * dt;
+    for (var d = 0; d < decos.length; d++) {
+      if (decos[d].worldY + flowOffset > H + 90) { decos[d].worldY -= (H + 180); randomizeDeco(decos[d]); }
+    }
+
     // 연어: 좌우 보간 + 위로 헤엄(고정 y) + 성장
     var tx = laneX[salmon.lane];
     salmon.x += (tx - salmon.x) * Math.min(1, dt * 12);
@@ -323,6 +358,9 @@
     ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.setLineDash([6, 10]);
     for (var i = 0; i < LANES; i++) { ctx.beginPath(); ctx.moveTo(laneX[i], 0); ctx.lineTo(laneX[i], H); ctx.stroke(); }
     ctx.setLineDash([]);
+
+    // 강(민물) 단계에만 구불구불한 둑 + 풀/나무 (바다 단계는 탁 트인 바다)
+    if (flow !== 0) drawBanks();
 
     for (var r = 0; r < foods.length; r++) drawFood(foods[r]);
     for (var o = 0; o < obstacles.length; o++) drawObstacle(obstacles[o]);
@@ -431,6 +469,68 @@
     ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(0, 0, e.r*pulse, 0, 6.2832); ctx.stroke();
     ctx.restore();
+  }
+
+  // ---------- 강둑 + 풀/나무 렌더 ----------
+  function drawBanks() {
+    var STEP = 18;
+    // 좌측 땅
+    var lg = ctx.createLinearGradient(0, 0, W * 0.2, 0);
+    lg.addColorStop(0, "#274d23"); lg.addColorStop(1, "#3a6b34");
+    ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(0, 0);
+    for (var y = 0; y <= H; y += STEP) ctx.lineTo(leftEdge(y), y);
+    ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+    // 우측 땅
+    var rg = ctx.createLinearGradient(W, 0, W * 0.8, 0);
+    rg.addColorStop(0, "#274d23"); rg.addColorStop(1, "#3a6b34");
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.moveTo(W, 0);
+    for (var y2 = 0; y2 <= H; y2 += STEP) ctx.lineTo(rightEdge(y2), y2);
+    ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+    // 모래톱(물가) 라인
+    ctx.strokeStyle = "rgba(201,178,122,0.5)"; ctx.lineWidth = 5;
+    ctx.beginPath();
+    for (var y3 = 0; y3 <= H; y3 += STEP) { if (y3 === 0) ctx.moveTo(leftEdge(0), 0); else ctx.lineTo(leftEdge(y3), y3); }
+    ctx.stroke();
+    ctx.beginPath();
+    for (var y4 = 0; y4 <= H; y4 += STEP) { if (y4 === 0) ctx.moveTo(rightEdge(0), 0); else ctx.lineTo(rightEdge(y4), y4); }
+    ctx.stroke();
+    // 풀/나무 (둑 곡선에 붙어 함께 흐름)
+    var autumn = (stageIdx === 2);
+    for (var i = 0; i < decos.length; i++) {
+      var d = decos[i], sy = d.worldY + flowOffset;
+      if (sy < -90 || sy > H + 90) continue;
+      var ex = d.side === 0 ? leftEdge(sy) : rightEdge(sy);
+      var x = d.side === 0 ? ex * d.frac : ex + (W - ex) * d.frac;
+      var leaf = (autumn ? LEAF_AUTUMN : LEAF_GREEN)[d.cidx];
+      if (d.type === "tree") drawTree(x, sy, d.size, leaf);
+      else if (d.type === "bush") drawBush(x, sy, d.size, leaf);
+      else drawGrass(x, sy, d.size, leaf);
+    }
+  }
+  function drawTree(x, sy, size, leaf) {
+    ctx.fillStyle = "#6b4a2b";
+    ctx.fillRect(x - size * 0.12, sy - size * 1.15, size * 0.24, size * 1.15);
+    ctx.fillStyle = leaf;
+    ctx.beginPath(); ctx.arc(x, sy - size * 1.4, size * 0.72, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(x - size * 0.55, sy - size * 1.05, size * 0.55, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + size * 0.55, sy - size * 1.05, size * 0.55, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.10)";
+    ctx.beginPath(); ctx.arc(x - size * 0.2, sy - size * 1.55, size * 0.28, 0, 6.2832); ctx.fill();
+  }
+  function drawBush(x, sy, size, leaf) {
+    ctx.fillStyle = leaf;
+    ctx.beginPath(); ctx.ellipse(x, sy - size * 0.3, size * 0.75, size * 0.5, 0, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x - size * 0.4, sy - size * 0.18, size * 0.42, size * 0.32, 0, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + size * 0.4, sy - size * 0.18, size * 0.42, size * 0.32, 0, 0, 6.2832); ctx.fill();
+  }
+  function drawGrass(x, sy, size, leaf) {
+    ctx.strokeStyle = leaf; ctx.lineWidth = Math.max(1.5, size * 0.13); ctx.lineCap = "round";
+    for (var k = -1; k <= 1; k++) {
+      ctx.beginPath(); ctx.moveTo(x + k * size * 0.25, sy);
+      ctx.quadraticCurveTo(x + k * size * 0.4, sy - size * 0.5, x + k * size * 0.6, sy - size * 0.85);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
   }
 
   // ---------- 게임 흐름 ----------
