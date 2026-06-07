@@ -428,13 +428,11 @@
       grd.addColorStop(0, "#fff1c2"); grd.addColorStop(1, "#ff9f1c");
       ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(ex, ey, er, 0, 6.2832); ctx.fill();
     }
-    // 포식자(알 도둑)
+    // 포식자(알 도둑) — 작은 큰물고기로 표현
     for (var k = 0; k < threats.length; k++) {
       var th = threats[k];
-      ctx.font = (th.r * 2.0) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText("🐟", th.x, th.y);
+      ctx.save(); ctx.translate(th.x, th.y); drawBigFish(th.r * 0.95, th.t); ctx.restore();
     }
-    ctx.textAlign = "left"; ctx.textBaseline = "top";
   }
   function drawGuardHUD() {
     ctx.textAlign = "left"; ctx.textBaseline = "top";
@@ -564,6 +562,133 @@
     ctx.restore();
   }
 
+  // ───── 적(포식자) 그리기: 모두 머리가 아래(연어 쪽)를 향함, o.t로 애니메이션 ─────
+  function drawBigFish(R, t) {
+    var L = R * 2.4, Wd = R * 0.95, sway = Math.sin(t) * R * 0.5;
+    var body = "#6f9442", back = "#3f5824", fin = "#4d6b2c";
+    ctx.fillStyle = fin;                       // 꼬리(위)
+    ctx.beginPath();
+    ctx.moveTo(R*0.2,-L*0.36); ctx.lineTo(R*0.95+sway,-L*0.72); ctx.lineTo(sway*0.6,-L*0.56);
+    ctx.lineTo(-R*0.95+sway,-L*0.72); ctx.lineTo(-R*0.2,-L*0.36); ctx.closePath(); ctx.fill();
+    for (var s=-1;s<=1;s+=2){                  // 가슴지느러미
+      ctx.beginPath(); ctx.moveTo(s*Wd*0.5,L*0.02);
+      ctx.quadraticCurveTo(s*Wd*1.45,-L*0.05,s*Wd*1.15,-L*0.2);
+      ctx.quadraticCurveTo(s*Wd*0.7,-L*0.06,s*Wd*0.45,-L*0.08); ctx.closePath(); ctx.fill();
+    }
+    var bg=ctx.createLinearGradient(-Wd,0,Wd,0);
+    bg.addColorStop(0,back); bg.addColorStop(0.5,body); bg.addColorStop(1,back); ctx.fillStyle=bg;
+    ctx.beginPath(); ctx.moveTo(0,L);          // 몸통(코 아래)
+    ctx.bezierCurveTo(Wd*0.9,L*0.72,Wd,L*0.05,Wd*0.45,-L*0.34);
+    ctx.quadraticCurveTo(R*0.3,-L*0.46,R*0.2,-L*0.36); ctx.lineTo(-R*0.2,-L*0.36);
+    ctx.quadraticCurveTo(-R*0.3,-L*0.46,-Wd*0.45,-L*0.34);
+    ctx.bezierCurveTo(-Wd,L*0.05,-Wd*0.9,L*0.72,0,L); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#2a3a1c";                   // 벌린 입
+    ctx.beginPath(); ctx.ellipse(0,L*0.86,Wd*0.34,L*0.07,0,0,6.2832); ctx.fill();
+    ctx.fillStyle="#fff";                      // 이빨
+    for (var k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(k*Wd*0.16,L*0.82); ctx.lineTo(k*Wd*0.16-R*0.05,L*0.93); ctx.lineTo(k*Wd*0.16+R*0.05,L*0.93); ctx.closePath(); ctx.fill(); }
+    for (var e=-1;e<=1;e+=2){                  // 눈(노란)
+      ctx.fillStyle="#ffd23f"; ctx.beginPath(); ctx.arc(e*Wd*0.42,L*0.5,R*0.15,0,6.2832); ctx.fill();
+      ctx.fillStyle="#1b2b10"; ctx.beginPath(); ctx.arc(e*Wd*0.42,L*0.5,R*0.07,0,6.2832); ctx.fill();
+    }
+  }
+  function drawShark(R, t) {
+    var L = R*2.9, Wd = R*0.82, sway = Math.sin(t)*R*0.45;
+    var body="#9aa7b0", back="#5e6b74", fin="#74828b";
+    ctx.fillStyle=fin;                         // 꼬리(위)
+    ctx.beginPath(); ctx.moveTo(R*0.18,-L*0.36); ctx.lineTo(sway+R*0.2,-L*0.82);
+    ctx.lineTo(sway-R*0.5,-L*0.6); ctx.lineTo(-R*0.18,-L*0.34); ctx.closePath(); ctx.fill();
+    for (var s=-1;s<=1;s+=2){                  // 큰 가슴지느러미
+      ctx.beginPath(); ctx.moveTo(s*Wd*0.5,L*0.05); ctx.lineTo(s*Wd*1.7,-L*0.18);
+      ctx.lineTo(s*Wd*0.5,-L*0.12); ctx.closePath(); ctx.fill();
+    }
+    var bg=ctx.createLinearGradient(-Wd,0,Wd,0);
+    bg.addColorStop(0,back); bg.addColorStop(0.5,body); bg.addColorStop(1,back); ctx.fillStyle=bg;
+    ctx.beginPath(); ctx.moveTo(0,L);          // 뾰족한 코(아래)
+    ctx.bezierCurveTo(Wd*0.7,L*0.8,Wd,L*0.1,Wd*0.4,-L*0.34);
+    ctx.lineTo(R*0.18,-L*0.36); ctx.lineTo(-R*0.18,-L*0.36); ctx.lineTo(-Wd*0.4,-L*0.34);
+    ctx.bezierCurveTo(-Wd,L*0.1,-Wd*0.7,L*0.8,0,L); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,0.16)";    // 배 하이라이트
+    ctx.beginPath(); ctx.ellipse(0,L*0.35,Wd*0.4,L*0.42,0,0,6.2832); ctx.fill();
+    ctx.fillStyle=back;                        // 등지느러미(중앙)
+    ctx.beginPath(); ctx.moveTo(0,L*0.05); ctx.lineTo(Wd*0.32,-L*0.05); ctx.lineTo(0,-L*0.28); ctx.lineTo(-Wd*0.32,-L*0.05); ctx.closePath(); ctx.fill();
+    for (var e=-1;e<=1;e+=2){ ctx.fillStyle="#10181d"; ctx.beginPath(); ctx.arc(e*Wd*0.4,L*0.62,R*0.1,0,6.2832); ctx.fill(); }
+  }
+  function drawSeal(R, t) {
+    var body="#9aa0a6", back="#6f757b", L=R*2.0, Wd=R*1.0, flip=Math.sin(t)*R*0.2;
+    ctx.fillStyle=back;                        // 뒷지느러미(위)
+    ctx.beginPath(); ctx.moveTo(-R*0.4,-L*0.7); ctx.lineTo(0,-L*0.5); ctx.lineTo(R*0.4,-L*0.7); ctx.lineTo(0,-L*0.95); ctx.closePath(); ctx.fill();
+    for (var s=-1;s<=1;s+=2){                  // 앞 플리퍼
+      ctx.beginPath(); ctx.moveTo(s*Wd*0.5,L*0.05);
+      ctx.quadraticCurveTo(s*Wd*1.3,L*0.2+flip,s*Wd*1.0,L*0.45);
+      ctx.quadraticCurveTo(s*Wd*0.6,L*0.2,s*Wd*0.4,L*0.15); ctx.closePath(); ctx.fill();
+    }
+    var bg=ctx.createLinearGradient(-Wd,0,Wd,0);
+    bg.addColorStop(0,back); bg.addColorStop(0.5,body); bg.addColorStop(1,back); ctx.fillStyle=bg;
+    ctx.beginPath(); ctx.ellipse(0,L*0.05,Wd*0.78,L*0.62,0,0,6.2832); ctx.fill();   // 통통한 몸
+    ctx.fillStyle=body; ctx.beginPath(); ctx.arc(0,L*0.62,Wd*0.5,0,6.2832); ctx.fill();   // 머리
+    ctx.fillStyle=back; ctx.beginPath(); ctx.arc(0,L*0.82,Wd*0.18,0,6.2832); ctx.fill();  // 주둥이
+    ctx.fillStyle="rgba(60,65,70,0.4)";       // 반점
+    var sp=[[Wd*0.2,-L*0.1],[-Wd*0.25,L*0.1],[Wd*0.1,L*0.25],[-Wd*0.1,-L*0.25]];
+    for (var i=0;i<sp.length;i++){ ctx.beginPath(); ctx.arc(sp[i][0],sp[i][1],R*0.1,0,6.2832); ctx.fill(); }
+    for (var e=-1;e<=1;e+=2){ ctx.fillStyle="#15191c"; ctx.beginPath(); ctx.arc(e*Wd*0.18,L*0.6,R*0.1,0,6.2832); ctx.fill(); }
+  }
+  function drawHeron(R, t) {
+    var wing="#7d93a8", wingdark="#5d7287", bodyc="#aebccb", beak="#e8b13a", flap=Math.sin(t*1.2)*R*0.5;
+    ctx.fillStyle=wingdark;                    // 꼬리(위)
+    ctx.beginPath(); ctx.moveTo(-R*0.2,-R*0.9); ctx.lineTo(R*0.2,-R*0.9); ctx.lineTo(0,-R*1.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle=wing;                        // 펼친 날개
+    for (var s=-1;s<=1;s+=2){
+      ctx.beginPath(); ctx.moveTo(s*R*0.3,-R*0.2);
+      ctx.quadraticCurveTo(s*R*2.4,-R*0.3-flap,s*R*2.2,R*0.6+flap);
+      ctx.quadraticCurveTo(s*R*1.2,R*0.1,s*R*0.3,R*0.3); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle=bodyc; ctx.beginPath(); ctx.ellipse(0,0,R*0.5,R*1.0,0,0,6.2832); ctx.fill();  // 몸
+    ctx.beginPath(); ctx.arc(0,R*1.0,R*0.32,0,6.2832); ctx.fill();                                // 머리
+    ctx.fillStyle=beak;                        // 긴 부리(아래)
+    ctx.beginPath(); ctx.moveTo(-R*0.12,R*1.1); ctx.lineTo(R*0.12,R*1.1); ctx.lineTo(0,R*2.0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#1b2b10";
+    ctx.beginPath(); ctx.arc(R*0.12,R*0.95,R*0.08,0,6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(-R*0.12,R*0.95,R*0.08,0,6.2832); ctx.fill();
+  }
+  function drawEagle(R, t) {
+    var wing="#5a4326", wingdark="#3f2f1a", bodyc="#4a3620", head="#f0eee6", beak="#f2b21c", flap=Math.sin(t*1.3)*R*0.55;
+    ctx.fillStyle=head; ctx.beginPath(); ctx.moveTo(-R*0.25,-R*0.85); ctx.lineTo(R*0.25,-R*0.85); ctx.lineTo(0,-R*1.3); ctx.closePath(); ctx.fill(); // 꼬리
+    ctx.strokeStyle=beak; ctx.lineWidth=Math.max(1.5,R*0.12); ctx.lineCap="round";  // 발톱(아래)
+    for (var c=-1;c<=1;c++){ ctx.beginPath(); ctx.moveTo(c*R*0.22,R*0.55); ctx.lineTo(c*R*0.3,R*1.05); ctx.stroke(); }
+    ctx.lineCap="butt";
+    ctx.fillStyle=wing;                        // 펼친 날개
+    for (var s=-1;s<=1;s+=2){
+      ctx.beginPath(); ctx.moveTo(s*R*0.3,-R*0.3);
+      ctx.quadraticCurveTo(s*R*2.6,-R*0.5-flap,s*R*2.3,R*0.5+flap);
+      ctx.quadraticCurveTo(s*R*1.3,0,s*R*0.3,R*0.35); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle=bodyc; ctx.beginPath(); ctx.ellipse(0,0,R*0.5,R*0.95,0,0,6.2832); ctx.fill();   // 몸
+    ctx.fillStyle=head; ctx.beginPath(); ctx.arc(0,R*0.95,R*0.34,0,6.2832); ctx.fill();            // 흰 머리(아래)
+    ctx.fillStyle=beak; ctx.beginPath(); ctx.moveTo(-R*0.1,R*1.15); ctx.lineTo(R*0.1,R*1.15); ctx.lineTo(0,R*1.55); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#1b1208";
+    ctx.beginPath(); ctx.arc(R*0.13,R*0.9,R*0.07,0,6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(-R*0.13,R*0.9,R*0.07,0,6.2832); ctx.fill();
+  }
+  function drawBear(R, t) {
+    var fur="#6b4a2b", furdark="#4f3620", claw="#efe9df", nose="#1c130b", reach=Math.sin(t*1.5)*R*0.15;
+    ctx.fillStyle=fur;                         // 귀(뒤)
+    ctx.beginPath(); ctx.arc(-R*0.62,-R*0.72,R*0.36,0,6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(R*0.62,-R*0.72,R*0.36,0,6.2832); ctx.fill();
+    for (var s=-1;s<=1;s+=2){                  // 두 팔(아래로) + 발톱
+      ctx.fillStyle=fur; ctx.beginPath();
+      ctx.ellipse(s*R*0.78,R*0.95+reach,R*0.32,R*0.62,s*0.25,0,6.2832); ctx.fill();
+      ctx.fillStyle=claw;
+      for (var c=-1;c<=1;c++){ ctx.beginPath(); ctx.arc(s*R*0.78+c*R*0.13,R*1.5+reach,R*0.07,0,6.2832); ctx.fill(); }
+    }
+    var bg=ctx.createRadialGradient(-R*0.2,-R*0.2,R*0.3,0,0,R*1.3);
+    bg.addColorStop(0,fur); bg.addColorStop(1,furdark); ctx.fillStyle=bg;
+    ctx.beginPath(); ctx.arc(0,0,R*1.05,0,6.2832); ctx.fill();                       // 머리/몸
+    ctx.fillStyle="#8a6a44"; ctx.beginPath(); ctx.ellipse(0,R*0.7,R*0.42,R*0.34,0,0,6.2832); ctx.fill(); // 주둥이
+    ctx.fillStyle=nose; ctx.beginPath(); ctx.ellipse(0,R*0.78,R*0.16,R*0.11,0,0,6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(-R*0.35,R*0.18,R*0.12,0,6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(R*0.35,R*0.18,R*0.12,0,6.2832); ctx.fill();
+  }
+
   function drawObstacle(o) {
     ctx.save(); ctx.translate(o.x, o.y);
     if (o.type === "rock") {
@@ -595,7 +720,13 @@
       ctx.strokeStyle = "rgba(120,180,210,0.9)"; ctx.lineWidth = Math.max(2, o.r * 0.16);
       ctx.beginPath(); ctx.arc(-o.r * 0.4, 0, o.r * 0.4, 0.6, 2.6); ctx.stroke();
       ctx.beginPath(); ctx.arc(o.r * 0.4, 0, o.r * 0.4, 3.7, 5.7); ctx.stroke();
-    } else {
+    } else if (o.type === "bigfish") { drawBigFish(o.r, o.t); }
+    else if (o.type === "shark") { drawShark(o.r, o.t); }
+    else if (o.type === "seal") { drawSeal(o.r, o.t); }
+    else if (o.type === "heron") { drawHeron(o.r, o.t); }
+    else if (o.type === "eagle") { drawEagle(o.r, o.t); }
+    else if (o.type === "bear") { drawBear(o.r, o.t); }
+    else {
       var def = OB_DEF[o.type];
       ctx.font = (o.r * 2.0) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(def ? def.emoji : "❔", 0, 0);
