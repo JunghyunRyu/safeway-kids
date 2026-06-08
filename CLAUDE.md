@@ -279,6 +279,7 @@ cd site && npm run dev
 **Open Gap Notes**:
 - [`artifacts/gap-notes/2026-04-27-storage-contract-divergence.md`](artifacts/gap-notes/2026-04-27-storage-contract-divergence.md) — Storage FR-3.x ↔ deployed code 4 divergence (V1.1 해소)
 - [`artifacts/gap-notes/2026-06-08-pt-portone-v2-already-implemented.md`](artifacts/gap-notes/2026-06-08-pt-portone-v2-already-implemented.md) — P1-3 PortOne v2는 선행 구현 완료 → 핸드오프 잔여작업 오기재, P1-3 범위 WalkPhoto로 축소 (LOW)
+- [`artifacts/gap-notes/2026-06-08-pt-confirm-payment-dead-code-bug.md`](artifacts/gap-notes/2026-06-08-pt-confirm-payment-dead-code-bug.md) — **PT `confirm_payment` 도달 불가 코드 버그** (purge 함수 오삽입 → PAID 영속 안 됨). HIGH, PT 출시 전 수정 필요. CC는 미이식 (CC 작업 중 발견)
 
 **Known Issues (출시 critical path 무관)**:
 - KI-2 TOSS_WEBHOOK_SECRET 미설정 → Toss webhook 3 fail

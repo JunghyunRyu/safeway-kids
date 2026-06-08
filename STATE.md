@@ -3,7 +3,7 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-06-08 (v12 — P1-3 WalkPhoto 모델 + Alembic 마이그(`f3b9c1d27a40`) + 단위 테스트 3건 추가. tests/unit 77 passed, 회귀 0. alembic 단일 head 유지(C-4). PortOne v2는 이미 구현 완료로 확인 → Gap Note 발행, P1-3 범위 축소. **6/15까지 슬라이스 트랙 P1-1·P1-2·P1-3 전부 종료**. v11 anchor: P1-2 ai 모듈 스켈레톤 19/19 / v10: P1-1 mobile tsc / v9: 5/15 modoo 제출)
+**Last updated**: 2026-06-08 (v13 — **CC gap-closing M1 (결제 연동) 완료**: CcPayment 모델 + 마이그(`a7c4e9f1b256`) + 결제 prepare/confirm/cancel/webhook + 통합테스트 4건. CC 결제 4 passed, tests/unit 77 passed, 회귀 0, alembic 단일 head. 사용자 directive로 CC 워크스트림 재개(보류 해제). PT confirm_payment 버그 Gap Note. v12 anchor: P1-3 WalkPhoto / v11: P1-2 ai 스켈레톤 / v9: 5/15 modoo 제출)
 **Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말 예상)** + PT V1.0 출시 reschedule (7월 말~8월 초) + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
 **Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료(v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임된 상태. 6/15까지 본업 사이 가벼운 P1 작업만, 6/15 이후 Track 2 본격 ramp-up
 **Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**
@@ -59,7 +59,7 @@
 ## Portfolio Status (5/22)
 - **PetTracker**: 5/15 신청 완료 → 1R 결과 대기 → 7월 말~8월 초 출시 (reschedule)
 - **SafeWay Kids**: **동결** (D-7) — 샌드박스 v2.1 정지
-- **CareConnect**: 보류 — 사용자 고민 중 (PT 출시 후 + 30일 사이클은 7월 말 이후)
+- **CareConnect**: **gap-closing 재개 (사용자 directive 2026-06-08)** — 기존 ~62~75% 구현 위에 PT 패리티 작업. M1 결제 연동(PortOne v2) ✅ 완료. 다음 후보: 전용 테스트 확대 / V1.1 기능(세션 리포트·사고폼·분쟁센터·동의 트레일). 우선순위는 PT/본업 하위지만 사용자 지시로 활성
 - **SDET Code**: 운영 중, 외국인 prospect 1건 재가동 vs 운영비 trade-off **P3 분석 대기** (#33)
 - **루넨랩스**: 사업자등록 1R 통과 후 진행 / lunenlabs.com LIVE 유지
 
