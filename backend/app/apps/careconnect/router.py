@@ -15,6 +15,12 @@ from app.apps.careconnect.schemas import (
     CaregiverQualCreate,
     CcBookingCreate,
     CcBookingResponse,
+    CcPaymentCancelRequest,
+    CcPaymentCancelResponse,
+    CcPaymentConfirmRequest,
+    CcPaymentConfirmResponse,
+    CcPaymentPrepareRequest,
+    CcPaymentPrepareResponse,
     CcReviewCreate,
     CcWalletResponse,
     CheckinRequest,
@@ -369,6 +375,64 @@ async def export_cc_transactions_csv(
         iter([buf.getvalue().encode('utf-8-sig')]),
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="cc-transactions-{month}.csv"'},
+    )
+
+
+# ── Payments (PortOne v2) — PetTracker 패리티 ─────────────────────
+
+@router.post("/payments/prepare", response_model=CcPaymentPrepareResponse, status_code=201)
+async def prepare_payment(
+    body: CcPaymentPrepareRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_cc_parent),
+) -> CcPaymentPrepareResponse:
+    """결제 prepare — PortOne 결제창 호출 직전 merchant_uid 발급."""
+    payment = await service.prepare_cc_payment(db, user.id, body.booking_id)
+    await db.commit()
+    return CcPaymentPrepareResponse(
+        payment_id=payment.id,
+        merchant_uid=payment.merchant_uid,
+        amount=payment.amount,
+        currency=payment.currency,
+        pg_provider=payment.pg_provider,
+    )
+
+
+@router.post("/payments/confirm", response_model=CcPaymentConfirmResponse)
+async def confirm_payment(
+    body: CcPaymentConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_cc_parent),
+) -> CcPaymentConfirmResponse:
+    """결제 confirm — PortOne 결제창 종료 후 백엔드에서 금액/상태 검증."""
+    payment = await service.confirm_cc_payment(db, user.id, body.imp_uid, body.merchant_uid)
+    await db.commit()
+    return CcPaymentConfirmResponse(
+        payment_id=payment.id,
+        status=payment.status,
+        amount=payment.amount,
+        paid_at=payment.paid_at,
+        imp_uid=payment.imp_uid,
+    )
+
+
+@router.post("/payments/{payment_id}/cancel", response_model=CcPaymentCancelResponse)
+async def cancel_payment(
+    payment_id: uuid.UUID,
+    body: CcPaymentCancelRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_cc_parent),
+) -> CcPaymentCancelResponse:
+    """결제 취소/환불 (전액 또는 부분)."""
+    payment = await service.cancel_cc_payment(
+        db, user.id, payment_id, body.reason, body.cancel_amount,
+    )
+    await db.commit()
+    return CcPaymentCancelResponse(
+        payment_id=payment.id,
+        status=payment.status,
+        cancel_amount=payment.cancel_amount,
+        cancelled_at=payment.cancelled_at,
     )
 
 

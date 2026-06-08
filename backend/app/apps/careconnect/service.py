@@ -18,6 +18,8 @@ from app.apps.careconnect.models import (
     CcBooking,
     CcBookingStatus,
     CcChild,
+    CcPayment,
+    CcPaymentStatus,
     ChildConsent,
 )
 from app.apps.careconnect.schemas import (
@@ -461,3 +463,201 @@ async def cc_withdraw(db: AsyncSession, user_id: uuid.UUID, amount: int) -> Wall
     db.add(tx)
     await db.flush()
     return tx
+
+
+# ── Payment Service (PortOne v2) — PetTracker 패리티 ──────────────
+
+def _cc_booking_amount(booking: CcBooking) -> int:
+    """예약 결제 금액 = 시간당 요금 × 돌봄 시간 (confirm_handover 정산과 동일 계산)."""
+    return int(booking.hourly_rate * booking.duration_hours)
+
+
+def _build_cc_merchant_uid(booking_id: uuid.UUID) -> str:
+    """`cc_<booking_short>_<unix_ts>` 형태의 가맹점 주문번호 (PT `pt_`와 격리)."""
+    ts = int(datetime.now(UTC).timestamp())
+    return f"cc_{booking_id.hex[:12]}_{ts}"
+
+
+async def prepare_cc_payment(
+    db: AsyncSession,
+    parent_id: uuid.UUID,
+    booking_id: uuid.UUID,
+) -> CcPayment:
+    """결제 prepare — PortOne 결제창 호출 직전 백엔드에 merchant_uid 발급/저장.
+
+    돌봄자 수락 직후 ~ 돌봄 시작 전 호출. 진행/완료/취소/만료 상태면 차단.
+    동일 booking에 PAID payment가 이미 있으면 중복 방지(멱등).
+    """
+    booking = await db.get(CcBooking, booking_id)
+    if not booking:
+        raise NotFoundError(detail="예약을 찾을 수 없습니다")
+    if booking.parent_id != parent_id:
+        raise ForbiddenError(detail="본인의 예약에 대해서만 결제할 수 있습니다")
+    if booking.status in (
+        CcBookingStatus.IN_PROGRESS,
+        CcBookingStatus.COMPLETED,
+        CcBookingStatus.CANCELLED,
+        CcBookingStatus.EXPIRED,
+    ):
+        raise ValidationError(detail=f"현재 상태({booking.status})에서는 결제할 수 없습니다")
+
+    existing_paid = (await db.execute(
+        select(CcPayment)
+        .where(CcPayment.booking_id == booking_id)
+        .where(CcPayment.status == CcPaymentStatus.PAID)
+    )).scalar_one_or_none()
+    if existing_paid:
+        return existing_paid
+
+    payment = CcPayment(
+        booking_id=booking_id,
+        amount=_cc_booking_amount(booking),
+        currency="KRW",
+        pg_provider="portone",
+        merchant_uid=_build_cc_merchant_uid(booking_id),
+        status=CcPaymentStatus.PENDING,
+    )
+    db.add(payment)
+    await db.flush()
+    return payment
+
+
+async def confirm_cc_payment(
+    db: AsyncSession,
+    parent_id: uuid.UUID,
+    imp_uid: str,
+    merchant_uid: str,
+) -> CcPayment:
+    """결제 confirm — PortOne 결제창 종료 후 백엔드에서 결제 상태/금액 검증.
+
+    Idempotent: 이미 PAID이고 imp_uid도 같으면 그대로 반환.
+    """
+    from app.modules.billing.providers.portone import portone_provider
+
+    payment = (await db.execute(
+        select(CcPayment).where(CcPayment.merchant_uid == merchant_uid)
+    )).scalar_one_or_none()
+    if not payment:
+        raise NotFoundError(detail="결제 정보를 찾을 수 없습니다")
+
+    booking = await db.get(CcBooking, payment.booking_id)
+    if not booking or booking.parent_id != parent_id:
+        raise ForbiddenError(detail="본인의 결제만 확인할 수 있습니다")
+
+    if payment.status == CcPaymentStatus.PAID and payment.imp_uid == imp_uid:
+        return payment
+
+    if payment.status not in (CcPaymentStatus.PENDING, CcPaymentStatus.PAID):
+        raise ValidationError(detail=f"결제 상태({payment.status})에서는 confirm할 수 없습니다")
+
+    pg_resp = await portone_provider.confirm_payment(
+        payment_key=imp_uid,
+        order_id=merchant_uid,
+        amount=payment.amount,
+    )
+    pg_status = pg_resp.get("status")
+    if pg_status not in ("PAID", "VIRTUAL_ACCOUNT_ISSUED"):
+        raise ValidationError(detail=f"PG 결제 상태가 비정상입니다: {pg_status}")
+
+    payment.imp_uid = imp_uid
+    payment.status = CcPaymentStatus.PAID
+    payment.paid_at = datetime.now(UTC)
+    await db.flush()
+    return payment
+
+
+async def cancel_cc_payment(
+    db: AsyncSession,
+    parent_id: uuid.UUID,
+    payment_id: uuid.UUID,
+    reason: str,
+    cancel_amount: int | None = None,
+) -> CcPayment:
+    """결제 취소/환불.
+
+    - cancel_amount=None 또는 amount와 같으면 전액 취소 (CANCELLED)
+    - 부분 취소면 REFUNDED, 취소액은 cancel_amount 컬럼에 기록.
+    """
+    from app.modules.billing.providers.portone import portone_provider
+
+    payment = await db.get(CcPayment, payment_id)
+    if not payment:
+        raise NotFoundError(detail="결제 정보를 찾을 수 없습니다")
+
+    booking = await db.get(CcBooking, payment.booking_id)
+    if not booking or booking.parent_id != parent_id:
+        raise ForbiddenError(detail="본인의 결제만 취소할 수 있습니다")
+
+    if payment.status != CcPaymentStatus.PAID:
+        raise ValidationError(detail=f"결제 상태({payment.status})에서는 취소할 수 없습니다")
+
+    if not payment.imp_uid:
+        raise ValidationError(detail="PG 결제 식별자(imp_uid)가 없어 취소할 수 없습니다")
+
+    if cancel_amount is not None and cancel_amount > payment.amount:
+        raise ValidationError(detail="취소 금액이 결제 금액을 초과합니다")
+
+    await portone_provider.cancel_payment(
+        payment_key=payment.imp_uid,
+        cancel_reason=reason,
+        cancel_amount=cancel_amount,
+    )
+
+    payment.cancel_amount = cancel_amount if cancel_amount is not None else payment.amount
+    payment.cancel_reason = reason
+    payment.cancelled_at = datetime.now(UTC)
+    payment.status = (
+        CcPaymentStatus.CANCELLED
+        if cancel_amount is None or cancel_amount == payment.amount
+        else CcPaymentStatus.REFUNDED
+    )
+    await db.flush()
+    return payment
+
+
+async def handle_cc_portone_webhook_event(
+    db: AsyncSession,
+    payload: dict,
+) -> dict:
+    """PortOne v2 webhook 상태 sync (CareConnect).
+
+    Payload(V2): {"type": "Transaction.Paid", "data": {"paymentId", "orderId", "status", ...}}
+    또는 V1: {"imp_uid", "merchant_uid", "status"}.
+    CcPayment row가 없으면 조용히 ignored 반환 (다른 앱/가맹점 noise).
+    """
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+    imp_uid = data.get("paymentId") or data.get("imp_uid")
+    merchant_uid = data.get("orderId") or data.get("merchant_uid")
+    pg_status = (data.get("status") or "").upper()
+
+    if not imp_uid and not merchant_uid:
+        return {"status": "ignored", "reason": "missing identifiers"}
+
+    stmt = select(CcPayment)
+    if imp_uid and merchant_uid:
+        stmt = stmt.where(
+            (CcPayment.imp_uid == imp_uid) | (CcPayment.merchant_uid == merchant_uid)
+        )
+    elif imp_uid:
+        stmt = stmt.where(CcPayment.imp_uid == imp_uid)
+    else:
+        stmt = stmt.where(CcPayment.merchant_uid == merchant_uid)
+
+    payment = (await db.execute(stmt)).scalar_one_or_none()
+    if not payment:
+        return {"status": "ignored", "reason": "no matching payment"}
+
+    if imp_uid and not payment.imp_uid:
+        payment.imp_uid = imp_uid
+
+    if pg_status == "PAID" and payment.status != CcPaymentStatus.PAID:
+        payment.status = CcPaymentStatus.PAID
+        payment.paid_at = datetime.now(UTC)
+    elif pg_status in ("CANCELLED", "PARTIAL_CANCELLED") and payment.status == CcPaymentStatus.PAID:
+        payment.status = (
+            CcPaymentStatus.CANCELLED if pg_status == "CANCELLED" else CcPaymentStatus.REFUNDED
+        )
+        payment.cancelled_at = datetime.now(UTC)
+
+    await db.flush()
+    return {"status": "ok", "payment_id": str(payment.id), "new_status": payment.status}

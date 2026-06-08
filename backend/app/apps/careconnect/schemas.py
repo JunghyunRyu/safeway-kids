@@ -139,3 +139,42 @@ class SessionMemoRequest(BaseModel):
 
 class WithdrawRequest(BaseModel):
     amount: int = Field(..., gt=0)
+
+
+# ── Payments (PortOne v2) — PetTracker 패리티 ─────────────────────
+
+class CcPaymentPrepareRequest(BaseModel):
+    booking_id: uuid.UUID
+
+
+class CcPaymentPrepareResponse(BaseModel):
+    payment_id: uuid.UUID
+    merchant_uid: str
+    amount: int
+    currency: str = "KRW"
+    pg_provider: str = "portone"
+
+
+class CcPaymentConfirmRequest(BaseModel):
+    imp_uid: str = Field(..., min_length=1, max_length=100)
+    merchant_uid: str = Field(..., min_length=1, max_length=100)
+
+
+class CcPaymentConfirmResponse(BaseModel):
+    payment_id: uuid.UUID
+    status: str
+    amount: int
+    paid_at: datetime | None
+    imp_uid: str | None
+
+
+class CcPaymentCancelRequest(BaseModel):
+    reason: str = Field(..., min_length=1, max_length=200)
+    cancel_amount: int | None = Field(None, gt=0)
+
+
+class CcPaymentCancelResponse(BaseModel):
+    payment_id: uuid.UUID
+    status: str
+    cancel_amount: int | None
+    cancelled_at: datetime | None

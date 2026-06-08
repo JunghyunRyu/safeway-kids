@@ -38,6 +38,13 @@ class CareActivityType(enum.StrEnum):
     OTHER = "other"
 
 
+class CcPaymentStatus(enum.StrEnum):
+    PENDING = "pending"
+    PAID = "paid"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+
 # ── Children (PII encrypted) ────────────────────────────────────
 
 class CcChild(Base):
@@ -235,4 +242,39 @@ class CaregiverReview(Base):
 
     __table_args__ = (
         Index("ix_caregiver_reviews_cg_time", "caregiver_id", "created_at"),
+    )
+
+
+# ── CareConnect Payments (PortOne v2) ────────────────────────────
+
+class CcPayment(Base):
+    """PortOne v2 결제 기록 — PetTracker `PtPayment`와 동일 구조의 CareConnect 버전.
+
+    SafeWay Kids `payments` / PetTracker `pt_payments` 테이블과 격리.
+    amount 는 예약의 hourly_rate × duration_hours 로 계산해 저장한다.
+    pg_provider 컬럼으로 향후 다른 PG 추가 가능 (현재는 "portone" 단일).
+    """
+
+    __tablename__ = "cc_payments"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    booking_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("cc_bookings.id"), nullable=False, index=True
+    )
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)  # KRW (정수)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="KRW")
+    pg_provider: Mapped[str] = mapped_column(String(20), nullable=False, default="portone")
+    imp_uid: Mapped[str | None] = mapped_column(String(100), unique=True, index=True)
+    merchant_uid: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancel_amount: Mapped[int | None] = mapped_column(Integer)
+    cancel_reason: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_cc_payments_booking_status", "booking_id", "status"),
     )

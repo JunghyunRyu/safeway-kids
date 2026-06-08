@@ -320,6 +320,7 @@ async def portone_webhook(
     """
     import json
 
+    from app.apps.careconnect.service import handle_cc_portone_webhook_event
     from app.apps.pettracker.service import handle_portone_webhook_event
     from app.common.exceptions import ForbiddenError
     from app.modules.billing.providers.portone import portone_provider
@@ -345,6 +346,11 @@ async def portone_webhook(
     except json.JSONDecodeError:
         raise ValidationError(detail="Invalid JSON body")
 
+    # PT 결제(pt_*)를 먼저 시도하고, 일치하는 row가 없으면 CC 결제(cc_*)로 라우팅.
     result = await handle_portone_webhook_event(db, payload)
+    if result.get("status") == "ignored":
+        cc_result = await handle_cc_portone_webhook_event(db, payload)
+        if cc_result.get("status") != "ignored":
+            result = cc_result
     await db.commit()
     return result
