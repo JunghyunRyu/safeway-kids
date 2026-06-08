@@ -3,7 +3,7 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-06-08 (v13 — **CC gap-closing M1 (결제 연동) 완료**: CcPayment 모델 + 마이그(`a7c4e9f1b256`) + 결제 prepare/confirm/cancel/webhook + 통합테스트 4건. CC 결제 4 passed, tests/unit 77 passed, 회귀 0, alembic 단일 head. 사용자 directive로 CC 워크스트림 재개(보류 해제). PT confirm_payment 버그 Gap Note. v12 anchor: P1-3 WalkPhoto / v11: P1-2 ai 스켈레톤 / v9: 5/15 modoo 제출)
+**Last updated**: 2026-06-08 (v14 — **PT confirm_payment dead-code 버그 수정**: purge 함수 모듈 최상위 이동 + PAID 영속 복원 + PT 결제 통합테스트 3건(`test_pt_payments.py`) 추가. Gap Note RESOLVED. PT 결제 3 passed, 타깃회귀 33 passed, unit 77 passed, 회귀 0. v13: CC gap-closing M1 결제 연동(CcPayment+마이그 `a7c4e9f1b256`+테스트 4) / v12: P1-3 WalkPhoto / v11: P1-2 ai 스켈레톤 / v9: 5/15 modoo 제출)
 **Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말 예상)** + PT V1.0 출시 reschedule (7월 말~8월 초) + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
 **Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료(v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임된 상태. 6/15까지 본업 사이 가벼운 P1 작업만, 6/15 이후 Track 2 본격 ramp-up
 **Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**

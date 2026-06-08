@@ -650,6 +650,12 @@ async def confirm_payment(
     if pg_status not in ("PAID", "VIRTUAL_ACCOUNT_ISSUED"):
         raise ValidationError(detail=f"PG 결제 상태가 비정상입니다: {pg_status}")
 
+    payment.imp_uid = imp_uid
+    payment.status = PtPaymentStatus.PAID
+    payment.paid_at = datetime.now(UTC)
+    await db.flush()
+    return payment
+
 
 # ── 위치정보법 §16 자동 파기 (180일) — PT 산책 GPS 이력 ─────────────────
 
@@ -662,12 +668,6 @@ async def purge_old_walk_gps_history(db: AsyncSession) -> int:
     if count > 0:
         logger.info("[PT GPS] Purged %d old walk GPS records (before %s)", count, cutoff.isoformat())
     return count
-
-    payment.imp_uid = imp_uid
-    payment.status = PtPaymentStatus.PAID
-    payment.paid_at = datetime.now(UTC)
-    await db.flush()
-    return payment
 
 
 async def cancel_payment(

@@ -59,4 +59,18 @@ PT를 출시하기 전 다음 수정 필요 (사용자 승인 후 별도 작업 
 2. `confirm_payment` 말미에 `payment.imp_uid/status/paid_at` 설정 + `return payment` 복원.
 3. PT 결제 통합 테스트 추가 (CC 테스트와 대칭).
 
-**상태**: PT 버그는 미수정 (사용자 directive는 CC). 본 Gap Note로 기록만.
+## 해소 (2026-06-08, 사용자 directive "버그수정")
+
+권고 3건 전부 반영:
+1. ✅ `purge_old_walk_gps_history`를 모듈 최상위로 이동 (`confirm_payment` 밖).
+2. ✅ `confirm_payment` 말미에 `payment.imp_uid/status/paid_at` 설정 + `await db.flush()` + `return payment` 복원.
+3. ✅ PT 결제 통합 테스트 추가 (`tests/integration/test_pt_payments.py`, CC와 대칭) —
+   full flow / PG 비정상 status 거부 / 소유권 403. DB 영속 직접 assert로 dead-code 회귀 가드.
+
+검증:
+- `tests/integration/test_pt_payments.py` 3 passed
+- 타깃 회귀(PT+CC 결제, billing, walkphoto, cross-app) 33 passed / 3 failed(=기존 KI-2 Toss, 무관)
+- `tests/unit` 77 passed (회귀 0)
+- `main.py`의 `from app.apps.pettracker.service import purge_old_walk_gps_history` 임포트 정상 (함수 위치 모듈 최상위 유지)
+
+**상태**: **RESOLVED** — PT 출시 critical path 결제 confirm 버그 제거 완료.
