@@ -266,7 +266,7 @@ cd site && npm run dev
 - ✅ **EXT-9~11** AWS·Firebase·Anthropic 보유 / **OpenAI** 결제만 / **PortOne** 사업자만
 - 🔴 **D-7 SafeWay 동결** — Claude proactive 작업 0, 사용자 재진입 전 모든 SafeWay 영역 동결
 
-**6/15까지 슬라이스 (본업 사이 가벼운 작업)**: ~~P1-1 mobile tsc 복구~~ (✅ 5/22) → ~~P1-2 LLM client + Redis cost counter 스켈레톤 (stub)~~ (✅ 5/22) → P1-3 WalkPhoto 마이그 + PortOne v2 인터페이스 (mock)
+**6/15까지 슬라이스 (본업 사이 가벼운 작업)**: ~~P1-1 mobile tsc 복구~~ (✅ 5/22) → ~~P1-2 LLM client + Redis cost counter 스켈레톤 (stub)~~ (✅ 5/22) → ~~P1-3 WalkPhoto 마이그 + PortOne v2~~ (✅ 6/8 — WalkPhoto 모델+마이그(`f3b9c1d27a40`)+테스트 3, tests/unit 77 passed. PortOne v2는 선행 구현 확인 → Gap Note, 범위 축소). **슬라이스 트랙 전체 종료.**
 
 **6/15 이후 ramp-up**: P2-1 OpenAI 결제 해결 → P2-2 Track 2 T2.2~T2.4 LLM 실 구현 (사고·캡션·모더레이션·GPS) → P2-3 PT V1.0 출시 (T2.5 통합 + T2.6 EAS Build)
 
@@ -278,6 +278,7 @@ cd site && npm run dev
 
 **Open Gap Notes**:
 - [`artifacts/gap-notes/2026-04-27-storage-contract-divergence.md`](artifacts/gap-notes/2026-04-27-storage-contract-divergence.md) — Storage FR-3.x ↔ deployed code 4 divergence (V1.1 해소)
+- [`artifacts/gap-notes/2026-06-08-pt-portone-v2-already-implemented.md`](artifacts/gap-notes/2026-06-08-pt-portone-v2-already-implemented.md) — P1-3 PortOne v2는 선행 구현 완료 → 핸드오프 잔여작업 오기재, P1-3 범위 WalkPhoto로 축소 (LOW)
 
 **Known Issues (출시 critical path 무관)**:
 - KI-2 TOSS_WEBHOOK_SECRET 미설정 → Toss webhook 3 fail

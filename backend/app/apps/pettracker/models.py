@@ -47,6 +47,14 @@ class PtPaymentStatus(enum.StrEnum):
     REFUNDED = "refunded"
 
 
+class WalkPhotoCaptionStatus(enum.StrEnum):
+    """축 B 캡션 생성 라이프사이클 — Tech Spec FR-B2."""
+    PENDING = "pending"        # 업로드 직후, LLM 캡션 대기
+    GENERATED = "generated"    # LLM 캡션 생성 완료
+    EDITED = "edited"          # 펫시터 1-tap 수정 (FR-B5)
+    FAILED = "failed"          # LLM 호출 실패/timeout (EC-1)
+
+
 # ── Pets ─────────────────────────────────────────────────────────
 
 class Pet(Base):
@@ -192,6 +200,42 @@ class WalkGpsHistory(Base):
 
     __table_args__ = (
         Index("ix_walk_gps_session_time", "session_id", "recorded_at"),
+    )
+
+
+# ── Walk Photos (AI 캡션 + 컨디션 영속 레이어) ──────────────────────
+
+class WalkPhoto(Base):
+    """산책 사진 + AI 캡션/컨디션 — Tech Spec FR-B2 / FR-F2.
+
+    축 B(산책 사진 자동 캡션) + 축 F(사진 → 펫 컨디션 1줄)의 영속 레이어.
+    본 슬라이스(P1-3)는 스키마 골격만 추가한다 — 업로드 시 caption_status
+    "pending"으로 INSERT 되고, 실제 LLM 캡션/컨디션 채움은 P2-2
+    (generate_caption BackgroundTask)에서 wire 한다. 지금은 LLM 호출 0.
+    """
+
+    __tablename__ = "walk_photos"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("walk_sessions.id"), nullable=False
+    )
+    s3_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    caption: Mapped[str | None] = mapped_column(Text)
+    caption_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending", server_default="pending"
+    )
+    # 축 F — 사진 → 펫 컨디션 1줄 (베타). LLM(P2-2)이 캡션과 동일 응답에 통합.
+    # 값: 활기 | 평온 | 지친_듯 | 이상 | 불명 (varchar — 코드베이스 enum 컨벤션 준수)
+    condition: Mapped[str | None] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    session: Mapped["WalkSession"] = relationship(lazy="joined")
+
+    __table_args__ = (
+        Index("ix_walk_photos_session_created", "session_id", "created_at"),
     )
 
 

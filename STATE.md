@@ -3,7 +3,7 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-05-22 (v11 — P1-2 ai 모듈 스켈레톤 + Redis cost counter + 단위 테스트 19/19 PASS. 회귀 0 (백엔드 207 passed / 3 fail = 기존 KI-2 Toss 3건만). 신규 파일 7개 + config.py AI env 8개 추가. v10 anchor: P1-1 mobile tsc PASS / v9 anchor: 5/15 modoo 제출)
+**Last updated**: 2026-06-08 (v12 — P1-3 WalkPhoto 모델 + Alembic 마이그(`f3b9c1d27a40`) + 단위 테스트 3건 추가. tests/unit 77 passed, 회귀 0. alembic 단일 head 유지(C-4). PortOne v2는 이미 구현 완료로 확인 → Gap Note 발행, P1-3 범위 축소. **6/15까지 슬라이스 트랙 P1-1·P1-2·P1-3 전부 종료**. v11 anchor: P1-2 ai 모듈 스켈레톤 19/19 / v10: P1-1 mobile tsc / v9: 5/15 modoo 제출)
 **Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말 예상)** + PT V1.0 출시 reschedule (7월 말~8월 초) + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
 **Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료(v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임된 상태. 6/15까지 본업 사이 가벼운 P1 작업만, 6/15 이후 Track 2 본격 ramp-up
 **Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**
@@ -30,7 +30,7 @@
 | 5/23 ~ 6/15 | 본업 집중 + PT 인프라 골격 슬라이스 (P1-1·P1-2·P1-3) | 사용자(본업) + Claude(슬라이스) |
 | ~~~ 6/15 mobile tsc 복구 (P1-1)~~~ | ✅ 5/22 PASS (workspace hoisting, 루트 node_modules에서 tsc 해상 0 errors) | Claude |
 | ~~~ 6/15 LLM client 스켈레톤 + Redis cost counter (P1-2)~~~ | ✅ 5/22 PASS (19/19 unit tests, 회귀 0, 신규 파일 7개 + config 8개 env) | Claude |
-| ~ 6/15 | WalkPhoto 마이그 + PortOne v2 인터페이스 (P1-3, mock only) | Claude |
+| ~~~ 6/15 WalkPhoto 마이그 + PortOne v2 (P1-3)~~~ | ✅ 6/8 PASS (WalkPhoto 모델+마이그 `f3b9c1d27a40`+테스트 3, tests/unit 77 passed. PortOne v2는 선행 구현 확인 → Gap Note, 범위 축소) | Claude |
 | ~ 7월 말 | 1R 결과 안내 수신 | 운영기관(프라이머) |
 | 7월 말 → | 통과 시: 사업자등록 + PortOne 계약 + OpenAI 결제 해결 + Track 2 본격 (P2-1·P2-2) | 사용자 + Claude |
 | 7월 말 ~ 8월 초 | PT V1.0 출시 (T2.5 통합 테스트 + T2.6 EAS Build) (P2-3) | Claude |
