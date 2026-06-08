@@ -64,7 +64,8 @@
 - **루넨랩스**: 사업자등록 1R 통과 후 진행 / lunenlabs.com LIVE 유지
 
 ## Latest Handoff
-- [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS. 다음 first step = P1-3
+- [`artifacts/handoffs/2026-06-08-session-handoff.md`](artifacts/handoffs/2026-06-08-session-handoff.md) — P1-3 WalkPhoto 완료(tests/unit 77 passed) + PortOne v2 선행 구현 Gap Note. 슬라이스 트랙 종료. 다음 first step = 6/15 이후 P2-1
+- [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS
 - [`artifacts/handoffs/2026-05-22-session-handoff.md`](artifacts/handoffs/2026-05-22-session-handoff.md) — 5/11~5/22 12일 갭 acknowledgement + 3대 결정(PT reschedule·SafeWay 동결·본업 집중) anchor
 
 ## Available Skills
