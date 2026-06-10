@@ -3,10 +3,11 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-05-22 (v11 — P1-2 ai 모듈 스켈레톤 + Redis cost counter + 단위 테스트 19/19 PASS. 회귀 0 (백엔드 207 passed / 3 fail = 기존 KI-2 Toss 3건만). 신규 파일 7개 + config.py AI env 8개 추가. v10 anchor: P1-1 mobile tsc PASS / v9 anchor: 5/15 modoo 제출)
-**Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말 예상)** + PT V1.0 출시 reschedule (7월 말~8월 초) + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
-**Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료(v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임된 상태. 6/15까지 본업 사이 가벼운 P1 작업만, 6/15 이후 Track 2 본격 ramp-up
-**Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**
+**Last updated**: 2026-06-10 (v12 — **모두의 창업 1R 탈락 통보** 반영. 예상(~7월 말)보다 ~7주 조기. 탈락 사유 미제공. 기록: [`artifacts/reports/2026-06-10-modoo-1r-rejection.md`](artifacts/reports/2026-06-10-modoo-1r-rejection.md). v11 anchor: P1-2 19/19 PASS)
+**Active workstream**: **1R 탈락 → fallback 경로 결정 대기 (사용자)** + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업 (P1-3 잔여)
+**Current phase**: **Phase 7 종료 (modoo 워크스트림 closure — 결과 = 1R 탈락)** — 다음 워크스트림은 fallback 결정 후 Phase 0 재진입. 결정 전까지 D-8 슬라이스(P1-3)만 유효
+**Priority principle**: **본업 (~6/15) > fallback 경로 결정 (사용자) > PT V1.0 출시 계획 재검토 > SafeWay 동결 유지 > CareConnect 보류**
+**Next gate**: **fallback 경로 사용자 결정** — ① 7월 modoo 차회 재신청 (v2.6 60~70% 재사용) ② 타 정부지원사업 ③ 자비 소규모 출시 (개인사업자→PortOne) ④ 보류/재평가. 급하지 않음 — 6/15 본업 종료 후 결정 가능
 **LIVE infrastructure**: `https://www.lunenlabs.com/` + `https://www.lunenlabs.com/pet` (5/6 LIVE 유지, 변경 없음)
 **PT positioning**: **강아지 일상 종합 케어 동반자** (`pt_positioning_holistic_care.md` anchor 유지)
 
@@ -31,24 +32,23 @@
 | ~~~ 6/15 mobile tsc 복구 (P1-1)~~~ | ✅ 5/22 PASS (workspace hoisting, 루트 node_modules에서 tsc 해상 0 errors) | Claude |
 | ~~~ 6/15 LLM client 스켈레톤 + Redis cost counter (P1-2)~~~ | ✅ 5/22 PASS (19/19 unit tests, 회귀 0, 신규 파일 7개 + config 8개 env) | Claude |
 | ~ 6/15 | WalkPhoto 마이그 + PortOne v2 인터페이스 (P1-3, mock only) | Claude |
-| ~ 7월 말 | 1R 결과 안내 수신 | 운영기관(프라이머) |
-| 7월 말 → | 통과 시: 사업자등록 + PortOne 계약 + OpenAI 결제 해결 + Track 2 본격 (P2-1·P2-2) | 사용자 + Claude |
-| 7월 말 ~ 8월 초 | PT V1.0 출시 (T2.5 통합 테스트 + T2.6 EAS Build) (P2-3) | Claude |
-| Fallback | 1R 미통과 시: 7월 modoo 차회 또는 별도 사업 path (v2.6 본문 60~70% 재사용) | 사용자 결정 |
+| ~~~ 7월 말 1R 결과~~~ | ❌ **6/10 조기 탈락 통보** — 통과 전제 행(사업자등록·PortOne·P2-1~P2-3 일정) 무효화, fallback 결정 후 재계획 | 운영기관(프라이머) |
+| 6/10 → | **Fallback 경로 결정**: ① modoo 차회 ② 타 지원사업 ③ 자비 출시 ④ 보류 (v2.6 본문 60~70% 재사용 가능) | **사용자 결정 대기** |
+| 결정 후 | PT V1.0 출시 타깃(7월 말~8월 초)·Track 2 ramp-up 재계획 (Phase 0 재진입) | 사용자 + Claude |
 
 ## Blockers / Waiting On
-- 🟡 **1R 결과 안내 대기 (~7월 말)** — 외부 의존, action 불가
-- 🟡 **OpenAI 결제 보류** — 카드 결제 처리 실패. Track 2 T2.2~T2.3 LLM 실 호출 unblock 의존. 6/15 본업 종료 후 결제 해결 (P2-1)
-- 🟡 **PortOne 사업자 계정 필요** — 1R 통과 후 사업자등록 → PortOne 계약 순서. UD-4 자격 박탈 risk 회피 path 유지
+- 🔴 **fallback 경로 사용자 결정 대기** — ❌ 1R 탈락 (6/10 통보, 사유 미제공). modoo 후속·출시 재계획 모두 이 결정에 종속
+- 🟡 **OpenAI 결제 보류** — 카드 결제 처리 실패. Track 2 LLM 실 호출 unblock 의존. 6/15 본업 종료 후 결제 해결 (1R 무관, 유지)
+- 🟡 **PortOne 사업자 계정 필요** — 기존 "1R 통과 후 사업자등록" 전제 무효. fallback 경로(자비 진행 시 개인사업자 등록 등)에 따라 재정의
 - ✅ ~~mobile tsc 환경~~ (5/22 P1-1 PASS, npm workspace hoisting으로 루트 node_modules 사용. "lock mismatch" 진단은 오진이었음)
 - 🟡 **EXT-9~11 외부 계정 (AWS·Firebase·Anthropic) 이미 보유** — OpenAI만 결제 이슈 / PortOne만 사업자 의존
 - 🔴 **D-7 SafeWay 동결** — Claude proactive 작업 0. 사용자 재진입 전 모든 SafeWay 영역 동결 (자문 메모·v2.2·미팅 등)
 
-## Risks (5/22 갱신)
-- **R-1 (HIGH)** 신청서 §4 "6/9 출시" 약속과 실제 출시 7월 말~8월 초 시차 → 1R 통과 후 멘토링 단계 setback 사유 설명 필요 (운영기관 신뢰 risk)
-- **R-2 (MED)** 1R 미통과 시 자금 lag 4~6개월 → 7월 modoo 차회 fallback path (산출물 60~70% 재사용)
-- **R-3 (MED)** 1인 burnout signal (SafeWay 동결 결정 기저) → PT도 무리하면 동력 손실 risk. 6/15까지 가벼운 슬라이스만 유지
-- **R-4 (LOW)** OpenAI 결제 해결 지연 → Track 2 LLM 실 구현 지연 → 8월 초까지 슬립 가능
+## Risks (6/10 갱신)
+- ~~R-1~~ **소멸** — 1R 탈락으로 멘토링 단계 자체가 없음 (§4 출시 약속 setback 설명 불필요)
+- **R-2 (현실화)** 1R 탈락 → 자금 lag 4~6개월 시나리오 진입. fallback path로 완화 (산출물 60~70% 재사용)
+- **R-3 (MED→HIGH 주시)** 1인 burnout signal — 탈락이 동력 손실로 이어질 risk. 6/15까지 가벼운 슬라이스만 유지, fallback 결정 재촉 금지
+- **R-4 (LOW)** OpenAI 결제 해결 지연 → Track 2 LLM 실 구현 지연 (1R 무관, 유지)
 
 ## Parallel: SafeWay Kids 샌드박스 — **동결 (D-7)**
 - 자문 메모(양길모 + 이의림+이학선 5/7 미팅 후) 수신 완료, **사용자 평가 = 불만족**
@@ -56,12 +56,12 @@
 - Active draft `artifacts/business/regulatory/2026-05-03-sandbox-application-v2.1-draft.md` 정지 상태로 보존
 - 재진입 시점 = 사용자 자발적 결정 (Claude proactive 작업 금지)
 
-## Portfolio Status (5/22)
-- **PetTracker**: 5/15 신청 완료 → 1R 결과 대기 → 7월 말~8월 초 출시 (reschedule)
+## Portfolio Status (6/10)
+- **PetTracker**: 5/15 modoo 신청 → ❌ **1R 탈락 (6/10)** → fallback 경로 결정 대기. 출시 타깃(7월 말~8월 초) 재검토 필요
 - **SafeWay Kids**: **동결** (D-7) — 샌드박스 v2.1 정지
 - **CareConnect**: 보류 — 사용자 고민 중 (PT 출시 후 + 30일 사이클은 7월 말 이후)
 - **SDET Code**: 운영 중, 외국인 prospect 1건 재가동 vs 운영비 trade-off **P3 분석 대기** (#33)
-- **루넨랩스**: 사업자등록 1R 통과 후 진행 / lunenlabs.com LIVE 유지
+- **루넨랩스**: 사업자등록 — 기존 "1R 통과 후" 전제 무효, fallback 경로에 따라 재결정 / lunenlabs.com LIVE 유지
 
 ## Latest Handoff
 - [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS. 다음 first step = P1-3

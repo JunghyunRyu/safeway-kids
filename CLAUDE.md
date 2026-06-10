@@ -241,15 +241,15 @@ cd site && npm run dev
 
 > **Live pointer** — STATE.md mirror. `/session-start`·`/session-end`로 정합성 유지.
 
-**Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말)** + PT V1.0 출시 reschedule (7월 말~8월 초) + **본업 집중 (~6/15)** + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
-**Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료 (v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임. 6/15 본업 종료 후 Track 2 본격 ramp-up
-**Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**
+**Active workstream**: **모두의 창업 1R 탈락 (6/10 통보) → fallback 경로 결정 대기 (사용자)** + **본업 집중 (~6/15)** + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업 (P1-3 잔여)
+**Current phase**: **Phase 7 종료 (modoo 워크스트림 closure — 결과 = 1R 탈락)** — 탈락 기록: [`artifacts/reports/2026-06-10-modoo-1r-rejection.md`](artifacts/reports/2026-06-10-modoo-1r-rejection.md). fallback 결정 후 Phase 0 재진입
+**Priority principle**: **본업 (~6/15) > fallback 경로 결정 (사용자) > PT V1.0 출시 계획 재검토 > SafeWay 동결 유지 > CareConnect 보류**
 **Active Brief**: [`artifacts/specs/2026-05-03-modoo-deadline-execution-brief.md`](artifacts/specs/2026-05-03-modoo-deadline-execution-brief.md) (Phase 5 종료)
 **신청서 제출본 (5/15 16:00 anchor)**: [`artifacts/business/fundraising/2026-05-10-modoo-pt-application-v2.6-tight.md`](artifacts/business/fundraising/2026-05-10-modoo-pt-application-v2.6-tight.md) (Q1 97 / Q2 900 / Q3 997 / Q4 992자, AI tell 제거)
 **진화 기록**: v1.4(36) → v2.0(37.5) → v2.1(38.5) → v2.5(42.5/페르소나 34.4) → v2.6-humanized → **v2.6-tight (제출본)**
 **운영기관 선택**: 프라이머 ★★★★★ ([`artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md`](artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md))
-**Next gate**: **~7월 말 1R 결과 안내** → 통과 시: 사업자등록 + PortOne 계약 + OpenAI 결제 해결 + Track 2 본격 → 7월 말~8월 초 PT V1.0 출시. 미통과 시: 7월 modoo 차회 또는 별도 사업 fallback (산출물 60~70% 재사용)
-**PT 출시 타깃 (재정렬)**: **2026-07월 말 ~ 8월 초** (이전 6/9 ±2d에서 reschedule)
+**Next gate**: **fallback 경로 사용자 결정** — ① 7월 modoo 차회 재신청 (v2.6 60~70% 재사용) ② 타 정부지원사업 ③ 자비 소규모 출시 (개인사업자→PortOne) ④ 보류/재평가. 급하지 않음 — 6/15 본업 종료 후 결정 가능
+**PT 출시 타깃**: ~~2026-07월 말 ~ 8월 초 (D-6)~~ — 1R 통과 전제 무효, fallback 결정 후 재설정
 **Latest handoff**: [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) (P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS, 회귀 0. 다음 first step = P1-3)
 
 **User Decisions (2026-05-22 갱신)**:
@@ -258,23 +258,23 @@ cd site && npm run dev
 - **D-7 (NEW 2026-05-22)** **SafeWay 샌드박스 동결**: 자문 메모 불만족 + 1인 개발 부담 signal. Claude proactive 작업 0
 - **D-8 (NEW 2026-05-22)** **6/15까지 본업 집중**: PT는 AI 호출 없는 인프라 골격만 슬라이스 (비용 0, burnout 0)
 
-**Blockers / Waiting On (5/22 갱신)**:
-- 🟡 **1R 결과 안내 대기 (~7월 말)** — 외부 의존, action 불가
-- 🟡 **OpenAI 결제 보류** — 카드 결제 실패. Track 2 LLM 실 호출 unblock 의존. 6/15 본업 종료 후 해결
-- 🟡 **PortOne 사업자 계정 필요** — 1R 통과 후 사업자등록 → 계약 순서
+**Blockers / Waiting On (6/10 갱신)**:
+- 🔴 **fallback 경로 사용자 결정 대기** — ❌ 1R 탈락 (6/10 통보, 사유 미제공). modoo 후속·출시 재계획 모두 종속
+- 🟡 **OpenAI 결제 보류** — 카드 결제 실패. Track 2 LLM 실 호출 unblock 의존. 6/15 본업 종료 후 해결 (1R 무관)
+- 🟡 **PortOne 사업자 계정 필요** — "1R 통과 후 사업자등록" 전제 무효, fallback 경로에 따라 재정의
 - ✅ ~~mobile tsc 환경~~ — 5/22 P1-1 검증 PASS (npx tsc --noEmit 0 errors). 환경은 npm workspace hoisting으로 루트 node_modules의 typescript@5.9.3 사용. "lock mismatch" 진단은 오진
 - ✅ **EXT-9~11** AWS·Firebase·Anthropic 보유 / **OpenAI** 결제만 / **PortOne** 사업자만
 - 🔴 **D-7 SafeWay 동결** — Claude proactive 작업 0, 사용자 재진입 전 모든 SafeWay 영역 동결
 
 **6/15까지 슬라이스 (본업 사이 가벼운 작업)**: ~~P1-1 mobile tsc 복구~~ (✅ 5/22) → ~~P1-2 LLM client + Redis cost counter 스켈레톤 (stub)~~ (✅ 5/22) → P1-3 WalkPhoto 마이그 + PortOne v2 인터페이스 (mock)
 
-**6/15 이후 ramp-up**: P2-1 OpenAI 결제 해결 → P2-2 Track 2 T2.2~T2.4 LLM 실 구현 (사고·캡션·모더레이션·GPS) → P2-3 PT V1.0 출시 (T2.5 통합 + T2.6 EAS Build)
+**6/15 이후 ramp-up (fallback 결정에 따라 재계획)**: P2-1 OpenAI 결제 해결 → P2-2 Track 2 T2.2~T2.4 LLM 실 구현 (사고·캡션·모더레이션·GPS) → P2-3 PT V1.0 출시 (T2.5 통합 + T2.6 EAS Build) — 일정·범위는 fallback 결정 후 확정
 
-**Risks (5/22 갱신)**:
-- **R-1 (HIGH)** §4 "6/9 출시" 약속과 실제 출시 7월 말~8월 초 시차 → 멘토링 단계 setback 사유 설명 필요
-- **R-2 (MED)** 1R 미통과 시 자금 lag 4~6개월 → fallback path 보존
-- **R-3 (MED)** 1인 burnout signal (SafeWay 동결 기저) → PT도 무리하면 동력 손실. 6/15까지 가벼운 슬라이스만
-- **R-4 (LOW)** OpenAI 결제 해결 지연 → Track 2 LLM 슬립
+**Risks (6/10 갱신)**:
+- ~~R-1~~ **소멸** — 1R 탈락으로 멘토링 단계 없음
+- **R-2 (현실화)** 1R 탈락 → 자금 lag 4~6개월 시나리오 진입. fallback path로 완화 (산출물 60~70% 재사용)
+- **R-3 (MED→HIGH 주시)** 1인 burnout signal — 탈락이 동력 손실로 이어질 risk. fallback 결정 재촉 금지
+- **R-4 (LOW)** OpenAI 결제 해결 지연 → Track 2 LLM 슬립 (1R 무관)
 
 **Open Gap Notes**:
 - [`artifacts/gap-notes/2026-04-27-storage-contract-divergence.md`](artifacts/gap-notes/2026-04-27-storage-contract-divergence.md) — Storage FR-3.x ↔ deployed code 4 divergence (V1.1 해소)
