@@ -54,6 +54,7 @@ from app.apps.pettracker.models import (  # noqa: F401
     PtBooking,
     WalkSession,
     WalkGpsHistory,
+    WalkPhoto,
     WalkerWallet,
     WalkerReview,
 )

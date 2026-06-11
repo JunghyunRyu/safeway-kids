@@ -47,6 +47,13 @@ class PtPaymentStatus(enum.StrEnum):
     REFUNDED = "refunded"
 
 
+class WalkPhotoCaptionStatus(enum.StrEnum):
+    PENDING = "pending"
+    GENERATED = "generated"
+    EDITED = "edited"
+    FAILED = "failed"
+
+
 # ── Pets ─────────────────────────────────────────────────────────
 
 class Pet(Base):
@@ -192,6 +199,33 @@ class WalkGpsHistory(Base):
 
     __table_args__ = (
         Index("ix_walk_gps_session_time", "session_id", "recorded_at"),
+    )
+
+
+# ── Walk Photos (사진 캡션 축 B 인프라) ──────────────────────────
+
+class WalkPhoto(Base):
+    """산책 사진 + AI 캡션 상태 — Tech Spec FR-B2 / FR-F2.
+
+    캡션 생성(BackgroundTasks → Vision LLM)은 P2-2에서 wire — 본 모델은
+    저장 골격만 제공한다. caption_status는 pending → generated|failed,
+    펫시터 수정 시 edited (FR-B5).
+    """
+
+    __tablename__ = "walk_photos"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("walk_sessions.id"), nullable=False, index=True
+    )
+    s3_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    caption: Mapped[str | None] = mapped_column(Text)
+    caption_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    condition: Mapped[str | None] = mapped_column(String(50))  # FR-F2 컨디션 추정 (Optional)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_walk_photos_session_created", "session_id", "created_at"),
     )
 
 
