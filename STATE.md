@@ -3,8 +3,8 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-06-10 (v12 — **모두의 창업 1R 탈락 통보** 반영. 예상(~7월 말)보다 ~7주 조기. 탈락 사유 미제공. 기록: [`artifacts/reports/2026-06-10-modoo-1r-rejection.md`](artifacts/reports/2026-06-10-modoo-1r-rejection.md). v11 anchor: P1-2 19/19 PASS)
-**Active workstream**: **1R 탈락 → fallback 경로 결정 대기 (사용자)** + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업 (P1-3 잔여)
+**Last updated**: 2026-06-11 (v13 — **P1-3 완료 = 6/15 슬라이스 트랙 전체 완주**. WalkPhoto 모델+마이그레이션 `f7c2d4a91b3e` 실 Postgres 검증 + PortOne 테스트 공백 해소. 신규 11 테스트 PASS, 회귀 0 (214 passed / 221). Gap Note: PortOne은 4월에 이미 구현돼 있었음. v12 anchor: 1R 탈락 통보)
+**Active workstream**: **1R 탈락 → fallback 경로 결정 대기 (사용자)** + 본업 집중 기간 (~2026-06-15). **6/15 슬라이스 트랙 (P1-1·P1-2·P1-3) 전체 완주** — fallback 결정 전 Claude proactive 코드 작업 없음
 **Current phase**: **Phase 7 종료 (modoo 워크스트림 closure — 결과 = 1R 탈락)** — 다음 워크스트림은 fallback 결정 후 Phase 0 재진입. 결정 전까지 D-8 슬라이스(P1-3)만 유효
 **Priority principle**: **본업 (~6/15) > fallback 경로 결정 (사용자) > PT V1.0 출시 계획 재검토 > SafeWay 동결 유지 > CareConnect 보류**
 **Next gate**: **fallback 경로 사용자 결정** — ① 7월 modoo 차회 재신청 (v2.6 60~70% 재사용) ② 타 정부지원사업 ③ 자비 소규모 출시 (개인사업자→PortOne) ④ 보류/재평가. 급하지 않음 — 6/15 본업 종료 후 결정 가능
@@ -31,7 +31,7 @@
 | 5/23 ~ 6/15 | 본업 집중 + PT 인프라 골격 슬라이스 (P1-1·P1-2·P1-3) | 사용자(본업) + Claude(슬라이스) |
 | ~~~ 6/15 mobile tsc 복구 (P1-1)~~~ | ✅ 5/22 PASS (workspace hoisting, 루트 node_modules에서 tsc 해상 0 errors) | Claude |
 | ~~~ 6/15 LLM client 스켈레톤 + Redis cost counter (P1-2)~~~ | ✅ 5/22 PASS (19/19 unit tests, 회귀 0, 신규 파일 7개 + config 8개 env) | Claude |
-| ~ 6/15 | WalkPhoto 마이그 + PortOne v2 인터페이스 (P1-3, mock only) | Claude |
+| ~~~ 6/15 WalkPhoto 마이그 + PortOne v2 (P1-3)~~~ | ✅ 6/11 완료 — WalkPhoto `f7c2d4a91b3e` (실 PG 검증) + PortOne 테스트 7건 (구현은 4월에 이미 존재 — gap-note 6/11). 신규 KI-5 발견 | Claude |
 | ~~~ 7월 말 1R 결과~~~ | ❌ **6/10 조기 탈락 통보** — 통과 전제 행(사업자등록·PortOne·P2-1~P2-3 일정) 무효화, fallback 결정 후 재계획 | 운영기관(프라이머) |
 | 6/10 → | **Fallback 경로 결정**: ① modoo 차회 ② 타 지원사업 ③ 자비 출시 ④ 보류 (v2.6 본문 60~70% 재사용 가능) | **사용자 결정 대기** |
 | 결정 후 | PT V1.0 출시 타깃(7월 말~8월 초)·Track 2 ramp-up 재계획 (Phase 0 재진입) | 사용자 + Claude |

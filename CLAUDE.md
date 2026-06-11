@@ -218,7 +218,7 @@ cd site && npm run dev
 | 웹 대시보드 품질 95점 달성 | COMPLETE | 2026-03-20 |
 
 ### 검증 수치 (2026-05-06 backend-dev sub-agent 실측 갱신)
-- 백엔드 테스트: **207 passed / 210** (2026-05-22 P1-2 후 실측, 신규 P1-2 19건 추가, 회귀 0). Known fails: KI-2 Toss webhook 3건 (TOSS_WEBHOOK_SECRET 미설정). KI-3 health degraded / KI-4 WS teardown race는 이번 run 미발현 (flaky 카테고리)
+- 백엔드 테스트: **214 passed / 221** (2026-06-11 P1-3 후 원격 컨테이너 실측, 신규 P1-3 11건 추가, 회귀 0). Known fails: KI-2 Toss webhook 3건 + KI-3 health 1건 + KI-4 WS 3건 (원격 컨테이너에서 hang으로 발현, pytest-timeout으로 가시화 — [verification](artifacts/verification/2026-06-11-p1-3-walkphoto-portone-verification.md))
 - 모바일 테스트: **17 파일 / 71 it() 블록** (SafeWay mobile) + 9 파일 (PT mobile, apps/pettracker)
 - 웹 테스트: **12 파일 / 50 it() 블록**
 - TypeScript: web · site · lunenlabs **0 errors** (실측 PASS) / mobile **0 errors** (2026-05-22 PASS — `npx tsc --noEmit` from `mobile/`, typescript 5.9.3 hoisted to root node_modules)
@@ -266,7 +266,7 @@ cd site && npm run dev
 - ✅ **EXT-9~11** AWS·Firebase·Anthropic 보유 / **OpenAI** 결제만 / **PortOne** 사업자만
 - 🔴 **D-7 SafeWay 동결** — Claude proactive 작업 0, 사용자 재진입 전 모든 SafeWay 영역 동결
 
-**6/15까지 슬라이스 (본업 사이 가벼운 작업)**: ~~P1-1 mobile tsc 복구~~ (✅ 5/22) → ~~P1-2 LLM client + Redis cost counter 스켈레톤 (stub)~~ (✅ 5/22) → P1-3 WalkPhoto 마이그 + PortOne v2 인터페이스 (mock)
+**6/15까지 슬라이스 (전체 완주 ✅)**: ~~P1-1 mobile tsc 복구~~ (✅ 5/22) → ~~P1-2 LLM client + Redis cost counter 스켈레톤 (stub)~~ (✅ 5/22) → ~~P1-3 WalkPhoto 마이그 + PortOne 테스트 보강~~ (✅ 6/11 — PortOne 구현은 4월에 이미 존재, [gap-note](artifacts/gap-notes/2026-06-11-p1-3-portone-already-implemented.md))
 
 **6/15 이후 ramp-up (fallback 결정에 따라 재계획)**: P2-1 OpenAI 결제 해결 → P2-2 Track 2 T2.2~T2.4 LLM 실 구현 (사고·캡션·모더레이션·GPS) → P2-3 PT V1.0 출시 (T2.5 통합 + T2.6 EAS Build) — 일정·범위는 fallback 결정 후 확정
 
@@ -282,7 +282,8 @@ cd site && npm run dev
 **Known Issues (출시 critical path 무관)**:
 - KI-2 TOSS_WEBHOOK_SECRET 미설정 → Toss webhook 3 fail
 - KI-3 health endpoint degraded → 1 fail
-- KI-4 m4_websocket teardown race → 1 error
+- KI-4 WS teardown race → 환경 따라 **무한 hang으로 발현 가능** (6/11 원격 컨테이너에서 WS 3건, py-spy로 확인). 환경 의존 deadlock 가능성 — P2 트랙 조사 권장
+- KI-5 (NEW 6/11) fresh DB에서 alembic 전체 체인이 `m001`에서 실패 (`messages` 테이블이 체인 밖 생성 전제) → 신규 환경 프로비저닝 차단 요인, P2 트랙 보정 권장
 
 ---
 
