@@ -3,8 +3,8 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-06-11 (v13 — **P1-3 완료 = 6/15 슬라이스 트랙 전체 완주**. WalkPhoto 모델+마이그레이션 `f7c2d4a91b3e` 실 Postgres 검증 + PortOne 테스트 공백 해소. 신규 11 테스트 PASS, 회귀 0 (214 passed / 221). Gap Note: PortOne은 4월에 이미 구현돼 있었음. v12 anchor: 1R 탈락 통보)
-**Active workstream**: **1R 탈락 → fallback 경로 결정 대기 (사용자)** + 본업 집중 기간 (~2026-06-15). **6/15 슬라이스 트랙 (P1-1·P1-2·P1-3) 전체 완주** — fallback 결정 전 Claude proactive 코드 작업 없음
+**Last updated**: 2026-06-11 (v14 — **PT 결제+가입 마일스톤 완료** (사용자 지시, D-8 예외). 백엔드 240/247 회귀 0 + 모바일 3앱 tsc 0 + PT 30/30·SK 71/71 jest. 선재 HIGH 버그 confirm_payment 두 동강 수정. 보고서: [`artifacts/reports/2026-06-11-pt-payment-signup-milestone.md`](artifacts/reports/2026-06-11-pt-payment-signup-milestone.md). v13 anchor: P1-3 완료)
+**Active workstream**: **1R 탈락 → fallback 경로 결정 대기 (사용자)** + 본업 집중 기간 (~2026-06-15). 6/15 슬라이스 + **PT 결제·가입 시스템 (6/11 사용자 지시)** 완료 — fallback 결정 전 Claude proactive 코드 작업 없음
 **Current phase**: **Phase 7 종료 (modoo 워크스트림 closure — 결과 = 1R 탈락)** — 다음 워크스트림은 fallback 결정 후 Phase 0 재진입. 결정 전까지 D-8 슬라이스(P1-3)만 유효
 **Priority principle**: **본업 (~6/15) > fallback 경로 결정 (사용자) > PT V1.0 출시 계획 재검토 > SafeWay 동결 유지 > CareConnect 보류**
 **Next gate**: **fallback 경로 사용자 결정** — ① 7월 modoo 차회 재신청 (v2.6 60~70% 재사용) ② 타 정부지원사업 ③ 자비 소규모 출시 (개인사업자→PortOne) ④ 보류/재평가. 급하지 않음 — 6/15 본업 종료 후 결정 가능
@@ -18,7 +18,9 @@
 **운영기관 선택**: 프라이머 ★★★★★ ([`artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md`](artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md))
 **Portfolio Improvement Audit**: [`artifacts/reports/2026-05-08-portfolio-improvement-audit-integrated.md`](artifacts/reports/2026-05-08-portfolio-improvement-audit-integrated.md)
 
-## User Decisions (5/22 갱신 — 신규 3건 추가)
+## User Decisions (6/11 갱신 — D-9 추가)
+- **D-9 (NEW 2026-06-11) — PT 결제 UI·회원가입 즉시 구현**: 가입 = **Firebase 기반 + 소셜 로그인** (Kakao config-gate, OTP 기본 경로 유지), 착수 = 즉시 (D-8 예외). 결제 범위는 무응답 → 추천안(플로우 전체, dev-mock 채널) 채택 (A-4)
+
 - **D-1 = A** ~ **D-5** / **C-1 ~ C-5** / **UD-1 ~ UD-4** : modoo 제출 anchor (이력 archive, 변경 없음)
 - **D-6 (NEW 2026-05-22) — PT V1.0 출시 reschedule**: 6/9 ±2d → **7월 말~8월 초**. 4 제약 동시 정렬: (1) 본업 ~6/15, (2) 1R 결과 ~7월 말, (3) OpenAI 결제 보류 해결, (4) PortOne 사업자(1R 통과 후 등록). 신청서 §4 6/9 약속 setback 사유는 1R 통과 후 멘토링 단계에서 운영기관에 설명
 - **D-7 (NEW 2026-05-22) — SafeWay 샌드박스 동결**: 자문 메모 불만족 + 1인 개발 부담 signal. 사용자 자발적 재진입 전까지 Claude proactive 작업 0. SafeWay 영역 모든 P3 보류
@@ -38,6 +40,8 @@
 
 ## Blockers / Waiting On
 - 🔴 **fallback 경로 사용자 결정 대기** — ❌ 1R 탈락 (6/10 통보, 사유 미제공). modoo 후속·출시 재계획 모두 이 결정에 종속
+- 🟡 **EXT-12 Kakao 콘솔 등록** (사용자) — 앱 생성 + redirect URI 등록 → `app.json extra.kakaoRestApiKey/kakaoRedirectUri` 설정 시 카카오 버튼 활성 (미설정 시 OTP만, 기능 정상)
+- 🟡 **EXT-13 Firebase web config** (사용자) — 콘솔 웹 앱 추가 + service account → `extra.firebaseWebConfig` 설정 시 Firebase 세션 브리지 활성 (미설정 시 JWT 단독, 기능 정상)
 - 🟡 **OpenAI 결제 보류** — 카드 결제 처리 실패. Track 2 LLM 실 호출 unblock 의존. 6/15 본업 종료 후 결제 해결 (1R 무관, 유지)
 - 🟡 **PortOne 사업자 계정 필요** — 기존 "1R 통과 후 사업자등록" 전제 무효. fallback 경로(자비 진행 시 개인사업자 등록 등)에 따라 재정의
 - ✅ ~~mobile tsc 환경~~ (5/22 P1-1 PASS, npm workspace hoisting으로 루트 node_modules 사용. "lock mismatch" 진단은 오진이었음)
@@ -64,7 +68,8 @@
 - **루넨랩스**: 사업자등록 — 기존 "1R 통과 후" 전제 무효, fallback 경로에 따라 재결정 / lunenlabs.com LIVE 유지
 
 ## Latest Handoff
-- [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS. 다음 first step = P1-3
+- [`artifacts/handoffs/2026-06-11-session-handoff.md`](artifacts/handoffs/2026-06-11-session-handoff.md) — 1R 탈락 반영 + P1-3 완주 + PT 결제·가입 마일스톤 (D-9). 다음 = fallback 결정(사용자) / EXT-12·13 설정
+- [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1·P1-2 anchor
 - [`artifacts/handoffs/2026-05-22-session-handoff.md`](artifacts/handoffs/2026-05-22-session-handoff.md) — 5/11~5/22 12일 갭 acknowledgement + 3대 결정(PT reschedule·SafeWay 동결·본업 집중) anchor
 
 ## Available Skills

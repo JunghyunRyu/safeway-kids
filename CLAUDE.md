@@ -218,8 +218,8 @@ cd site && npm run dev
 | 웹 대시보드 품질 95점 달성 | COMPLETE | 2026-03-20 |
 
 ### 검증 수치 (2026-05-06 backend-dev sub-agent 실측 갱신)
-- 백엔드 테스트: **214 passed / 221** (2026-06-11 P1-3 후 원격 컨테이너 실측, 신규 P1-3 11건 추가, 회귀 0). Known fails: KI-2 Toss webhook 3건 + KI-3 health 1건 + KI-4 WS 3건 (원격 컨테이너에서 hang으로 발현, pytest-timeout으로 가시화 — [verification](artifacts/verification/2026-06-11-p1-3-walkphoto-portone-verification.md))
-- 모바일 테스트: **17 파일 / 71 it() 블록** (SafeWay mobile) + 9 파일 (PT mobile, apps/pettracker)
+- 백엔드 테스트: **240 passed / 247** (2026-06-11 PT 결제+가입 마일스톤 후 실측, 신규 26건 추가, 회귀 0). Known fails: KI-2 Toss webhook 3건 + KI-3 health 1건 + KI-4 WS 3건 (hang→pytest-timeout 가시화 — [verification](artifacts/verification/2026-06-11-pt-payment-signup-verification.md))
+- 모바일 테스트: **17 파일 / 71 it() 블록** (SafeWay mobile) + **12 파일 / 30 it()** (PT mobile, apps/pettracker)
 - 웹 테스트: **12 파일 / 50 it() 블록**
 - TypeScript: web · site · lunenlabs **0 errors** (실측 PASS) / mobile **0 errors** (2026-05-22 PASS — `npx tsc --noEmit` from `mobile/`, typescript 5.9.3 hoisted to root node_modules)
 - 총 코드 (실측 2026-05-06): 백엔드 24,936 + 모바일(SafeWay) 12,609 + 웹 10,804 + 사이트 1,361 + apps(PT+CC) 8,646 + lunenlabs 2,926 + packages 1,455 = **~62,200 LOC**
@@ -250,9 +250,10 @@ cd site && npm run dev
 **운영기관 선택**: 프라이머 ★★★★★ ([`artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md`](artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md))
 **Next gate**: **fallback 경로 사용자 결정** — ① 7월 modoo 차회 재신청 (v2.6 60~70% 재사용) ② 타 정부지원사업 ③ 자비 소규모 출시 (개인사업자→PortOne) ④ 보류/재평가. 급하지 않음 — 6/15 본업 종료 후 결정 가능
 **PT 출시 타깃**: ~~2026-07월 말 ~ 8월 초 (D-6)~~ — 1R 통과 전제 무효, fallback 결정 후 재설정
-**Latest handoff**: [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) (P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS, 회귀 0. 다음 first step = P1-3)
+**Latest handoff**: [`artifacts/handoffs/2026-06-11-session-handoff.md`](artifacts/handoffs/2026-06-11-session-handoff.md) (1R 탈락 반영 + P1-3 완주 + PT 결제·가입 마일스톤 D-9. 백엔드 240/247 회귀 0)
 
-**User Decisions (2026-05-22 갱신)**:
+**User Decisions (2026-06-11 갱신)**:
+- **D-9 (NEW 2026-06-11)** PT 결제 UI·회원가입 즉시 구현 — 가입 = Firebase 기반 + 소셜(Kakao config-gate), 결제 = 플로우 전체(dev-mock). 완료: [`artifacts/reports/2026-06-11-pt-payment-signup-milestone.md`](artifacts/reports/2026-06-11-pt-payment-signup-milestone.md)
 - **D-1~D-5 / C-1~C-5 / UD-1~UD-4**: modoo 제출 anchor (이력 archive, 변경 없음)
 - **D-6 (NEW 2026-05-22)** PT V1.0 출시 reschedule: 6/9 → **7월 말~8월 초**. 4 제약 동시 정렬 (본업 ~6/15, 1R 결과 ~7월 말, OpenAI 결제, PortOne 사업자). §4 6/9 약속 setback은 1R 통과 후 멘토링 단계에서 운영기관에 설명
 - **D-7 (NEW 2026-05-22)** **SafeWay 샌드박스 동결**: 자문 메모 불만족 + 1인 개발 부담 signal. Claude proactive 작업 0
@@ -262,6 +263,7 @@ cd site && npm run dev
 - 🔴 **fallback 경로 사용자 결정 대기** — ❌ 1R 탈락 (6/10 통보, 사유 미제공). modoo 후속·출시 재계획 모두 종속
 - 🟡 **OpenAI 결제 보류** — 카드 결제 실패. Track 2 LLM 실 호출 unblock 의존. 6/15 본업 종료 후 해결 (1R 무관)
 - 🟡 **PortOne 사업자 계정 필요** — "1R 통과 후 사업자등록" 전제 무효, fallback 경로에 따라 재정의
+- 🟡 **EXT-12 Kakao 콘솔 등록 / EXT-13 Firebase web config** (사용자) — 설정 시 소셜 로그인·Firebase 브리지 활성. 미설정에도 OTP+JWT로 전 기능 동작 (config-gate)
 - ✅ ~~mobile tsc 환경~~ — 5/22 P1-1 검증 PASS (npx tsc --noEmit 0 errors). 환경은 npm workspace hoisting으로 루트 node_modules의 typescript@5.9.3 사용. "lock mismatch" 진단은 오진
 - ✅ **EXT-9~11** AWS·Firebase·Anthropic 보유 / **OpenAI** 결제만 / **PortOne** 사업자만
 - 🔴 **D-7 SafeWay 동결** — Claude proactive 작업 0, 사용자 재진입 전 모든 SafeWay 영역 동결
