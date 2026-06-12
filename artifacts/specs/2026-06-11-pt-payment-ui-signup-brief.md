@@ -33,10 +33,17 @@
 - A-2: 실 PG 호출 없이 백엔드 dev-mode mock으로 결제 플로우 end-to-end 구성 가능 (검증됨 — provider dev 분기 존재)
 - A-3: OTP SMS 실 발송 인프라는 본 범위 밖 (기존 백엔드 동작 유지)
 
-## Open Questions (사용자 결정 대기)
-- Q-1: 결제 범위 — 플로우 전체 신설 vs 내역 화면만 개선?
-- Q-2: 가입 방식 — OTP 유지+동의/온보딩 보강 vs 이메일·비밀번호 추가 vs 카카오 소셜?
-- Q-3: 착수 시점 — 즉시 vs 6/15 본업 종료 후? (D-8 burnout 0 원칙과의 관계)
+## Open Questions → 사용자 결정 (2026-06-11 회신)
+- Q-1 결제 범위: **무응답** → 추천안 채택 가정 (A-4): **결제 플로우 전체** (prepare→수단 UI→confirm→결과→pt_payments 기반 내역). 실 카드 결제는 mock 채널, 출시 시 채널 키 교체
+- Q-2 가입 방식: ✅ **"Firebase 기반 + 소셜 로그인"** (사용자 직접 입력). 4월 승인 스펙(2026-04-24 pt-quality-uplift FR-2.x)의 Firebase 전환 설계와 합치 — 미들웨어 존재, B-7(라우터 전환·가입 endpoint) 미구현 상태에서 재개
+- Q-3 착수 시점: ✅ **지금 바로 착수** (D-8 예외 — 사용자 명시 지시)
+
+## Assumption Register (갱신)
+- A-1: 대상은 PT mobile (SafeWay 동결 D-7 유지)
+- A-2: 실 PG 호출 없이 백엔드 dev-mode mock으로 결제 플로우 end-to-end 구성 가능 (검증됨)
+- A-3: OTP SMS 실 발송 인프라는 본 범위 밖 (기존 백엔드 동작 유지)
+- A-4: Q-1 무응답 → 결제 플로우 전체 범위로 진행 (사용자 이의 시 축소)
+- A-5: Expo Go 테스트 유지 제약 → Firebase는 JS SDK(web) + custom token 방식, 네이티브 Firebase SDK 미사용. Firebase web config 미설정 시 legacy JWT로 동작하는 config-gate 패턴
 
 ## Acceptance Criteria (draft — Q 답변 후 확정)
 - 예약 생성에서 결제 완료까지 mock 채널로 끊김 없이 진행, `pt_payments`에 기록 생성
