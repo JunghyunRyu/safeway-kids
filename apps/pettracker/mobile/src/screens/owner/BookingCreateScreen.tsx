@@ -65,7 +65,7 @@ export default function BookingCreateScreen({ route, navigation }: any) {
     if (!selectedPet) { Alert.alert('오류', '반려동물을 선택해 주세요'); return; }
     setLoading(true);
     try {
-      await createBooking({
+      const booking = await createBooking({
         pet_id: selectedPet,
         duration_minutes: duration.minutes,
         scheduled_at: getScheduledAt(),
@@ -74,8 +74,20 @@ export default function BookingCreateScreen({ route, navigation }: any) {
         pickup_address: address || '서울',
         price: duration.price,
       });
-      Alert.alert('예약 완료', '산책 예약이 생성되었습니다!\n\n상태: 대기중 - 산책사 수락 대기\n산책사가 수락하면 알림을 보내드립니다', [
-        { text: '확인', onPress: () => navigation.navigate('Bookings') },
+      const petName = pets.find((p) => p.id === selectedPet)?.name;
+      // 예약 생성 → 결제 화면 진입 (FR-MP4). 나중에 결제도 허용 (내역에 결제 대기로 표시)
+      Alert.alert('예약 생성 완료', '결제를 진행하면 산책사 매칭이 시작됩니다', [
+        { text: '나중에 결제', style: 'cancel', onPress: () => navigation.navigate('Bookings') },
+        {
+          text: '결제하기',
+          onPress: () =>
+            navigation.navigate('Payment', {
+              bookingId: booking.id,
+              amount: duration.price,
+              durationMinutes: duration.minutes,
+              petName,
+            }),
+        },
       ]);
     } catch { Alert.alert('오류', '예약에 실패했습니다'); }
     setLoading(false);

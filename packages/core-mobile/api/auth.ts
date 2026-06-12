@@ -18,6 +18,13 @@ export interface TokenResponse {
     app_context: string;
     is_active: boolean;
   };
+  /** 기존 사용자가 현재 버전 필수 동의를 미보유한 경우 — 동의 화면 유도 (FR-C3) */
+  required_consents?: string[] | null;
+}
+
+export interface ConsentItem {
+  doc_type: string;
+  doc_version: string;
 }
 
 export interface UserResponse {
@@ -38,6 +45,7 @@ export async function verifyOtp(
   code: string,
   name: string,
   role: string,
+  consents?: ConsentItem[],
 ): Promise<TokenResponse> {
   const resp = await apiClient.post("/auth/otp/verify", {
     phone,
@@ -45,10 +53,12 @@ export async function verifyOtp(
     name,
     role,
     app_context: getAppContext(),
+    ...(consents && consents.length > 0 ? { consents } : {}),
   });
   const data: TokenResponse = resp.data;
   await tokenStorage.setItem("access_token", data.access_token);
   await tokenStorage.setItem("refresh_token", data.refresh_token);
+  await tokenStorage.setItem("user_role", data.user.role);
   return data;
 }
 
@@ -67,6 +77,7 @@ export async function devLogin(
   const data: TokenResponse = resp.data;
   await tokenStorage.setItem("access_token", data.access_token);
   await tokenStorage.setItem("refresh_token", data.refresh_token);
+  await tokenStorage.setItem("user_role", data.user.role);
   return data;
 }
 
@@ -75,9 +86,50 @@ export async function getMe(): Promise<UserResponse> {
   return resp.data;
 }
 
+/** 카카오 인가 코드 → 백엔드 로그인/가입 (FR-M4) */
+export async function kakaoLogin(
+  code: string,
+  redirectUri?: string,
+  role?: string,
+): Promise<TokenResponse> {
+  const resp = await apiClient.post("/auth/kakao", {
+    code,
+    ...(redirectUri ? { redirect_uri: redirectUri } : {}),
+    ...(role ? { role, app_context: getAppContext() } : {}),
+  });
+  const data: TokenResponse = resp.data;
+  await tokenStorage.setItem("access_token", data.access_token);
+  await tokenStorage.setItem("refresh_token", data.refresh_token);
+  await tokenStorage.setItem("user_role", data.user.role);
+  return data;
+}
+
+/** 동의 추가/철회 (FR-C4) */
+export async function updateConsents(payload: {
+  grant?: ConsentItem[];
+  withdraw?: string[];
+}): Promise<{ consents: unknown[]; missing_required: string[] }> {
+  const resp = await apiClient.post("/auth/consents", payload);
+  return resp.data;
+}
+
+/** JWT 사용자 → Firebase 세션 브리지 (FR-F1/F2). 실패는 호출 측에서 best-effort 처리. */
+export async function getFirebaseCustomToken(): Promise<{
+  custom_token: string;
+  firebase_uid: string;
+}> {
+  const resp = await apiClient.post("/auth/firebase/custom-token");
+  return resp.data;
+}
+
+export async function linkFirebaseUid(idToken: string): Promise<void> {
+  await apiClient.post("/auth/firebase/link", { id_token: idToken });
+}
+
 export async function logout(): Promise<void> {
   await tokenStorage.deleteItem("access_token");
   await tokenStorage.deleteItem("refresh_token");
+  await tokenStorage.deleteItem("user_role");
 }
 
 export async function isLoggedIn(): Promise<boolean> {

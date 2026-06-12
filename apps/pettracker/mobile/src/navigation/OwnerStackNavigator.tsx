@@ -19,6 +19,7 @@ import ReviewScreen from '../screens/owner/ReviewScreen';
 import PetRegistrationScreen from '../screens/owner/PetRegistrationScreen';
 import MyPetsScreen from '../screens/owner/MyPetsScreen';
 import PaymentHistoryScreen from '../screens/owner/PaymentHistoryScreen';
+import PaymentScreen from '../screens/owner/PaymentScreen';
 import NotificationSettingsScreen from '../screens/shared/NotificationSettingsScreen';
 import PolicyScreen from '../screens/shared/PolicyScreen';
 
@@ -37,6 +38,7 @@ export default function OwnerStackNavigator() {
       <Stack.Screen name="PetRegistration" component={PetRegistrationScreen} />
       <Stack.Screen name="MyPets" component={MyPetsScreen} />
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
+      <Stack.Screen name="Payment" component={PaymentScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="Policy" component={PolicyScreen} />
     </Stack.Navigator>

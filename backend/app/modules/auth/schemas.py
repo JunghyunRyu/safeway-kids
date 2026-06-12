@@ -9,6 +9,9 @@ from app.modules.auth.models import UserRole
 class KakaoLoginRequest(BaseModel):
     code: str = Field(..., description="카카오 인가 코드")
     redirect_uri: str | None = None
+    # PT/CC 소셜 로그인 (FR-M4) — 미지정 시 기존 동작(SafeWay parent) 유지
+    app_context: str | None = Field(default=None)
+    role: UserRole | None = Field(default=None)
 
 
 class OtpSendRequest(BaseModel):

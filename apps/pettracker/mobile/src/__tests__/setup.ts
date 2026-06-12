@@ -245,6 +245,19 @@ jest.mock('../api/wallet', () => ({
   withdraw: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('../api/payments', () => ({
+  preparePayment: jest.fn().mockResolvedValue({
+    payment_id: 'pay-1', merchant_uid: 'pt_abc_1', amount: 25000,
+    currency: 'KRW', pg_provider: 'portone',
+  }),
+  confirmPayment: jest.fn().mockResolvedValue({
+    payment_id: 'pay-1', status: 'paid', amount: 25000,
+    paid_at: '2026-06-11T10:00:00Z', imp_uid: 'imp_dev_pt_abc_1',
+  }),
+  cancelPayment: jest.fn().mockResolvedValue(undefined),
+  listPayments: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+}));
+
 // i18n pass-through
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({

@@ -58,10 +58,24 @@ async def kakao_login(
     body: KakaoLoginRequest,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """카카오 로그인 / 회원가입"""
+    """카카오 로그인 / 회원가입 (PT/CC는 app_context·role 지정 + 동의 유도)"""
     _validate_kakao_redirect_uri(body.redirect_uri)
-    user, _is_new = await service.kakao_login(db, body.code, body.redirect_uri)
-    return service.create_token_response(user)
+
+    from app.modules.auth.consent_docs import CONSENT_GATED_APP_CONTEXTS
+    from app.modules.auth.models import APP_SAFEWAY_KIDS
+
+    app_context = body.app_context or APP_SAFEWAY_KIDS
+    role = body.role or UserRole.PARENT
+    user, _is_new = await service.kakao_login(
+        db, body.code, body.redirect_uri, app_context=app_context, role=role
+    )
+    response = service.create_token_response(user)
+    if app_context in CONSENT_GATED_APP_CONTEXTS:
+        # 소셜 가입은 동의를 사후 수집 (FR-C3) — 클라이언트가 동의 화면으로 유도
+        missing = await service.missing_required_consents(db, user)
+        if missing:
+            response["required_consents"] = missing
+    return response
 
 
 @router.post("/otp/send")

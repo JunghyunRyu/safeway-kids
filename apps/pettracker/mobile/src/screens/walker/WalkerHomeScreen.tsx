@@ -4,12 +4,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { listBookings, acceptBooking, declineBooking, type Booking } from '../../api/bookings';
 import { getWallet, type Wallet } from '../../api/wallet';
+import { getWalkerProfile } from '../../api/walkers';
+import { getMe } from '@safeway/core-mobile/api/auth';
 
 export default function WalkerHomeScreen() {
   const [todayBookings, setTodayBookings] = useState<Booking[]>([]);
   const [pendingBookings, setPendingBookings] = useState<Booking[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [needsQualification, setNeedsQualification] = useState(false);
+
+  const checkQualification = async () => {
+    // 신규 가입 온보딩 배너 (FR-M6) — 실패 시 미신청으로 간주, 홈 로딩은 차단 안 함
+    try {
+      const me = await getMe();
+      const profile = await getWalkerProfile(me.id);
+      setNeedsQualification(profile.approval_status !== 'approved');
+    } catch {
+      setNeedsQualification(true);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -24,6 +38,7 @@ export default function WalkerHomeScreen() {
     } catch {
       Alert.alert('오류', '데이터를 불러올 수 없습니다');
     }
+    void checkQualification();
   };
 
   useEffect(() => { loadData(); }, []);
@@ -66,6 +81,16 @@ export default function WalkerHomeScreen() {
       <View style={styles.header}>
         <Text style={styles.greeting}>오늘의 산책 🐕</Text>
       </View>
+
+      {needsQualification && (
+        <View style={styles.qualBanner}>
+          <Ionicons name="ribbon-outline" size={22} color={Colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.qualBannerTitle}>산책 도우미 자격을 신청해 주세요</Text>
+            <Text style={styles.qualBannerDesc}>프로필 탭에서 경력·자격 서류를 제출하면 활동을 시작할 수 있어요</Text>
+          </View>
+        </View>
+      )}
 
       {/* Earnings Card */}
       <View style={styles.earningsCard}>
@@ -139,6 +164,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: { padding: Spacing.xl, paddingTop: 60 },
   greeting: { fontSize: Typography.sizes.xxl, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
+  qualBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    marginHorizontal: Spacing.base, marginBottom: Spacing.md,
+    backgroundColor: Colors.warningLight, borderRadius: Radius.lg,
+    padding: Spacing.base, borderWidth: 1, borderColor: Colors.warning,
+  },
+  qualBannerTitle: { fontSize: Typography.sizes.sm, fontWeight: Typography.weights.bold, color: Colors.textPrimary },
+  qualBannerDesc: { fontSize: Typography.sizes.xs, color: Colors.textSecondary, marginTop: 2 },
   earningsCard: {
     marginHorizontal: Spacing.base, padding: Spacing.xl, backgroundColor: Colors.accent,
     borderRadius: Radius.lg, ...Shadows.md,
