@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     kakao_client_id: str = ""
     kakao_client_secret: str = ""
     kakao_redirect_uri: str = "http://localhost:8000/api/v1/auth/kakao/callback"
+    # 모바일(expo-auth-session 등) redirect_uri allowlist — 콤마 구분 (FR-F6)
+    kakao_allowed_redirect_uris: str = ""
 
     # NHN Cloud SMS
     nhn_sms_app_key: str = ""

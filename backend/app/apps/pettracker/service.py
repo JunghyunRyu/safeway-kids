@@ -568,6 +568,31 @@ async def list_transactions(db: AsyncSession, user_id: uuid.UUID) -> list[Wallet
 
 # ── Payment Service (PortOne v2) ─────────────────────────────────
 
+
+async def list_payments(
+    db: AsyncSession,
+    owner_id: uuid.UUID,
+    status: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> tuple[list[PtPayment], int]:
+    """소유자 결제 목록 (FR-P1) — PtBooking join으로 owner 강제 필터."""
+    base = (
+        select(PtPayment)
+        .join(PtBooking, PtPayment.booking_id == PtBooking.id)
+        .where(PtBooking.owner_id == owner_id)
+    )
+    if status:
+        base = base.where(PtPayment.status == status)
+
+    count_stmt = select(func.count()).select_from(base.subquery())
+    total = (await db.execute(count_stmt)).scalar_one()
+
+    stmt = base.order_by(PtPayment.created_at.desc()).limit(limit).offset(offset)
+    result = await db.execute(stmt)
+    return list(result.scalars().all()), total
+
+
 def _build_merchant_uid(booking_id: uuid.UUID) -> str:
     """`pt_<booking_short>_<unix_ts>` 형태의 가맹점 주문번호 생성."""
     ts = int(datetime.now(UTC).timestamp())

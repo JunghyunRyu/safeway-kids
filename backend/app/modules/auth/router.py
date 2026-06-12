@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -10,8 +11,13 @@ from app.middleware.rbac import require_platform_admin
 from app.modules.auth import service
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.schemas import (
+    ConsentListResponse,
+    ConsentUpdateRequest,
     DriverQualificationRequest,
     DriverQualificationResponse,
+    FirebaseCustomTokenResponse,
+    FirebaseLinkRequest,
+    FirebaseRegisterRequest,
     KakaoLoginRequest,
     OtpSendRequest,
     OtpVerifyRequest,
@@ -25,7 +31,24 @@ from app.modules.auth.schemas import (
 )
 from app.rate_limit import limiter
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+def _validate_kakao_redirect_uri(redirect_uri: str | None) -> None:
+    """redirect_uri allowlist 검증 (FR-F6) — 미지정은 서버 기본값이라 안전."""
+    if redirect_uri is None:
+        return
+    allowed = {
+        u.strip()
+        for u in (settings.kakao_allowed_redirect_uris or "").split(",")
+        if u.strip()
+    }
+    allowed.add(settings.kakao_redirect_uri)
+    if redirect_uri not in allowed:
+        from app.common.exceptions import ValidationError
+        raise ValidationError(detail="허용되지 않은 redirect_uri입니다")
 
 
 @router.post("/kakao", response_model=TokenResponse)
@@ -36,6 +59,7 @@ async def kakao_login(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """카카오 로그인 / 회원가입"""
+    _validate_kakao_redirect_uri(body.redirect_uri)
     user, _is_new = await service.kakao_login(db, body.code, body.redirect_uri)
     return service.create_token_response(user)
 
@@ -64,10 +88,39 @@ async def verify_otp(
     from app.modules.auth.models import ROLE_APP_MAP
     app_context = body.app_context or ROLE_APP_MAP.get(body.role, "safeway_kids")
 
-    user, _is_new = await service.otp_login_or_register(
+    client_ip = request.client.host if request.client else None
+    consents = [c.model_dump() for c in body.consents] if body.consents else None
+
+    # 동의 게이트 (FR-C3) — PT/CC 신규 가입만. SafeWay 동작 불변.
+    from app.modules.auth.consent_docs import CONSENT_GATED_APP_CONTEXTS
+
+    gated = app_context in CONSENT_GATED_APP_CONTEXTS
+    existing_user = await service.find_user_by_phone(db, body.phone, app_context)
+    if gated and existing_user is None:
+        from app.common.exceptions import ValidationError
+
+        if not body.name:
+            raise ValidationError(detail="신규 가입에는 이름이 필요합니다")
+        missing = service.missing_required_for_new(body.role, consents)
+        if missing:
+            raise ValidationError(
+                detail={"message": "필수 동의 항목이 누락되었습니다", "missing_consents": missing}
+            )
+
+    user, is_new = await service.otp_login_or_register(
         db, body.phone, body.name, body.role, app_context=app_context
     )
-    return service.create_token_response(user)
+
+    response = None
+    if gated:
+        if consents:
+            await service.record_consents(db, user.id, consents, ip_address=client_ip)
+        still_missing = await service.missing_required_consents(db, user)
+        response = service.create_token_response(user)
+        if still_missing:
+            # 기존 사용자(동의 도입 전 가입)는 로그인은 허용하되 재동의 유도 (FR-C3)
+            response["required_consents"] = still_missing
+    return response or service.create_token_response(user)
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -108,6 +161,135 @@ async def refresh_token(
 async def get_me(current_user: User = Depends(get_current_user)) -> User:
     """현재 로그인한 사용자 정보"""
     return current_user
+
+
+# ── Consents (Tech Spec FR-C4, 2026-06-11) ───────────────────────
+
+
+@router.get("/consents", response_model=ConsentListResponse)
+async def get_my_consents(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """내 동의 현황 + 필수 동의 누락 목록"""
+    consents = await service.list_user_consents(db, current_user.id)
+    missing = await service.missing_required_consents(db, current_user)
+    return {"consents": consents, "missing_required": missing}
+
+
+@router.post("/consents", response_model=ConsentListResponse)
+async def update_my_consents(
+    request: Request,
+    body: ConsentUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """동의 추가(grant) / 철회(withdraw) — 마케팅 동의·재동의 플로우용"""
+    client_ip = request.client.host if request.client else None
+    if body.grant:
+        await service.record_consents(
+            db, current_user.id, [c.model_dump() for c in body.grant], ip_address=client_ip
+        )
+    if body.withdraw:
+        for doc_type in body.withdraw:
+            await service.withdraw_consent(db, current_user.id, doc_type)
+    await db.commit()
+    consents = await service.list_user_consents(db, current_user.id)
+    missing = await service.missing_required_consents(db, current_user)
+    return {"consents": consents, "missing_required": missing}
+
+
+# ── Firebase bridge (Tech Spec FR-F1~F3, 2026-06-11) ─────────────
+
+
+@router.post("/firebase/custom-token", response_model=FirebaseCustomTokenResponse)
+@limiter.limit(settings.rate_limit_otp)
+async def firebase_custom_token(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """기존 JWT 사용자(OTP/Kakao)를 Firebase 세션으로 연결하는 custom token 발급.
+
+    uid는 서버 레코드에서만 유래 — 요청 본문으로 uid를 받지 않는다 (security MUST).
+    """
+    token = await service.issue_firebase_custom_token(db, current_user)
+    await db.commit()
+    logger.info(
+        "firebase custom token issued: user=%s ip=%s",
+        current_user.id,
+        request.client.host if request.client else None,
+    )
+    return {"custom_token": token, "firebase_uid": current_user.firebase_uid}
+
+
+@router.post("/firebase/link", response_model=UserResponse)
+async def firebase_link(
+    body: FirebaseLinkRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Firebase sign-in 직후 ID token의 uid를 현재 사용자에 연결 (멱등, 충돌 409)"""
+    from app.middleware.firebase_auth import _verify_id_token, link_firebase_uid
+
+    decoded = await _verify_id_token(body.id_token)
+    firebase_uid = decoded.get("uid") or decoded.get("sub")
+    if not firebase_uid:
+        from app.common.exceptions import UnauthorizedError
+        raise UnauthorizedError(detail="Firebase 토큰에 uid가 없습니다")
+    user = await link_firebase_uid(db, current_user.id, firebase_uid)
+    await db.commit()
+    return user
+
+
+@router.post("/firebase/register", response_model=TokenResponse, status_code=201)
+@limiter.limit(settings.rate_limit_auth)
+async def firebase_register(
+    request: Request,
+    body: FirebaseRegisterRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """소셜-first 가입 (FR-F3): Firebase ID token + 프로필 + 동의 → 사용자 생성/연결.
+
+    phone은 필수 (users.phone NOT NULL + 본인확인 관행 유지 — Consensus #4).
+    """
+    from app.common.exceptions import ValidationError
+    from app.middleware.firebase_auth import _verify_id_token, link_firebase_uid
+    from app.modules.auth.consent_docs import CONSENT_GATED_APP_CONTEXTS
+    from app.modules.auth.models import ROLE_APP_MAP
+
+    decoded = await _verify_id_token(body.id_token)
+    firebase_uid = decoded.get("uid") or decoded.get("sub")
+    if not firebase_uid:
+        from app.common.exceptions import UnauthorizedError
+        raise UnauthorizedError(detail="Firebase 토큰에 uid가 없습니다")
+
+    client_ip_otp = request.client.host if request.client else None
+    otp_ok = await service.verify_otp(body.phone, body.otp_code, ip_address=client_ip_otp)
+    if not otp_ok:
+        from app.common.exceptions import UnauthorizedError
+        raise UnauthorizedError(detail="인증번호가 올바르지 않습니다")
+
+    app_context = body.app_context or ROLE_APP_MAP.get(body.role, "safeway_kids")
+    consents = [c.model_dump() for c in body.consents]
+    client_ip = request.client.host if request.client else None
+
+    existing = await service.find_user_by_phone(db, body.phone, app_context)
+    if existing is None and app_context in CONSENT_GATED_APP_CONTEXTS:
+        missing = service.missing_required_for_new(body.role, consents)
+        if missing:
+            raise ValidationError(
+                detail={"message": "필수 동의 항목이 누락되었습니다", "missing_consents": missing}
+            )
+
+    user, _is_new = await service.otp_login_or_register(
+        db, body.phone, body.name, body.role, app_context=app_context
+    )
+    user = await link_firebase_uid(db, user.id, firebase_uid)
+    if consents:
+        await service.record_consents(db, user.id, consents, ip_address=client_ip)
+    await db.commit()
+    return service.create_token_response(user)
 
 
 @router.post("/dev-login", response_model=TokenResponse)

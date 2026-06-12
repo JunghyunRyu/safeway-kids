@@ -19,6 +19,8 @@ from app.apps.pettracker.schemas import (
     PaymentCancelResponse,
     PaymentConfirmRequest,
     PaymentConfirmResponse,
+    PaymentListItem,
+    PaymentListResponse,
     PaymentPrepareRequest,
     PaymentPrepareResponse,
     PetCreate,
@@ -38,8 +40,15 @@ from app.apps.pettracker.schemas import (
     WithdrawRequest,
 )
 from app.database import get_db
-from app.middleware.auth import get_current_user
-from app.middleware.rbac import require_pet_owner, require_platform_admin, require_pt_any, require_walker
+
+# PT 라우터는 듀얼 인증 (JWT 우선 → Firebase) — Tech Spec FR-F5 (2026-06-11)
+from app.middleware.firebase_auth import get_current_user_dual as get_current_user  # noqa: F401
+from app.middleware.rbac import (
+    require_pet_owner_dual as require_pet_owner,
+    require_platform_admin,
+    require_pt_any_dual as require_pt_any,
+    require_walker_dual as require_walker,
+)
 from app.modules.auth.models import User
 
 router = APIRouter(prefix="/pt", tags=["PetTracker"])
@@ -471,6 +480,40 @@ async def request_withdrawal(
 
 
 # ── Payments (PortOne v2) ────────────────────────────────────────
+
+@router.get("/payments", response_model=PaymentListResponse)
+async def list_payments(
+    status: str | None = Query(None, description="pending|paid|cancelled|refunded"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_pet_owner),
+) -> PaymentListResponse:
+    """내 결제 내역 (FR-P1) — pt_payments 실 데이터, booking 컨텍스트 포함."""
+    payments, total = await service.list_payments(
+        db, user.id, status=status, limit=limit, offset=offset
+    )
+    items = [
+        PaymentListItem(
+            payment_id=p.id,
+            booking_id=p.booking_id,
+            amount=p.amount,
+            currency=p.currency,
+            status=p.status,
+            merchant_uid=p.merchant_uid,
+            paid_at=p.paid_at,
+            cancelled_at=p.cancelled_at,
+            cancel_amount=p.cancel_amount,
+            cancel_reason=p.cancel_reason,
+            created_at=p.created_at,
+            scheduled_at=p.booking.scheduled_at if p.booking else None,
+            duration_minutes=p.booking.duration_minutes if p.booking else None,
+            pet_name=p.booking.pet.name if p.booking and p.booking.pet else None,
+        )
+        for p in payments
+    ]
+    return PaymentListResponse(items=items, total=total)
+
 
 @router.post("/payments/prepare", response_model=PaymentPrepareResponse, status_code=201)
 async def prepare_payment(

@@ -252,3 +252,28 @@ class PaymentCancelResponse(BaseModel):
     status: str
     cancel_amount: int | None
     cancelled_at: datetime | None
+
+
+class PaymentListItem(BaseModel):
+    """결제 내역 항목 — Tech Spec FR-P1 (2026-06-11). 영수증 표시용 booking 컨텍스트 포함."""
+
+    payment_id: uuid.UUID
+    booking_id: uuid.UUID
+    amount: int
+    currency: str
+    status: str
+    merchant_uid: str
+    paid_at: datetime | None
+    cancelled_at: datetime | None
+    cancel_amount: int | None
+    cancel_reason: str | None
+    created_at: datetime
+    # booking 컨텍스트
+    scheduled_at: datetime | None
+    duration_minutes: int | None
+    pet_name: str | None
+
+
+class PaymentListResponse(BaseModel):
+    items: list[PaymentListItem]
+    total: int

@@ -8,9 +8,16 @@ from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.exceptions import UnauthorizedError
+from app.common.exceptions import UnauthorizedError, ValidationError
 from app.config import settings
-from app.modules.auth.models import APP_SAFEWAY_KIDS, VALID_APP_CONTEXTS, User, UserRole
+from app.modules.auth.consent_docs import CONSENT_DOC_VERSIONS, required_doc_types
+from app.modules.auth.models import (
+    APP_SAFEWAY_KIDS,
+    VALID_APP_CONTEXTS,
+    User,
+    UserConsent,
+    UserRole,
+)
 from app.redis import redis_client
 
 logger = logging.getLogger(__name__)
@@ -188,6 +195,137 @@ async def otp_login_or_register(
     db.add(user)
     await db.flush()
     return user, True
+
+
+# ── Consent (Tech Spec FR-C, 2026-06-11) ─────────────────────────
+
+
+async def find_user_by_phone(
+    db: AsyncSession, phone: str, app_context: str
+) -> User | None:
+    stmt = select(User).where(
+        User.phone == phone,
+        User.app_context == app_context,
+        User.deleted_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+def validate_consent_items(consents: list[dict]) -> None:
+    """doc_type·doc_version이 레지스트리와 일치하는지 검증 (FR-C2)."""
+    for item in consents:
+        doc_type = item.get("doc_type")
+        current = CONSENT_DOC_VERSIONS.get(doc_type)
+        if current is None:
+            raise ValidationError(detail=f"알 수 없는 동의 항목: {doc_type}")
+        if item.get("doc_version") != current:
+            raise ValidationError(
+                detail=f"동의 문서 버전 불일치: {doc_type} (현재 {current})"
+            )
+
+
+async def active_consent_doc_types(db: AsyncSession, user_id: uuid.UUID) -> set[str]:
+    """철회되지 않은 + 현재 버전인 동의 doc_type 집합."""
+    stmt = select(UserConsent.doc_type, UserConsent.doc_version).where(
+        UserConsent.user_id == user_id,
+        UserConsent.withdrawn_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    return {
+        doc_type
+        for doc_type, doc_version in result.all()
+        if CONSENT_DOC_VERSIONS.get(doc_type) == doc_version
+    }
+
+
+async def record_consents(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    consents: list[dict],
+    ip_address: str | None = None,
+    method: str = "mobile_checkbox_v1",
+) -> None:
+    """동의 행 기록 — 이미 활성인 동일 (doc_type, version)은 중복 생성 안 함."""
+    if not consents:
+        return
+    validate_consent_items(consents)
+    existing = await active_consent_doc_types(db, user_id)
+    for item in consents:
+        if item["doc_type"] in existing:
+            continue
+        db.add(
+            UserConsent(
+                user_id=user_id,
+                doc_type=item["doc_type"],
+                doc_version=item["doc_version"],
+                consent_method=method,
+                ip_address=ip_address,
+            )
+        )
+    await db.flush()
+
+
+async def missing_required_consents(
+    db: AsyncSession, user: User, pending: list[dict] | None = None
+) -> list[str]:
+    """필수 동의 중 미보유 doc_type 목록. pending(이번 요청 동봉분)은 보유로 간주."""
+    held = await active_consent_doc_types(db, user.id)
+    if pending:
+        held |= {c["doc_type"] for c in pending}
+    return [d for d in required_doc_types(user.role) if d not in held]
+
+
+def missing_required_for_new(role: UserRole, consents: list[dict] | None) -> list[str]:
+    """신규 가입 요청에서 필수 동의 누락 목록 (DB 조회 없음 — 생성 전 게이트)."""
+    provided = {c["doc_type"] for c in (consents or [])}
+    return [d for d in required_doc_types(role) if d not in provided]
+
+
+async def withdraw_consent(
+    db: AsyncSession, user_id: uuid.UUID, doc_type: str
+) -> int:
+    """활성 동의 철회 — withdrawn_at 기록. 철회된 행 수 반환."""
+    stmt = select(UserConsent).where(
+        UserConsent.user_id == user_id,
+        UserConsent.doc_type == doc_type,
+        UserConsent.withdrawn_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+    now = datetime.now(UTC)
+    for row in rows:
+        row.withdrawn_at = now
+    await db.flush()
+    return len(rows)
+
+
+async def list_user_consents(db: AsyncSession, user_id: uuid.UUID) -> list[UserConsent]:
+    stmt = (
+        select(UserConsent)
+        .where(UserConsent.user_id == user_id)
+        .order_by(UserConsent.granted_at.desc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+# ── Firebase bridge (Tech Spec FR-F1, 2026-06-11) ────────────────
+
+
+async def issue_firebase_custom_token(db: AsyncSession, user: User) -> str:
+    """현재 사용자에 대한 Firebase Custom Token 발급.
+
+    uid는 서버 레코드(User.firebase_uid)에서만 유래 — 클라이언트가 uid를
+    지정할 수 없다 (security MUST, Consensus #6). 미연결 사용자는 자체
+    uid(=user.id 문자열)를 선점 저장 후 발급한다.
+    """
+    from app.middleware.firebase_auth import create_custom_token_async
+
+    if not user.firebase_uid:
+        user.firebase_uid = str(user.id)
+        await db.flush()
+    return await create_custom_token_async(user.firebase_uid)
 
 
 def create_access_token(

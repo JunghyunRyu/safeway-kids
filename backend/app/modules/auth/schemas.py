@@ -15,12 +15,23 @@ class OtpSendRequest(BaseModel):
     phone: str = Field(..., pattern=r"^01[0-9]{8,9}$", description="휴대폰 번호 (01012345678)")
 
 
+class ConsentItem(BaseModel):
+    """동의 항목 — doc_version은 consent_docs 레지스트리의 현재 버전과 일치해야 함 (FR-C2)."""
+
+    doc_type: str = Field(..., max_length=20, description="terms|privacy|location|marketing|age14")
+    doc_version: str = Field(..., max_length=64)
+
+
 class OtpVerifyRequest(BaseModel):
     phone: str = Field(..., pattern=r"^01[0-9]{8,9}$")
     code: str = Field(..., min_length=6, max_length=6, description="인증번호 6자리")
-    name: str = Field(..., min_length=1, max_length=100, description="사용자 이름")
+    # 신규 가입에만 필수 — 기존 사용자 로그인은 빈 값 허용 (이름 덮어쓰기 방지, FR-M3)
+    name: str = Field(default="", max_length=100, description="사용자 이름 (신규 가입 시 필수)")
     role: UserRole = Field(default=UserRole.PARENT, description="사용자 역할")
     app_context: str | None = Field(default=None, description="앱 컨텍스트 (미지정시 역할에서 자동 추론)")
+    consents: list[ConsentItem] | None = Field(
+        default=None, description="동의 항목 (PT/CC 신규 가입 시 필수 동의 포함)"
+    )
 
 
 class TokenUserInfo(BaseModel):
@@ -39,10 +50,52 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user: TokenUserInfo
+    # 기존 사용자가 현재 버전 필수 동의를 미보유한 경우 — 클라이언트가 동의 화면으로 유도 (FR-C3)
+    required_consents: list[str] | None = None
 
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class ConsentRecordResponse(BaseModel):
+    doc_type: str
+    doc_version: str
+    consent_method: str
+    granted_at: datetime
+    withdrawn_at: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
+class ConsentListResponse(BaseModel):
+    consents: list[ConsentRecordResponse]
+    missing_required: list[str]
+
+
+class ConsentUpdateRequest(BaseModel):
+    grant: list[ConsentItem] | None = Field(default=None, description="추가 동의")
+    withdraw: list[str] | None = Field(default=None, description="철회할 doc_type 목록")
+
+
+class FirebaseCustomTokenResponse(BaseModel):
+    custom_token: str
+    firebase_uid: str
+
+
+class FirebaseLinkRequest(BaseModel):
+    id_token: str = Field(..., description="Firebase ID token (signInWithCustomToken 이후)")
+
+
+class FirebaseRegisterRequest(BaseModel):
+    id_token: str = Field(..., description="Firebase ID token (소셜 sign-in 직후)")
+    name: str = Field(..., min_length=1, max_length=100)
+    # 소셜 가입도 phone OTP 본인확인 필수 (Consensus #4 — users.phone 신뢰 유지)
+    phone: str = Field(..., pattern=r"^01[0-9]{8,9}$")
+    otp_code: str = Field(..., min_length=6, max_length=6, description="phone으로 발송된 인증번호")
+    role: UserRole = Field(...)
+    app_context: str | None = None
+    consents: list[ConsentItem] = Field(default_factory=list)
 
 
 class UserResponse(BaseModel):

@@ -79,6 +79,45 @@ class User(Base):
     consents: Mapped[list["GuardianConsent"]] = relationship(back_populates="guardian")  # type: ignore[name-defined] # noqa: F821
 
 
+class ConsentDocType(enum.StrEnum):
+    TERMS = "terms"
+    PRIVACY = "privacy"
+    LOCATION = "location"
+    MARKETING = "marketing"
+    AGE14 = "age14"
+
+
+class UserConsent(Base):
+    """약관·개인정보·위치정보 동의 기록 — Tech Spec FR-C1 (2026-06-11).
+
+    개인정보보호법 §15/§22 증빙: 어떤 문서 버전(doc_version)에 어떤 방식
+    (consent_method)으로 언제(granted_at) 동의했는지 행 단위 보존.
+    철회는 행 삭제가 아니라 withdrawn_at 기록 (감사 추적 유지).
+    GuardianConsent(SafeWay 아동 동의)와 별개 — 사용자 본인 동의 전용.
+    """
+
+    __tablename__ = "user_consents"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False, index=True
+    )
+    doc_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    doc_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    consent_method: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="mobile_checkbox_v1"
+    )
+    granted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ip_address: Mapped[str | None] = mapped_column(String(45))
+
+    __table_args__ = (
+        Index("ix_user_consents_user_doc", "user_id", "doc_type"),
+    )
+
+
 class DriverQualification(Base):
     __tablename__ = "driver_qualifications"
 

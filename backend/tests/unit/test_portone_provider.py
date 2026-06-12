@@ -36,6 +36,38 @@ def test_provider_implements_pg_abc(provider: PortOneProvider) -> None:
     assert provider.name == "portone"
 
 
+# ---------- dev-mode allowlist (FR-P2 — fail-open 차단) ----------
+
+
+@pytest.mark.parametrize(
+    ("environment", "expect_dev"),
+    [
+        ("development", True),
+        ("test", True),
+        ("staging", False),   # 미등록 환경은 실호출 경로
+        ("production", False),
+        ("", False),          # 환경변수 누락도 mock으로 떨어지지 않는다
+    ],
+)
+def test_dev_mode_allowlist(
+    monkeypatch: pytest.MonkeyPatch, environment: str, expect_dev: bool
+) -> None:
+    monkeypatch.setattr(settings, "environment", environment)
+    assert PortOneProvider()._is_dev is expect_dev
+
+
+async def test_real_path_without_secret_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "environment", "staging")
+    monkeypatch.setattr(settings, "portone_api_secret", "")
+    provider = PortOneProvider()
+    with pytest.raises(RuntimeError, match="PortOne API secret"):
+        await provider.confirm_payment("p1", "o1", 1000)
+    with pytest.raises(RuntimeError, match="PortOne API secret"):
+        await provider.cancel_payment("p1", "사유")
+
+
 # ---------- verify_webhook (HMAC fail-closed) ----------
 
 

@@ -40,8 +40,22 @@ class PortOneProvider(AbstractPGProvider):
 
     name = "portone"
 
+    # mock 분기 allowlist — "production이 아니면 mock"의 fail-open을 차단 (FR-P2).
+    # staging 등 미등록 환경·환경변수 누락(빈 문자열)은 실호출 경로로 떨어지고,
+    # secret 미설정이면 _require_secret에서 fail-closed.
+    _DEV_ENVIRONMENTS = ("development", "test")
+
     def __init__(self) -> None:
-        self._is_dev = settings.environment != "production"
+        self._is_dev = settings.environment in self._DEV_ENVIRONMENTS
+
+    @staticmethod
+    def _require_secret() -> None:
+        if not (getattr(settings, "portone_api_secret", "") or ""):
+            raise RuntimeError(
+                "PortOne API secret이 설정되지 않았습니다 — "
+                "실 결제 호출 불가 (environment="
+                f"{settings.environment!r})"
+            )
 
     async def confirm_payment(
         self,
@@ -55,8 +69,8 @@ class PortOneProvider(AbstractPGProvider):
         payment_key 는 PortOne의 paymentId (V2)에 해당.
         """
         if self._is_dev:
-            logger.info(
-                "[DEV] PortOne confirm_payment skipped — paymentId=%s amount=%d",
+            logger.warning(
+                "[DEV-MOCK-PAYMENT] PortOne confirm_payment skipped — paymentId=%s amount=%d",
                 payment_key, amount,
             )
             return {
@@ -67,6 +81,7 @@ class PortOneProvider(AbstractPGProvider):
                 "method": {"type": "PaymentMethodCard"},
             }
 
+        self._require_secret()
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{PORTONE_BASE_URL}/payments/{payment_key}",
@@ -102,8 +117,8 @@ class PortOneProvider(AbstractPGProvider):
             body["amount"] = cancel_amount
 
         if self._is_dev:
-            logger.info(
-                "[DEV] PortOne cancel_payment skipped — paymentId=%s amount=%s reason=%s",
+            logger.warning(
+                "[DEV-MOCK-PAYMENT] PortOne cancel_payment skipped — paymentId=%s amount=%s reason=%s",
                 payment_key, cancel_amount, cancel_reason,
             )
             return {
@@ -112,6 +127,7 @@ class PortOneProvider(AbstractPGProvider):
                 "cancellation": {"amount": cancel_amount, "reason": cancel_reason},
             }
 
+        self._require_secret()
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{PORTONE_BASE_URL}/payments/{payment_key}/cancel",
