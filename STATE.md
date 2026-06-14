@@ -3,7 +3,7 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = CLAUDE.md "프로젝트 진행 현황" / 세션 이력 = `artifacts/handoffs/`.
 
-**Last updated**: 2026-06-11 (v14 — **PT 결제+가입 마일스톤 완료** (사용자 지시, D-8 예외). 백엔드 240/247 회귀 0 + 모바일 3앱 tsc 0 + PT 30/30·SK 71/71 jest. 선재 HIGH 버그 confirm_payment 두 동강 수정. 보고서: [`artifacts/reports/2026-06-11-pt-payment-signup-milestone.md`](artifacts/reports/2026-06-11-pt-payment-signup-milestone.md). v13 anchor: P1-3 완료)
+**Last updated**: 2026-06-14 (v15 — **PT GPS 저정확도 필터링 슬라이스 완료** (사용자 질문→진행 지시). 저정확도(>50m)·순간이동(>15km/h) 점을 보존하되 polyline·실시간·거리에서 제외, 정지 드리프트 가드. 백엔드 247 passed 회귀 0, 마이그 b6d1f3e8c2a7 up/down/up 검증. 검증: [`artifacts/verification/2026-06-14-pt-gps-filtering-verification.md`](artifacts/verification/2026-06-14-pt-gps-filtering-verification.md). v14 anchor: PT 결제+가입 마일스톤)
 **Active workstream**: **1R 탈락 → fallback 경로 결정 대기 (사용자)** + 본업 집중 기간 (~2026-06-15). 6/15 슬라이스 + **PT 결제·가입 시스템 (6/11 사용자 지시)** 완료 — fallback 결정 전 Claude proactive 코드 작업 없음
 **Current phase**: **Phase 7 종료 (modoo 워크스트림 closure — 결과 = 1R 탈락)** — 다음 워크스트림은 fallback 결정 후 Phase 0 재진입. 결정 전까지 D-8 슬라이스(P1-3)만 유효
 **Priority principle**: **본업 (~6/15) > fallback 경로 결정 (사용자) > PT V1.0 출시 계획 재검토 > SafeWay 동결 유지 > CareConnect 보류**

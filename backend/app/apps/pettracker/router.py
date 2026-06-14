@@ -271,9 +271,12 @@ async def record_gps(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_walker),
 ) -> dict:
-    await service.record_gps(db, session_id, body)
+    gps, accepted = await service.record_gps(db, session_id, body)
     await db.commit()
-    return {"status": "ok"}
+    if accepted:
+        return {"status": "ok"}
+    # 저정확도·순간이동 점은 보존되지만 표시·거리에서 제외됨 — 모바일이 신호 약함 안내에 활용
+    return {"status": "filtered", "reason": gps.filter_reason}
 
 
 @router.post("/walks/{session_id}/end")

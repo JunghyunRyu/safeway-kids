@@ -218,7 +218,7 @@ cd site && npm run dev
 | 웹 대시보드 품질 95점 달성 | COMPLETE | 2026-03-20 |
 
 ### 검증 수치 (2026-05-06 backend-dev sub-agent 실측 갱신)
-- 백엔드 테스트: **240 passed / 247** (2026-06-11 PT 결제+가입 마일스톤 후 실측, 신규 26건 추가, 회귀 0). Known fails: KI-2 Toss webhook 3건 + KI-3 health 1건 + KI-4 WS 3건 (hang→pytest-timeout 가시화 — [verification](artifacts/verification/2026-06-11-pt-payment-signup-verification.md))
+- 백엔드 테스트: **247 passed** (2026-06-14 GPS 필터링 슬라이스 후 실측, 신규 6건 추가, 회귀 0). Known fails: KI-2 Toss webhook 3 + KI-3 health 1 + KI-4 WS 2(+2 err, Redis 끊김 시 발현) — [verification](artifacts/verification/2026-06-14-pt-gps-filtering-verification.md)
 - 모바일 테스트: **17 파일 / 71 it() 블록** (SafeWay mobile) + **12 파일 / 30 it()** (PT mobile, apps/pettracker)
 - 웹 테스트: **12 파일 / 50 it() 블록**
 - TypeScript: web · site · lunenlabs **0 errors** (실측 PASS) / mobile **0 errors** (2026-05-22 PASS — `npx tsc --noEmit` from `mobile/`, typescript 5.9.3 hoisted to root node_modules)

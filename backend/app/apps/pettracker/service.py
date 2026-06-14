@@ -33,10 +33,14 @@ from app.apps.pettracker.schemas import (
     WalkerSearchParams,
 )
 from app.common.exceptions import ForbiddenError, NotFoundError, ValidationError
+from app.core.gps_validation import validate_gps_accuracy, validate_gps_speed
 from app.core.models import CommissionRecord, WalletTransaction
 from app.modules.auth.models import APP_PETTRACKER
 
 logger = logging.getLogger(__name__)
+
+# PT 산책 트래킹 GPS 정확도 임계 (m) — CareConnect 체크인 50m와 정합 (Tech Spec FR-2)
+PT_GPS_ACCURACY_THRESHOLD_M = 50.0
 
 
 # ── Haversine ────────────────────────────────────────────────────
@@ -364,10 +368,13 @@ async def end_walk(db: AsyncSession, session_id: uuid.UUID, walker_id: uuid.UUID
 
     session.ended_at = datetime.now(UTC)
 
-    # Calculate distance from GPS history
+    # Calculate distance from GPS history — 통과(비필터) 점만 사용 (Tech Spec FR-6)
     gps_points = (await db.execute(
         select(WalkGpsHistory)
-        .where(WalkGpsHistory.session_id == session_id)
+        .where(
+            WalkGpsHistory.session_id == session_id,
+            WalkGpsHistory.is_filtered.is_(False),
+        )
         .order_by(WalkGpsHistory.recorded_at)
     )).scalars().all()
 
@@ -377,7 +384,12 @@ async def end_walk(db: AsyncSession, session_id: uuid.UUID, walker_id: uuid.UUID
         route.append([point.latitude, point.longitude])
         if i > 0:
             prev = gps_points[i - 1]
-            total_distance += haversine_km(prev.latitude, prev.longitude, point.latitude, point.longitude) * 1000
+            seg_m = haversine_km(prev.latitude, prev.longitude, point.latitude, point.longitude) * 1000
+            # 정지 중 드리프트 제거: 이동량이 두 점 accuracy 합 미만이면 노이즈로 간주 (0)
+            if prev.accuracy is not None and point.accuracy is not None:
+                if seg_m < (prev.accuracy + point.accuracy):
+                    seg_m = 0.0
+            total_distance += seg_m
 
     session.distance_meters = int(total_distance)
     session.route_polyline = route
@@ -427,13 +439,62 @@ async def end_walk(db: AsyncSession, session_id: uuid.UUID, walker_id: uuid.UUID
     return session
 
 
-async def record_gps(db: AsyncSession, session_id: uuid.UUID, point: GpsPoint) -> None:
+async def _classify_gps_point(
+    db: AsyncSession, session_id: uuid.UUID, point: GpsPoint
+) -> str | None:
+    """저정확도·순간이동 점을 판별 (Tech Spec FR-3).
+
+    Returns filter_reason (``"low_accuracy"`` | ``"implausible_speed"``) 또는
+    통과 시 ``None``. 정확도 우선 — 둘 다 실패해도 low_accuracy로 분류.
+    accuracy=None은 통과(검증 불가, 기존 동작 유지).
+    """
+    if not validate_gps_accuracy(point.accuracy, threshold=PT_GPS_ACCURACY_THRESHOLD_M):
+        return "low_accuracy"
+
+    # 직전 '통과' 점 기준 속도 plausibility (첫 점·통과점 없음이면 생략)
+    prev = (await db.execute(
+        select(WalkGpsHistory)
+        .where(
+            WalkGpsHistory.session_id == session_id,
+            WalkGpsHistory.is_filtered.is_(False),
+        )
+        .order_by(WalkGpsHistory.recorded_at.desc())
+        .limit(1)
+    )).scalar_one_or_none()
+    if prev is not None:
+        # 일부 DB 드라이버(SQLite 등)는 naive datetime을 반환 — UTC-aware로 정규화
+        prev_time = prev.recorded_at
+        if prev_time.tzinfo is None:
+            prev_time = prev_time.replace(tzinfo=UTC)
+        curr_time = point.recorded_at
+        if curr_time.tzinfo is None:
+            curr_time = curr_time.replace(tzinfo=UTC)
+        ok, _speed = validate_gps_speed(
+            prev.latitude, prev.longitude, prev_time,
+            point.latitude, point.longitude, curr_time,
+        )
+        if not ok:
+            return "implausible_speed"
+    return None
+
+
+async def record_gps(
+    db: AsyncSession, session_id: uuid.UUID, point: GpsPoint
+) -> tuple[WalkGpsHistory, bool]:
     """Record a single GPS point for a walk session.
 
-    DB 영속 후 Redis pub/sub 채널 `pt:walk:{session_id}:updates`에 발행.
+    저정확도·순간이동 점은 원본을 보존하되(is_filtered=True) polyline append·
+    Redis 실시간 발행에서 제외한다 (Tech Spec FR-4). 거리 계산도 종료 시 통과
+    점만 합산한다.
+
+    DB 영속 후 통과 점만 Redis pub/sub 채널 `pt:walk:{session_id}:updates`에 발행.
     Publish 실패는 영속을 깨지 않음 (fail-soft).
+    Returns (gps_row, accepted).
     Gap Note: artifacts/gap-notes/2026-04-30-record-gps-publish-missing.md
     """
+    filter_reason = await _classify_gps_point(db, session_id, point)
+    accepted = filter_reason is None
+
     gps = WalkGpsHistory(
         session_id=session_id,
         latitude=point.latitude,
@@ -442,9 +503,18 @@ async def record_gps(db: AsyncSession, session_id: uuid.UUID, point: GpsPoint) -
         speed=point.speed,
         accuracy=point.accuracy,
         recorded_at=point.recorded_at,
+        is_filtered=not accepted,
+        filter_reason=filter_reason,
     )
     db.add(gps)
     await db.flush()
+
+    if not accepted:
+        logger.info(
+            "PT GPS point filtered (session=%s reason=%s accuracy=%s)",
+            session_id, filter_reason, point.accuracy,
+        )
+        return gps, False
 
     walk_session = await db.get(WalkSession, session_id)
     if walk_session is not None:
@@ -472,6 +542,8 @@ async def record_gps(db: AsyncSession, session_id: uuid.UUID, point: GpsPoint) -
         )
     except Exception as e:
         logger.warning("PT GPS publish failed (session=%s): %s", session_id, e)
+
+    return gps, True
 
 
 async def get_walk_report(db: AsyncSession, session_id: uuid.UUID) -> WalkSession:

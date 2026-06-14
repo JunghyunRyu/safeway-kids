@@ -196,6 +196,9 @@ class WalkGpsHistory(Base):
     accuracy: Mapped[float | None] = mapped_column(Float)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # 저정확도·순간이동 점 — 원본은 보존하되 polyline·실시간·거리계산에서 제외 (Tech Spec FR-1)
+    is_filtered: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    filter_reason: Mapped[str | None] = mapped_column(String(30))
 
     __table_args__ = (
         Index("ix_walk_gps_session_time", "session_id", "recorded_at"),
