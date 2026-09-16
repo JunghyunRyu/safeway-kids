@@ -62,11 +62,11 @@ Specialist pool (user-level): `business-operations-manager` · `korea-{regulator
 ## Active Work (mirror of `STATE.md` — 5 critical fields only)
 > 결정(D-#)·리스크·블로커·갭노트·검증수치 상세는 모두 `STATE.md`와 최신 Milestone Report에 있다. 여기서 추측하지 말고 그 파일들을 읽어라.
 
-- **Active workstream**: 모두의 창업 1R 결과 대기(~7월 말) + PT V1.0 출시 reschedule(7월 말~8월 초) + 본업 집중(~6/15)
+- **Active workstream**: 모두의 창업 2차 결과 대기 (2026-09-16 20:19 제출 완료, PetTracker → 동물보호소 대상 재도전. 1차는 탈락)
 - **Current phase**: Phase 7 (Milestone Closure 대기)
-- **Active brief**: `artifacts/specs/2026-05-03-modoo-deadline-execution-brief.md`
-- **Next gate**: ~7월 말 1R 결과 안내 → 통과 시 사업자등록 + PortOne 계약 + OpenAI 결제 해결 + Track 2 본격
-- **Blockers**: 1R 결과 대기 · OpenAI 결제 보류 · PortOne 사업자 계정 · 🔴 D-7 SafeWay 동결(proactive 작업 금지)
+- **Active brief**: `artifacts/business/fundraising/2026-09-14-modoo-2nd-shelter-first-rewrite.md` (제출 원문은 modoo.or.kr 「내 지원서 → 2차」가 기준)
+- **Next gate**: 2차 결과 발표(발표일 미확인) → 통과 시 사업자등록 + 보호소 1곳 확보
+- **Blockers**: 2차 결과 대기 · 협회 인용 허락 회신 대기 · ⚪ OpenAI 결제·PortOne·D-7 SafeWay 동결은 6/4 이후 미확인
 - **Latest handoff / 이력**: `artifacts/handoffs/` 최신 파일 · 마일스톤 이력·검증수치는 `artifacts/reports/` 최신 Milestone Report
 
 ## Session bootstrap

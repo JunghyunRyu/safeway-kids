@@ -1,92 +1,74 @@
 # SafeWay Platform — Current State (Live)
 
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
-> 마일스톤 이력 = `artifacts/reports/` Milestone Reports / 세션 이력 = `artifacts/handoffs/`.
+> 마일스톤 이력 = `artifacts/reports/` / 세션 이력 = `artifacts/handoffs/` / **6/4 이전 상세(D-1~D-10, GPS·UX 조치, Critical Path)는 git `96bf792`의 STATE.md v16 참조.**
 
-**Last updated**: 2026-06-04 (v16 — **PT 모바일 UX 감사 86/86 전건 구현·검증 완료** (커밋 `d47ecc3`…`e1516c0` 11커밋) + **CLAUDE.md 316→81줄 최적화 `d4fbd48`**. 3 ux-advocate 병렬 감사→Tech Spec→8 마일스톤(프론트 26화면+백엔드 M-D)→마지막 2건(O-02 size필터: WalkerQualification.accepted_sizes+Alembic `b3d9f1a2c5e4`+search 필터 / O-21 펫편집삭제: DELETE pets+MyPets UI / O-36 펫사진: PetRegistration 업로드). 검증: PT tsc 0·jest 20/20, 백엔드 pytest 117 passed, alembic 단일head, 회귀 0. P0 10건 전부. 사용자 "모두 구현"=D-8 명시 오버라이드. 리포트: `artifacts/reports/2026-06-03-pt-mobile-ux-remediation-milestone.md`. v14 anchor: GPS/SOS 안전핵심 6건 `61b03aa`)
-**Active workstream**: **모두의 창업 1R 결과 대기 (~7월 말 예상)** + PT V1.0 출시 reschedule (7월 말~8월 초) + 본업 집중 기간 (~2026-06-15) + 6/15까지 AI 호출 없는 인프라 골격만 슬라이스 작업
-**Current phase**: **Phase 7 (Milestone Closure 대기)** — 5/15 16:00 modoo.or.kr 제출 완료(v2.6-tight, 운영기관=프라이머). Phase 6 Verification은 1R 평가위원 채점으로 외부 위임된 상태. 6/15까지 본업 사이 가벼운 P1 작업만, 6/15 이후 Track 2 본격 ramp-up
-**Priority principle**: **1R 결과 안내 대기 > 본업 (~6/15) > PT V1.0 출시 ramp-up (6/15~) > SafeWay 동결 유지 > CareConnect 보류**
-**LIVE infrastructure**: `https://www.lunenlabs.com/` + `https://www.lunenlabs.com/pet` (5/6 LIVE 유지, 변경 없음)
-**PT positioning**: **강아지 일상 종합 케어 동반자** (`pt_positioning_holistic_care.md` anchor 유지)
+**Last updated**: 2026-09-16 (v17 — **모두의 창업 2차 제출 완료 20:19**, 사용자 직접 제출. 6/8~9/12 구간은 커밋·산출물 없음 = 검증된 활동 기록 없음)
+**Active workstream**: **모두의 창업 2차 결과 대기** (PetTracker → 동물보호소 대상으로 전환해 재도전)
+**Current phase**: **Phase 7 (Milestone Closure 대기)** — 제출 완료, 검증은 외부 심사(멘토 3인 다면심사)로 위임된 상태
+**Priority principle**: 2차 결과 대기 > (통과 시) 보호소 1곳 시범 운영 준비 > SafeWay 동결 유지 > CareConnect 보류
 
-**Active Brief**: [`artifacts/specs/2026-05-03-modoo-deadline-execution-brief.md`](artifacts/specs/2026-05-03-modoo-deadline-execution-brief.md) (Phase 5 종료, Phase 7 진입)
-**Final Tech Spec**: [`artifacts/specs/2026-05-03-modoo-deadline-execution-final-tech-spec.md`](artifacts/specs/2026-05-03-modoo-deadline-execution-final-tech-spec.md)
-**신청서 제출본 (5/15 16:00 anchor)**: [`artifacts/business/fundraising/2026-05-10-modoo-pt-application-v2.6-tight.md`](artifacts/business/fundraising/2026-05-10-modoo-pt-application-v2.6-tight.md) (Q1 97 / Q2 900 / Q3 997 / Q4 992자, AI tell 제거 + 자문 시제 거짓말 회피 inject)
-**진화 기록**: v1.4(36) → v2.0(37.5) → v2.1(38.5) → v2.2(39.5) → v2.3(40.5) → v2.4(41.5) → v2.5(42.5/페르소나 34.4) → v2.6-humanized → **v2.6-tight (제출본)**
-**운영기관 선택**: 프라이머 ★★★★★ ([`artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md`](artifacts/business/fundraising/2026-05-08-modoo-operating-org-fit-analysis.md))
-**Portfolio Improvement Audit**: [`artifacts/reports/2026-05-08-portfolio-improvement-audit-integrated.md`](artifacts/reports/2026-05-08-portfolio-improvement-audit-integrated.md)
+**Active Brief**: [`artifacts/business/fundraising/2026-09-14-modoo-2nd-shelter-first-rewrite.md`](artifacts/business/fundraising/2026-09-14-modoo-2nd-shelter-first-rewrite.md) — 2차 방향 문서. ⚠️ 정식 Requirement Brief·Tech Spec은 만들지 않았다. **제출 원문은 modoo.or.kr 「내 지원서 → 2차」가 기준**이고 로컬 문서는 그보다 낡았다
+**Next gate**: 2차 결과 발표 — **발표일 미확인**, 공지사항에서 확인할 것. 통과 시 사업자등록 → 보호소 1곳 확보
+**Plan (전략·채점)**: `~/.claude/plans/memoized-wondering-bear.md` (저장소 밖)
 
-## User Decisions (5/22 갱신 — 신규 3건 추가)
-- **D-1 = A** ~ **D-5** / **C-1 ~ C-5** / **UD-1 ~ UD-4** : modoo 제출 anchor (이력 archive, 변경 없음)
-- **D-6 (NEW 2026-05-22) — PT V1.0 출시 reschedule**: 6/9 ±2d → **7월 말~8월 초**. 4 제약 동시 정렬: (1) 본업 ~6/15, (2) 1R 결과 ~7월 말, (3) OpenAI 결제 보류 해결, (4) PortOne 사업자(1R 통과 후 등록). 신청서 §4 6/9 약속 setback 사유는 1R 통과 후 멘토링 단계에서 운영기관에 설명
-- **D-7 (NEW 2026-05-22) — SafeWay 샌드박스 동결**: 자문 메모 불만족 + 1인 개발 부담 signal. 사용자 자발적 재진입 전까지 Claude proactive 작업 0. SafeWay 영역 모든 P3 보류
-- **D-8 (NEW 2026-05-22) — 6/15까지 본업 집중**: 그 사이 PT는 **AI 호출 없는 인프라 골격만** 슬라이스 작업 (LLM client 스켈레톤·Redis cost counter·PortOne mock·WalkPhoto 마이그). 비용 0, burnout 0 원칙
-- **D-9 (NEW 2026-06-03) — GPS/SOS 결함 수정 범위 = 검증된 것 전부**: 모바일+GPS 감사 결과 사용자가 "검증된 19건 전부" 선택 + "Tech Spec 먼저". 이로 인해 **D-7 SafeWay 동결 부분 해제** (M-03·G-05/M-01·G-01 update_gps 등 SafeWay 코드 수정). ⚠️ 작업 후 재동결 여부 미결.
-- **D-10 (NEW 2026-06-03) — 안전 핵심만 지금**: 19건 중 출시 차단급 6건(G-01·G-21·C-2·M-02·M-03·G-05/M-01)만 즉시 구현(커밋 `61b03aa`). 나머지(백그라운드 GPS·지오펜싱·배치·rate limit 등)는 6/15 이후. D-8 가벼운 슬라이스 원칙 유지.
+## 1차 결과
+- 2026-05-15 제출(v2.6-tight, 개인 보호자 대상) → **탈락**. 탈락 통보만 받았고 보완 피드백·재도전 멘토링은 없었다 (사용자 보고)
+- 1차에서 약속한 **6/9 출시는 이행하지 않았다**. D-6 reschedule(7월 말~8월 초)도 이행 기록이 없다
 
-## GPS/SOS Remediation (2026-06-03, D-9/D-10)
-- **완료·커밋 `61b03aa`** (안전핵심 6건): G-01(검증연결: 차량 422 리젝트/도보 로그온리)·G-21(PT 세션 소유권 403)·C-2(SOS nullable)·M-02(`/pt/sos`)·M-03(dev login `__DEV__` 단독)·G-05/M-01(SOSButton (0,0)금지·실패피드백) + tz 정규화 버그수정. 회귀 0.
-- **Tech Spec**: [`artifacts/specs/2026-06-03-mobile-gps-remediation-tech-spec.md`](artifacts/specs/2026-06-03-mobile-gps-remediation-tech-spec.md) (4도메인 팀 작성 + tech-spec-reviewer APPROVE WITH CHANGES)
-- **감사**: [`artifacts/reviews/2026-06-03-mobile-gps-hole-audit.md`](artifacts/reviews/2026-06-03-mobile-gps-hole-audit.md) (50건 발견, 25건 검증, FP 1·강등 1)
-- **6/15 이후 연기 (D-10)**: G-02 동의 fail-closed · G-03 WS dev bypass 제거 · G-06/09/10 accuracy·staleness(스키마 마이그 M1) · G-07/08 백그라운드 GPS(**EAS 빌드 필요**) · G-11 오프라인 큐+배치 · G-12 rate limit · G-13 지오펜싱(마이그 M2, pickup_lat/lng 사용) · M-04 · M-10/11
-- **🔴 변호사 확인 필요 (korea-regulatory-counsel)**: OQ-2 아동 탑승차량 위치 = 아동개보법 추가동의 대상? · **OQ-5 G-03 bypass 과거 prod/staging 배포 이력 → 있었다면 위치정보법 §39 신고 의무** (사실 확인 우선)
+## 2차 제출본 요지 (2026-09-16 20:19)
+- **구분**: 일반/기술 · 예비창업자 · 재도전자(Q8 보완사항 작성) · 멘토 기관 = 서울 · **서강대학교** · 사업 분야 = 임팩트 · 팀원 없음
+- **첫 고객**: 전국 236개 동물보호센터. 근거 = Feuerbacher & Gunter(*Animals*, 2023) 외출 → 입양 확률 5배 (**미국 사례** — 국내 적용은 1단계 핵심 가설로 명시)
+- **해결 순서**: ① 사고 대응·기록 → ② 산책 파트너 기록 기반 배정 → ③ AI 캡션·감정 톤 리포트(입양 공고 초안)
+- **수익**: 1단계 보호소 무상 → 2단계 **지자체 연간 이용료**(첫 매출) → 3단계 개인 과금(유상 산책·노령견 구독)과 병원·숙박·커머스 연계. **손익분기점은 "아직 계산하지 못함"으로 명시**
+- **첨부**: 영상 `https://youtu.be/QdWUensg4lY` · 다이어그램 4장(Q2 1 · Q3-1 2 · Q3-2 1)
+- **외부 검증**: 동물보호단체 7곳 문의(9/13·9/14) → 1곳 회신(9/15, "한 사람 동행") → 인력 병목 확인. **단체명은 인용 허락을 못 받아 쓰지 않았다**
 
-## Critical Path (5/22 ~ 8월 초)
-| 시점 | 작업 | 담당 |
+## 신청서에 적은 약속 (통과 시 추적 대상)
+| 단계 | 진입 조건 | 확인할 것 |
 |---|---|---|
-| 5/22 (오늘) | P0 cleanup: untracked 산출물 push (✅ `dd4398b`) + STATE/CLAUDE 갱신 + 5/22 핸드오프 | Claude |
-| 5/23 ~ 6/15 | 본업 집중 + PT 인프라 골격 슬라이스 (P1-1·P1-2·P1-3) | 사용자(본업) + Claude(슬라이스) |
-| ~~~ 6/15 mobile tsc 복구 (P1-1)~~~ | ✅ 5/22 PASS (workspace hoisting, 루트 node_modules에서 tsc 해상 0 errors) | Claude |
-| ~~~ 6/15 LLM client 스켈레톤 + Redis cost counter (P1-2)~~~ | ✅ 5/22 PASS (19/19 unit tests, 회귀 0, 신규 파일 7개 + config 8개 env) | Claude |
-| ~~~ 6/15 WalkPhoto 모델 + 마이그 (P1-3 일부)~~~ | ✅ 5/22 PASS (마이그 `f1a3c5b7d9e2`, 8/8 tests, 라운드트립 PASS, 회귀 0, 커밋 `0d5ea26`) | Claude |
-| ~ 6/15 | PortOne v2 인터페이스 mock (P1-3 잔여) | Claude |
-| ~ 7월 말 | 1R 결과 안내 수신 | 운영기관(프라이머) |
-| 7월 말 → | 통과 시: 사업자등록 + PortOne 계약 + OpenAI 결제 해결 + Track 2 본격 (P2-1·P2-2) | 사용자 + Claude |
-| 7월 말 ~ 8월 초 | PT V1.0 출시 (T2.5 통합 테스트 + T2.6 EAS Build) (P2-3) | Claude |
-| Fallback | 1R 미통과 시: 7월 modoo 차회 또는 별도 사업 path (v2.6 본문 60~70% 재사용) | 사용자 결정 |
+| 1 | 보호소 1곳 확보 | 산책 30건 운영 · 공고 초안 품질 · 파트너 앱 사용 여부 · **다음 달 재사용 의사** · 사고 발생률·보험 견적 · 지자체 1곳 이용료 협의 |
+| 2 | 1단계 재사용 의사 | 수도권 보호소 5곳 · 지자체 연간 이용료 → 첫 매출 |
+| 3 | 누적 산책 데이터 | 유상 산책 · 노령견 구독 → 병원 연계 |
+
+지원금 1억 원 계획: 시범 운영 2,000 · 서버/AI 2,000 · 외주 2,700 · 인건비 2,000(고객 접점 1인) · 법무/예비비 1,300 (만 원)
 
 ## Blockers / Waiting On
-- 🟡 **1R 결과 안내 대기 (~7월 말)** — 외부 의존, action 불가
-- 🟡 **OpenAI 결제 보류** — 카드 결제 처리 실패. Track 2 T2.2~T2.3 LLM 실 호출 unblock 의존. 6/15 본업 종료 후 결제 해결 (P2-1)
-- 🟡 **PortOne 사업자 계정 필요** — 1R 통과 후 사업자등록 → PortOne 계약 순서. UD-4 자격 박탈 risk 회피 path 유지
-- ✅ ~~mobile tsc 환경~~ (5/22 P1-1 PASS, npm workspace hoisting으로 루트 node_modules 사용. "lock mismatch" 진단은 오진이었음)
-- 🟡 **EXT-9~11 외부 계정 (AWS·Firebase·Anthropic) 이미 보유** — OpenAI만 결제 이슈 / PortOne만 사업자 의존
-- 🔴 **D-7 SafeWay 동결** — Claude proactive 작업 0. 사용자 재진입 전 모든 SafeWay 영역 동결 (자문 메모·v2.2·미팅 등)
+- 🟡 **2차 결과 발표 대기** — 외부 의존. 발표일 미확인
+- 🟡 **협회 인용 허락 회신 대기** — 후속 메일 2건(9/15·9/16) 발송. 무응답이면 단체명 없이 유지 (`...-shelter-outreach-log.md`)
+- ⚪ **6/4 이후 갱신 없음, 현재 상태 미확인**: OpenAI 결제 보류 · PortOne 사업자 계정 · D-7 SafeWay 동결(D-9로 부분 해제 후 재동결 여부 미결)
 
-## Risks (5/22 갱신)
-- **R-1 (HIGH)** 신청서 §4 "6/9 출시" 약속과 실제 출시 7월 말~8월 초 시차 → 1R 통과 후 멘토링 단계 setback 사유 설명 필요 (운영기관 신뢰 risk)
-- **R-2 (MED)** 1R 미통과 시 자금 lag 4~6개월 → 7월 modoo 차회 fallback path (산출물 60~70% 재사용)
-- **R-3 (MED)** 1인 burnout signal (SafeWay 동결 결정 기저) → PT도 무리하면 동력 손실 risk. 6/15까지 가벼운 슬라이스만 유지
-- **R-4 (LOW)** OpenAI 결제 해결 지연 → Track 2 LLM 실 구현 지연 → 8월 초까지 슬립 가능
+## Risks
+- **R-5 (HIGH)** 수요 검증 근거가 회신 1건뿐. 신청서 [한계]에 "해법이 문제를 푸는지는 아무도 확인하지 않았다"고 명시했다
+- **R-6 (MED)** 지자체 이용료는 **전부 가정**(예시: 월 고정비 500만 원 ÷ 곳당 연 300만 원 = 20곳). 1단계에서 실측 필요
+- **R-7 (MED)** 핵심 근거 연구가 미국 사례 — 국내 보호소에서 같은 효과가 나는지 미확인
+- **R-3 (MED, 유지)** 1인 운영 burnout — 신청서에 "고객 접점 담당 1인 우선 채용" 계획
+- ~~R-1 (6/9 출시 약속 시차)~~ — 1차 탈락으로 소멸. 2차 Q4-1에 미이행 사실을 직접 밝혔다
 
-## Parallel: SafeWay Kids 샌드박스 — **동결 (D-7)**
-- 자문 메모(양길모 + 이의림+이학선 5/7 미팅 후) 수신 완료, **사용자 평가 = 불만족**
-- 1인 개발 어려움 + 규제 부담으로 추진 동력 저하
-- Active draft `artifacts/business/regulatory/2026-05-03-sandbox-application-v2.1-draft.md` 정지 상태로 보존
-- 재진입 시점 = 사용자 자발적 결정 (Claude proactive 작업 금지)
+## Portfolio Status (9/16)
+- **PetTracker**: 2차 제출·결과 대기. **미출시** — 신청서 기준 내부 QA로 동작 확인, 실사용자 테스트 전
+- **SafeWay Kids**: 동결(D-7) — 마지막 확인 6/4
+- **CareConnect**: 보류 — 마지막 확인 5/22
+- **SDET Code**: sunset 방향 결정(2026-06-05, 메모리 기록) → 후속 **nightward**(구 tripwire)는 독립 저장소
+- **루넨랩스 사이트**: 6/8 독립 저장소 `lunenlabs`로 분리(`24c97a0`). lunenlabs.com LIVE 여부는 9/16 미확인
 
-## Portfolio Status (5/22)
-- **PetTracker**: 5/15 신청 완료 → 1R 결과 대기 → 7월 말~8월 초 출시 (reschedule)
-- **SafeWay Kids**: **동결** (D-7) — 샌드박스 v2.1 정지
-- **CareConnect**: 보류 — 사용자 고민 중 (PT 출시 후 + 30일 사이클은 7월 말 이후)
-- **SDET Code**: 운영 중, 외국인 prospect 1건 재가동 vs 운영비 trade-off **P3 분석 대기** (#33)
-- **루넨랩스**: 사업자등록 1R 통과 후 진행 / lunenlabs.com LIVE 유지
+## Repo 상태 (9/16 확인)
+- 브랜치 **`docs/modoo-2nd-submission`** = `main` + 2커밋 (6월 미커밋 문서 2건 / 2차 신청서 산출물 + STATE v17). **main에 아직 안 합침** → `git checkout main && git merge --ff-only docs/modoo-2nd-submission`. main으로 전환하면 STATE.md가 v16으로 보인다
+- `main` = origin 대비 **ahead 23 / behind 6** (마지막 fetch 기준, 이번에 fetch 안 함). **push 안 함**
+- **의도적으로 미커밋**: `docs/references/` (17MB — 샌드박스 신청서 docx·자문의견서 PDF·공고 hwp 원본)
+- ⚠️ **낡은 초안**(제출본과 다름, 붙여넣기 금지): `2026-09-13-modoo-2nd-form-final-copy.md` · `-q2-draft-v1.0` · `-q3-draft-v1.0` · `-supplement-narrative-v1.0`. `-shelter-first-rewrite.md`는 상단에 차이표가 있다
+
+## 2차 산출물
+- 발송·회신 기록: [`...-shelter-outreach-log.md`](artifacts/business/fundraising/2026-09-13-modoo-2nd-shelter-outreach-log.md)
+- 다이어그램: [`modoo-2nd-images/`](artifacts/business/fundraising/modoo-2nd-images/) (`05-revenue-stages.png` = v2 제출본, `-v1-stale`은 보관용) · 이미지 계획 [`...-image-prompts.md`](artifacts/business/fundraising/2026-09-13-modoo-2nd-image-prompts.md)
+- 영상: [`modoo-2nd-video/`](artifacts/business/fundraising/modoo-2nd-video/) (`pettracker-modoo.mp4`, 70.7초)
 
 ## Latest Handoff
-- [`artifacts/handoffs/2026-06-04-session-handoff.md`](artifacts/handoffs/2026-06-04-session-handoff.md) — **PT UX 86/86 전건 완료 (11커밋) + CLAUDE.md 최적화**. 다음 first step = PT UX 마일스톤 종료 확정 또는 modoo 1R 대기 워크스트림 복귀 (UX 잔여 0)
-- [`artifacts/handoffs/2026-06-03-session-handoff.md`](artifacts/handoffs/2026-06-03-session-handoff.md) — GPS/SOS 안전핵심 6건 커밋 `61b03aa`, 회귀 0. 다음 first step = (1)마일스톤 종료 또는 (2)OQ-5 G-03 배포이력 사실확인 또는 (3)SafeWay 재동결 결정
-- [`artifacts/handoffs/2026-05-22-session-handoff-v3.md`](artifacts/handoffs/2026-05-22-session-handoff-v3.md) — P1-3 일부(WalkPhoto 모델+마이그) PASS·커밋
-- [`artifacts/handoffs/2026-05-22-session-final-handoff.md`](artifacts/handoffs/2026-05-22-session-final-handoff.md) — P1-1 mobile tsc 검증 PASS + P1-2 ai 모듈 스켈레톤 19/19 PASS
+- [`artifacts/handoffs/2026-06-04-session-handoff.md`](artifacts/handoffs/2026-06-04-session-handoff.md) — PT UX 86/86 완료. ⚠️ **2차 준비 세션(9/13~9/16)의 handoff는 작성하지 않았다** — 이 STATE.md가 그 공백을 대신한다
 
-## Open Gap Notes
-- [`artifacts/gap-notes/2026-05-22-walkphoto-migration-sequencing.md`](artifacts/gap-notes/2026-05-22-walkphoto-migration-sequencing.md) — Tech Spec §16 "4테이블 1마이그" → WalkPhoto 분리(D-8). P2-2에 나머지 3개 테이블 이연 체크리스트 보유
-- [`artifacts/gap-notes/2026-06-03-gps-speed-validation-log-only.md`](artifacts/gap-notes/2026-06-03-gps-speed-validation-log-only.md) — 스펙 §6.1 "422 reject" → PT 도보 속도/정확도는 **로그온리**(GPS 지터 false-positive 회피). 하드리젝트는 실데이터 2주 수집 후 임계 튜닝하여 활성화. 차량 200km/h는 하드리젝트 유지
+## Open Gap Notes (6/3 이후 미갱신)
+- [`2026-05-22-walkphoto-migration-sequencing.md`](artifacts/gap-notes/2026-05-22-walkphoto-migration-sequencing.md) · [`2026-06-03-gps-speed-validation-log-only.md`](artifacts/gap-notes/2026-06-03-gps-speed-validation-log-only.md)
 
-## Available Skills
-- `/session-start` · `/session-end` · `/sandbox-followup [email|prep|status|review]` (동결 중)
-
-## Available Agents
-- `business-operations-manager` · `korea-{regulatory-counsel,tax-accounting-advisor,fundraising-strategist}`
-- `backend-dev` · `frontend-dev` · `db-architect` · `security-expert` · `product-manager` · `qa-lead` · `ux-advocate`
-- `tech-spec-reviewer` · `requirement-analyst` · `verification-auditor`
+## Available Skills / Agents
+- `/session-start` · `/session-end` · `/sandbox-followup` (동결 중)
+- `business-operations-manager` · `korea-{regulatory-counsel,tax-accounting-advisor,fundraising-strategist}` · `korean-grant-application-writer` · `evaluator-rubric-reviewer` · `traction-data-builder` · `tech-spec-reviewer` · `requirement-analyst` · `verification-auditor`

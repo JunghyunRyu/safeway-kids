@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>수익 구조 v2</title>
+<style>
+  :root{--ink:#14161a;--sub:#5b6470;--line:#d8dde4;--soft:#f4f6f9;--accent:#1f6feb;--good:#0f7b53}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#fff;width:1400px;height:556px;overflow:hidden}
+  .card{
+    width:1400px;height:556px;background:#fff;
+    padding:34px 48px;display:flex;flex-direction:column;position:relative;overflow:hidden;
+    font-family:"Pretendard","Malgun Gothic","맑은 고딕",-apple-system,system-ui,sans-serif;color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .eyebrow{font-size:14px;letter-spacing:.14em;color:var(--accent);font-weight:700;margin-bottom:8px}
+  h1{font-size:35px;line-height:1.25;letter-spacing:-.02em;font-weight:800;margin-bottom:7px}
+  .lede{font-size:18px;color:var(--sub);line-height:1.5;margin-bottom:20px}
+  .brand{position:absolute;right:48px;bottom:12px;font-size:13px;color:#98a1ad;letter-spacing:.04em}
+  .stages{display:flex;gap:20px;flex:1;margin-bottom:14px}
+  .stg{flex:1;border:1px solid var(--line);border-radius:16px;padding:24px 22px;display:flex;flex-direction:column}
+  .stg.hl{border-color:#9fc0f5;box-shadow:0 0 0 3px #e8f0fe}
+  .sn{font-size:13px;font-weight:800;letter-spacing:.12em;color:var(--accent);margin-bottom:12px}
+  .st{font-size:24px;font-weight:800;line-height:1.3;margin-bottom:6px;letter-spacing:-.01em}
+  .sc{font-size:14px;color:var(--sub);margin-bottom:18px;line-height:1.5}
+  .cond{background:var(--soft);border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.5;margin-bottom:16px}
+  .cond b{display:block;font-size:12px;letter-spacing:.08em;color:var(--sub);margin-bottom:4px;font-weight:800}
+  .gain{font-size:15px;line-height:1.7;margin-top:auto}
+  .gain span{display:block}
+  .money{color:var(--good);font-weight:800}
+  .free{color:var(--sub);font-weight:700}
+</style>
+</head>
+<body>
+<section class="card">
+  <div class="eyebrow">수익 구조</div>
+  <h1>돈을 버는 곳과 벌지 않는 곳을 처음부터 구분합니다</h1>
+  <p class="lede">각 단계는 날짜가 아니라 조건으로 넘어갑니다.</p>
+  <div class="stages">
+    <div class="stg">
+      <div class="sn">STAGE 01</div>
+      <div class="st">보호소<br>무상 공급</div>
+      <div class="sc">보호소 자체에는 예산이 없습니다.<br>여기서는 벌지 않습니다.</div>
+      <div class="cond"><b>진입 조건</b>보호소 1곳 확보 · 산책 30건 운영</div>
+      <div class="gain">
+        <span class="free">매출 0원</span>
+        <span>산책 파트너와 활동 기록</span>
+        <span>산책 데이터 축적 시작</span>
+      </div>
+    </div>
+    <div class="stg hl">
+      <div class="sn">STAGE 02</div>
+      <div class="st">지자체<br>연간 이용료</div>
+      <div class="sc">보호센터 운영 예산 연 479억 원.<br>입양 한 건당 최대 25만 원을 지원합니다.</div>
+      <div class="cond"><b>진입 조건</b>1단계 보호소의 재사용 의사 확인</div>
+      <div class="gain">
+        <span class="money">첫 매출 발생</span>
+        <span>보호소 단위 연간 이용료</span>
+        <span>금액은 지자체와 협의해 정합니다</span>
+      </div>
+    </div>
+    <div class="stg">
+      <div class="sn">STAGE 03</div>
+      <div class="st">데이터가<br>여는 연계</div>
+      <div class="sc">데이터가 모이기 전에는<br>시작하지 않습니다.</div>
+      <div class="cond"><b>진입 조건</b>누적 산책 데이터 확보</div>
+      <div class="gain">
+        <span class="money">개인 과금 · 병원 · 숙박</span>
+        <span>유상 산책 · 노령견 모니터링 구독</span>
+        <span>사전 문진 차트 · 문제견 신원 보증</span>
+      </div>
+    </div>
+  </div>
+  <div class="brand">PetTracker</div>
+</section>
+</body>
+</html>
