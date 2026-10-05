@@ -56,7 +56,7 @@
 
 ## Repo 상태 (10/5 확인)
 - ✅ `docs/modoo-2nd-submission` → `main` **fast-forward 완료**(`023323e`). 이제 main에서 작업한다
-- ✅ **origin/main 병합 완료** (`8fedf63`, 10/5) → `main` = origin 대비 **ahead 28 / behind 0**, **push 안 함**. 병합 후 PT 테스트 53/53 통과, 작업 트리 깨끗(autocrlf 트랩 없음). 백업 태그 `backup/main-before-origin-merge`. 병합 전 상황: origin 쪽 23커밋 = 6/6~6/7 lunenlabs tripwire PR 3건 + 연어의 여행 게임(추가 후 별도 리포로 이전, 순변화 0) + LF 정규화(`c278e45`). 공백 무시 실변경은 `lunenlabs/`(로컬에선 6/8 분리 삭제됨)와 리뷰 문서 1건뿐
+- ✅ **origin/main 병합 완료** (`8fedf63`, 10/5) → `main` **push 완료**(10/5, origin과 동기화 `c0ecfaa`). 병합 후 PT 테스트 53/53 통과, 작업 트리 깨끗(autocrlf 트랩 없음). 백업 태그 `backup/main-before-origin-merge`. 병합 전 상황: origin 쪽 23커밋 = 6/6~6/7 lunenlabs tripwire PR 3건 + 연어의 여행 게임(추가 후 별도 리포로 이전, 순변화 0) + LF 정규화(`c278e45`). 공백 무시 실변경은 `lunenlabs/`(로컬에선 6/8 분리 삭제됨)와 리뷰 문서 1건뿐
 - 병합 미리보기(`git merge-tree`): 충돌 7건 = `lunenlabs/` modify/delete 6건 + `backend/app/modules/notification/schemas.py` 1건(origin은 줄바꿈만, 로컬은 `61b03aa` 실변경). 해결안 = lunenlabs 삭제 유지 + schemas.py 로컬본. → 그대로 실행함
 - **의도적으로 미커밋**: `docs/references/` (17MB — 샌드박스 신청서 docx·자문의견서 PDF·공고 hwp 원본)
 - ⚠️ **낡은 초안**(제출본과 다름, 붙여넣기 금지): `2026-09-13-modoo-2nd-form-final-copy.md` · `-q2-draft-v1.0` · `-q3-draft-v1.0` · `-supplement-narrative-v1.0`. `-shelter-first-rewrite.md`는 상단에 차이표가 있다
