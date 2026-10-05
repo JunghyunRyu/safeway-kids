@@ -64,9 +64,9 @@ Specialist pool (user-level): `business-operations-manager` · `korea-{regulator
 
 - **Active workstream**: 모두의 창업 2차 결과 대기 (2026-09-16 20:19 제출 완료, PetTracker → 동물보호소 대상 재도전. 1차는 탈락)
 - **Current phase**: Phase 7 (Milestone Closure 대기)
-- **Active brief**: `artifacts/business/fundraising/2026-09-14-modoo-2nd-shelter-first-rewrite.md` (제출 원문은 modoo.or.kr 「내 지원서 → 2차」가 기준)
-- **Next gate**: 2차 결과 발표(발표일 미확인) → 통과 시 사업자등록 + 보호소 1곳 확보
-- **Blockers**: 2차 결과 대기 · 협회 인용 허락 회신 대기 · ⚪ OpenAI 결제·PortOne·D-7 SafeWay 동결은 6/4 이후 미확인
+- **Active brief**: `artifacts/business/fundraising/2026-09-14-modoo-2nd-shelter-first-rewrite.md` (제출 원문 스냅샷: `artifacts/business/fundraising/2026-09-16-modoo-2nd-submitted-snapshot.md`)
+- **Next gate**: 2차 1라운드 결과 발표("10월 중", 정확한 일자 미공개) → 통과 시 사업자등록 + 보호소 1곳 확보
+- **Blockers**: 2차 결과 대기 · origin/main 병합 미실행(ahead 25/behind 23, 사용자 판단 대기) · ⚪ OpenAI 결제·PortOne·D-7 SafeWay 동결은 6/4 이후 미확인
 - **Latest handoff / 이력**: `artifacts/handoffs/` 최신 파일 · 마일스톤 이력·검증수치는 `artifacts/reports/` 최신 Milestone Report
 
 ## Session bootstrap

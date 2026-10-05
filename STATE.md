@@ -3,13 +3,14 @@
 > Single source of truth — "what is happening right now". `/session-start`·`/session-end`로 동기화.
 > 마일스톤 이력 = `artifacts/reports/` / 세션 이력 = `artifacts/handoffs/` / **6/4 이전 상세(D-1~D-10, GPS·UX 조치, Critical Path)는 git `96bf792`의 STATE.md v16 참조.**
 
-**Last updated**: 2026-09-16 (v17 — **모두의 창업 2차 제출 완료 20:19**, 사용자 직접 제출. 6/8~9/12 구간은 커밋·산출물 없음 = 검증된 활동 기록 없음)
+**Last updated**: 2026-10-05 (v18 — 발표 시점 확인, 협회 인용 blocker 해제, 브랜치 정리. 9/17~10/4 구간은 커밋·산출물 없음) · v17 2026-09-16 = 2차 제출 완료 20:19
 **Active workstream**: **모두의 창업 2차 결과 대기** (PetTracker → 동물보호소 대상으로 전환해 재도전)
 **Current phase**: **Phase 7 (Milestone Closure 대기)** — 제출 완료, 검증은 외부 심사(멘토 3인 다면심사)로 위임된 상태
 **Priority principle**: 2차 결과 대기 > (통과 시) 보호소 1곳 시범 운영 준비 > SafeWay 동결 유지 > CareConnect 보류
 
-**Active Brief**: [`artifacts/business/fundraising/2026-09-14-modoo-2nd-shelter-first-rewrite.md`](artifacts/business/fundraising/2026-09-14-modoo-2nd-shelter-first-rewrite.md) — 2차 방향 문서. ⚠️ 정식 Requirement Brief·Tech Spec은 만들지 않았다. **제출 원문은 modoo.or.kr 「내 지원서 → 2차」가 기준**이고 로컬 문서는 그보다 낡았다
-**Next gate**: 2차 결과 발표 — **발표일 미확인**, 공지사항에서 확인할 것. 통과 시 사업자등록 → 보호소 1곳 확보
+**Active Brief**: [`artifacts/business/fundraising/2026-09-14-modoo-2nd-shelter-first-rewrite.md`](artifacts/business/fundraising/2026-09-14-modoo-2nd-shelter-first-rewrite.md) — 2차 방향 문서. ⚠️ 정식 Requirement Brief·Tech Spec은 만들지 않았다. **제출 원문 = [`2026-09-16-modoo-2nd-submitted-snapshot.md`](artifacts/business/fundraising/2026-09-16-modoo-2nd-submitted-snapshot.md)** (10/5 modoo.or.kr에서 수집, 이미지 제외). 9/13~9/14 초안들은 이보다 낡았다
+**Next gate**: 2차 1라운드(예선) 결과 발표 — **"10월 중"** (중기부 계획, 언론 보도 기준. 공고문·사이트 공지에도 일자 없음 — 10/5 확인: 최신 공지는 9/22 「접수 결과 안내」(통계 인포그래픽)뿐, 결과 공지 아직 없음). 접수 약 9만 명 · 경쟁률 9.3:1 · 일반/기술 8,000명 선발. 통과 시 사업자등록 → 보호소 1곳 확보
+**대기 중 작업**: 보호소 시범 운영 기능 차이 분석 — 계획 [`artifacts/plans/2026-10-05-shelter-pilot-gap-analysis-plan.md`](artifacts/plans/2026-10-05-shelter-pilot-gap-analysis-plan.md) (사용자 승인 대기)
 **Plan (전략·채점)**: `~/.claude/plans/memoized-wondering-bear.md` (저장소 밖)
 
 ## 1차 결과
@@ -34,8 +35,10 @@
 지원금 1억 원 계획: 시범 운영 2,000 · 서버/AI 2,000 · 외주 2,700 · 인건비 2,000(고객 접점 1인) · 법무/예비비 1,300 (만 원)
 
 ## Blockers / Waiting On
-- 🟡 **2차 결과 발표 대기** — 외부 의존. 발표일 미확인
-- 🟡 **협회 인용 허락 회신 대기** — 후속 메일 2건(9/15·9/16) 발송. 무응답이면 단체명 없이 유지 (`...-shelter-outreach-log.md`)
+- 🟡 **2차 결과 발표 대기** — 외부 의존. "10월 중" (10/5 Gmail 확인: 결과 메일 없음)
+- 🟡 **origin/main 병합 미실행** — ahead 25 / behind 23. 해결안은 아래 Repo 상태 참조. 사용자 판단 대기
+- ~~협회 인용 허락 회신 대기~~ — **해제(10/5)**. 후속 메일 2건(9/15·9/16)에 19일째 무응답(Gmail 확인) → 단체명 없이 유지로 확정
+- ⚪ 「선배 창업가 인사이트 강연」(10/6~10/14, 2차 도전자 대상) — 선착순 **접수 마감으로 미참여** (사용자 확인 10/5)
 - ⚪ **6/4 이후 갱신 없음, 현재 상태 미확인**: OpenAI 결제 보류 · PortOne 사업자 계정 · D-7 SafeWay 동결(D-9로 부분 해제 후 재동결 여부 미결)
 
 ## Risks
@@ -52,9 +55,10 @@
 - **SDET Code**: sunset 방향 결정(2026-06-05, 메모리 기록) → 후속 **nightward**(구 tripwire)는 독립 저장소
 - **루넨랩스 사이트**: 6/8 독립 저장소 `lunenlabs`로 분리(`24c97a0`). lunenlabs.com LIVE 여부는 9/16 미확인
 
-## Repo 상태 (9/16 확인)
-- 브랜치 **`docs/modoo-2nd-submission`** = `main` + 2커밋 (6월 미커밋 문서 2건 / 2차 신청서 산출물 + STATE v17). **main에 아직 안 합침** → `git checkout main && git merge --ff-only docs/modoo-2nd-submission`. main으로 전환하면 STATE.md가 v16으로 보인다
-- `main` = origin 대비 **ahead 23 / behind 6** (마지막 fetch 기준, 이번에 fetch 안 함). **push 안 함**
+## Repo 상태 (10/5 확인)
+- ✅ `docs/modoo-2nd-submission` → `main` **fast-forward 완료**(`023323e`). 이제 main에서 작업한다
+- ⚠️ `main` = origin 대비 **ahead 25 / behind 23** (10/5 fetch). origin 쪽 23커밋 = 6/6~6/7 lunenlabs tripwire PR 3건 + 연어의 여행 게임(추가 후 별도 리포로 이전, 순변화 0) + LF 정규화(`c278e45`). 공백 무시 실변경은 `lunenlabs/`(로컬에선 6/8 분리 삭제됨)와 리뷰 문서 1건뿐
+- 병합 미리보기(`git merge-tree`): 충돌 7건 = `lunenlabs/` modify/delete 6건 + `backend/app/modules/notification/schemas.py` 1건(origin은 줄바꿈만, 로컬은 `61b03aa` 실변경). 해결안 = lunenlabs 삭제 유지 + schemas.py 로컬본. **origin 병합·push는 권한 단계에서 막혀 미실행 → 사용자 판단 대기**
 - **의도적으로 미커밋**: `docs/references/` (17MB — 샌드박스 신청서 docx·자문의견서 PDF·공고 hwp 원본)
 - ⚠️ **낡은 초안**(제출본과 다름, 붙여넣기 금지): `2026-09-13-modoo-2nd-form-final-copy.md` · `-q2-draft-v1.0` · `-q3-draft-v1.0` · `-supplement-narrative-v1.0`. `-shelter-first-rewrite.md`는 상단에 차이표가 있다
 
